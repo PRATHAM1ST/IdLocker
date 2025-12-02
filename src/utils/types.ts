@@ -110,10 +110,14 @@ export interface ThemeColors {
   textSecondary: string;
   textTertiary: string;
   
-  // Accents
+  // Primary
   primary: string;
   primaryDark: string;
   primaryLight: string;
+  
+  // Accent (coral/orange)
+  accent: string;
+  accentLight: string;
   
   // Status
   success: string;
@@ -131,6 +135,10 @@ export interface ThemeColors {
   inputBorder: string;
   inputText: string;
   placeholder: string;
+  
+  // Header gradient
+  headerGradientStart: string;
+  headerGradientEnd: string;
 }
 
 // Navigation params

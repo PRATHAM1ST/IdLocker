@@ -13,4 +13,7 @@ export { EmptyState } from './EmptyState';
 export { ImagePicker } from './ImagePicker';
 export { ImageResizer } from './ImageResizer';
 export { ImageShareModal } from './ImageShareModal';
+export { IllustratedHeader, CompactHeader } from './IllustratedHeader';
+export { CategoryCard, CategoryCardLarge, CategoryChip } from './CategoryCard';
+export { BottomTabBar } from './BottomTabBar';
 

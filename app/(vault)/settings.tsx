@@ -1,5 +1,6 @@
 /**
  * Settings screen - app configuration and security info
+ * Redesigned with modern card-based layout
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -8,21 +9,19 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Switch,
   Alert,
-  Linking,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Application from 'expo-constants';
-import { SafeThemedView } from '../../src/components/ThemedView';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { Button } from '../../src/components/Button';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useAuthLock, getBiometricTypeName } from '../../src/context/AuthLockProvider';
 import { loadSettings, clearVault } from '../../src/storage/vaultStorage';
-import { spacing, borderRadius } from '../../src/styles/theme';
+import { spacing, borderRadius, shadows } from '../../src/styles/theme';
 import type { AppSettings } from '../../src/utils/types';
 
 // Auto-lock timeout limits (in seconds)
@@ -43,6 +42,7 @@ function formatTimeout(seconds: number): string {
 }
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const { colors, isDark, preference, setThemePreference } = useTheme();
   const { lock, biometricType, hasBiometrics, autoLockTimeout, setAutoLockTimeout } = useAuthLock();
 
@@ -136,15 +136,34 @@ export default function SettingsScreen() {
       <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
         {title}
       </ThemedText>
-      <View style={[styles.sectionContent, { borderColor: colors.border }]}>
+      <View style={[styles.sectionContent, shadows.sm]}>
         {children}
       </View>
     </View>
   );
 
   return (
-    <SafeThemedView style={styles.container} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Settings' }} />
+    <ThemedView style={styles.container}>
+      {/* Header */}
+      <LinearGradient
+        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+      >
+        {/* Profile-like section */}
+        <View style={styles.profileSection}>
+          <View style={styles.profileAvatar}>
+            <Ionicons name="shield-checkmark" size={32} color="#FFFFFF" />
+          </View>
+          <ThemedText variant="title" style={styles.profileName}>
+            IdLocker
+          </ThemedText>
+          <ThemedText variant="caption" style={styles.profileSubtitle}>
+            Your Secure Vault
+          </ThemedText>
+        </View>
+      </LinearGradient>
 
       <ScrollView
         style={styles.scrollView}
@@ -160,7 +179,7 @@ export default function SettingsScreen() {
               hasBiometrics ? biometricName : 'Device Passcode',
             )}
             
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
             
             {renderSettingRow(
               'timer-outline',
@@ -171,7 +190,7 @@ export default function SettingsScreen() {
             <View style={[styles.sliderContainer, { backgroundColor: colors.card }]}>
               <View style={styles.sliderLabels}>
                 <ThemedText variant="caption" color="secondary">30s</ThemedText>
-                <ThemedText variant="body" style={{ color: colors.primary, fontWeight: '600' }}>
+                <ThemedText variant="body" style={{ color: colors.accent, fontWeight: '600' }}>
                   {formatTimeout(sliderValue)}
                 </ThemedText>
                 <ThemedText variant="caption" color="secondary">10m</ThemedText>
@@ -183,25 +202,14 @@ export default function SettingsScreen() {
                 value={sliderValue}
                 onValueChange={handleTimeoutSliderChange}
                 onSlidingComplete={handleTimeoutSliderComplete}
-                minimumTrackTintColor={colors.primary}
+                minimumTrackTintColor={colors.accent}
                 maximumTrackTintColor={colors.border}
-                thumbTintColor={colors.primary}
+                thumbTintColor={colors.accent}
                 step={10}
               />
-              <View style={styles.sliderMarkers}>
-                {[30, 60, 120, 300, 600].map((mark) => (
-                  <View 
-                    key={mark} 
-                    style={[
-                      styles.sliderMarker,
-                      { backgroundColor: sliderValue >= mark ? colors.primary : colors.border }
-                    ]} 
-                  />
-                ))}
-              </View>
             </View>
             
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
             
             {renderSettingRow(
               'lock-closed-outline',
@@ -231,7 +239,7 @@ export default function SettingsScreen() {
                   style={[
                     styles.themeOption,
                     preference === theme && {
-                      backgroundColor: colors.primary,
+                      backgroundColor: colors.accent,
                     },
                   ]}
                   onPress={() => handleThemeChange(theme)}
@@ -268,7 +276,7 @@ export default function SettingsScreen() {
               '1.0.0',
             )}
             
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
             
             {renderSettingRow(
               'shield-checkmark-outline',
@@ -342,13 +350,39 @@ export default function SettingsScreen() {
           </ThemedText>
         </View>
       </ScrollView>
-    </SafeThemedView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.base,
+  },
+  profileSection: {
+    alignItems: 'center',
+    paddingTop: spacing.lg,
+  },
+  profileAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  profileName: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  profileSubtitle: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: spacing.xs,
   },
   scrollView: {
     flex: 1,
@@ -403,17 +437,6 @@ const styles = StyleSheet.create({
   slider: {
     width: '100%',
     height: 40,
-  },
-  sliderMarkers: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    marginTop: -spacing.xs,
-  },
-  sliderMarker: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
   },
   themeOptions: {
     flexDirection: 'row',
@@ -476,4 +499,3 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
 });
-

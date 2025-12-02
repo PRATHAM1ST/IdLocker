@@ -1,5 +1,6 @@
 /**
  * Edit item screen - modify existing vault item
+ * Redesigned with modern styling
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -15,14 +16,16 @@ import {
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeThemedView } from '../../../src/components/ThemedView';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemedView } from '../../../src/components/ThemedView';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { Input, Select } from '../../../src/components/Input';
 import { Button } from '../../../src/components/Button';
 import { ImagePicker } from '../../../src/components/ImagePicker';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
-import { spacing, borderRadius, getCategoryColor } from '../../../src/styles/theme';
+import { spacing, borderRadius, getCategoryColor, shadows } from '../../../src/styles/theme';
 import { ITEM_TYPE_CONFIGS } from '../../../src/utils/constants';
 import { validateVaultItem, sanitizeInput } from '../../../src/utils/validation';
 import type { FieldDefinition, ImageAttachment } from '../../../src/utils/types';
@@ -30,6 +33,7 @@ import type { FieldDefinition, ImageAttachment } from '../../../src/utils/types'
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { getItem, updateItem, isLoading } = useVault();
 
@@ -111,7 +115,7 @@ export default function EditItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
     }
-  }, [item, label, fields, updateItem, router]);
+  }, [item, label, fields, images, updateItem, router]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -167,8 +171,8 @@ export default function EditItemScreen() {
 
   if (!item || !config || !categoryColor) {
     return (
-      <SafeThemedView style={styles.container}>
-        <Stack.Screen options={{ title: 'Edit Item' }} />
+      <ThemedView style={styles.container}>
+        <Stack.Screen options={{ title: 'Edit Item', headerShown: true }} />
         <View style={styles.loadingContainer}>
           {isLoading ? (
             <ActivityIndicator size="large" color={colors.primary} />
@@ -182,27 +186,44 @@ export default function EditItemScreen() {
             </>
           )}
         </View>
-      </SafeThemedView>
+      </ThemedView>
     );
   }
 
   return (
-    <SafeThemedView style={styles.container} edges={['bottom']}>
+    <ThemedView style={styles.container}>
       <Stack.Screen
         options={{
-          title: `Edit ${config.label}`,
-          headerLeft: () => (
-            <TouchableOpacity onPress={handleCancel}>
-              <ThemedText variant="body" color="accent">Cancel</ThemedText>
-            </TouchableOpacity>
-          ),
+          headerShown: false,
         }}
       />
+
+      {/* Header */}
+      <LinearGradient
+        colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleCancel}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <ThemedText variant="subtitle" style={styles.headerTitle}>
+            Edit {config.label}
+          </ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView 
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={styles.scrollView}
@@ -211,11 +232,16 @@ export default function EditItemScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Type indicator */}
-          <View style={[styles.typeIndicator, { backgroundColor: colors.card }]}>
+          <View style={[styles.typeIndicator, { backgroundColor: colors.card }, shadows.sm]}>
             <View style={[styles.typeIconSmall, { backgroundColor: categoryColor.bg }]}>
               <Ionicons name={config.icon as any} size={20} color={categoryColor.icon} />
             </View>
             <ThemedText variant="label">{config.label}</ThemedText>
+            <View style={[styles.typeBadge, { backgroundColor: categoryColor.bg }]}>
+              <ThemedText variant="caption" style={{ color: categoryColor.text }}>
+                Editing
+              </ThemedText>
+            </View>
           </View>
 
           {/* Label field */}
@@ -250,13 +276,37 @@ export default function EditItemScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeThemedView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.base,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40,
   },
   keyboardAvoid: {
     flex: 1,
@@ -282,19 +332,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     marginBottom: spacing.lg,
   },
   typeIconSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.sm,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+  },
+  typeBadge: {
+    marginLeft: 'auto',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
   },
   saveContainer: {
     marginTop: spacing.lg,
   },
 });
-

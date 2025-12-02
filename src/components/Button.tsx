@@ -50,7 +50,7 @@ export function Button({
   // Get variant styles
   const variantStyles = {
     primary: {
-      bg: colors.primary,
+      bg: colors.accent,
       text: '#FFFFFF',
       border: 'transparent',
     },
@@ -66,7 +66,7 @@ export function Button({
     },
     ghost: {
       bg: 'transparent',
-      text: colors.primary,
+      text: colors.accent,
       border: 'transparent',
     },
     danger: {

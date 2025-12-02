@@ -39,7 +39,7 @@ export function ThemedText({
     primary: colors.text,
     secondary: colors.textSecondary,
     tertiary: colors.textTertiary,
-    accent: colors.primary,
+    accent: colors.accent,
     error: colors.error,
     success: colors.success,
   }[color];

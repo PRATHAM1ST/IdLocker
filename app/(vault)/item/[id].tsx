@@ -1,5 +1,6 @@
 /**
  * Item detail screen - displays all fields with copy/show functionality
+ * Redesigned with category-colored gradient header
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -14,14 +15,16 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeThemedView } from '../../../src/components/ThemedView';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemedView } from '../../../src/components/ThemedView';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { SecureField } from '../../../src/components/SecureField';
 import { Button, IconButton } from '../../../src/components/Button';
 import { ImageShareModal } from '../../../src/components/ImageShareModal';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
-import { spacing, borderRadius, getCategoryColor } from '../../../src/styles/theme';
+import { spacing, borderRadius, getCategoryColor, shadows } from '../../../src/styles/theme';
 import { ITEM_TYPE_CONFIGS, SENSITIVE_FIELDS } from '../../../src/utils/constants';
 import { formatCardExpiry } from '../../../src/utils/validation';
 import type { VaultItem, ImageAttachment } from '../../../src/utils/types';
@@ -29,6 +32,7 @@ import type { VaultItem, ImageAttachment } from '../../../src/utils/types';
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { getItem, deleteItem, isLoading } = useVault();
 
@@ -87,8 +91,8 @@ export default function ItemDetailScreen() {
 
   if (!item || !config || !categoryColor) {
     return (
-      <SafeThemedView style={styles.container}>
-        <Stack.Screen options={{ title: 'Details' }} />
+      <ThemedView style={styles.container}>
+        <Stack.Screen options={{ title: 'Details', headerShown: true }} />
         <View style={styles.loadingContainer}>
           {isLoading ? (
             <ActivityIndicator size="large" color={colors.primary} />
@@ -102,7 +106,7 @@ export default function ItemDetailScreen() {
             </>
           )}
         </View>
-      </SafeThemedView>
+      </ThemedView>
     );
   }
 
@@ -147,129 +151,155 @@ export default function ItemDetailScreen() {
   };
 
   return (
-    <SafeThemedView style={styles.container} edges={['bottom']}>
+    <ThemedView style={styles.container}>
       <Stack.Screen
         options={{
-          title: config.label,
-          headerRight: () => (
-            <IconButton
-              icon="create-outline"
-              onPress={handleEdit}
-              color={colors.primary}
-            />
-          ),
+          headerShown: false,
         }}
       />
 
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header card */}
-        <View style={[styles.headerCard, { backgroundColor: colors.card }]}>
-          <View style={[styles.iconContainer, { backgroundColor: categoryColor.bg }]}>
-            <Ionicons
-              name={config.icon as any}
-              size={32}
-              color={categoryColor.icon}
-            />
-          </View>
-          <ThemedText variant="title" style={styles.itemLabel}>
-            {item.label}
-          </ThemedText>
-          <View style={[styles.typeBadge, { backgroundColor: categoryColor.bg }]}>
-            <ThemedText variant="caption" style={{ color: categoryColor.text }}>
-              {config.label}
-            </ThemedText>
-          </View>
-        </View>
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+        >
+          {/* Decorative circles */}
+          <View style={styles.decorativeCircle1} />
+          <View style={styles.decorativeCircle2} />
 
-        {/* Fields */}
-        <View style={[styles.fieldsCard, { backgroundColor: colors.card }]}>
-          <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
-            Details
-          </ThemedText>
-          
-          {displayFields.map(field => (
-            <SecureField
-              key={field.key}
-              label={field.label}
-              value={field.value}
-              sensitive={field.sensitive}
-              copyable
-            />
-          ))}
-        </View>
-
-        {/* Images */}
-        {item.images && item.images.length > 0 && (
-          <View style={[styles.imagesCard, { backgroundColor: colors.card }]}>
-            <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
-              Images ({item.images.length})
-            </ThemedText>
-            <ThemedText variant="caption" color="tertiary" style={styles.imageHint}>
-              Tap an image to resize and share
-            </ThemedText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.imagesContainer}
+          {/* Navigation */}
+          <View style={styles.headerNav}>
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => router.back()}
+              activeOpacity={0.7}
             >
-              {item.images.map((image) => (
-                <TouchableOpacity
-                  key={image.id}
-                  style={[styles.imageThumb, { borderColor: colors.border }]}
-                  onPress={() => setSelectedImage(image)}
-                  activeOpacity={0.8}
-                >
-                  <Image source={{ uri: image.uri }} style={styles.imageThumbInner} />
-                  <View style={[styles.imageDimensions, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-                    <ThemedText variant="caption" style={styles.imageDimensionsText}>
-                      {image.width}×{image.height}
-                    </ThemedText>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={handleEdit}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Metadata */}
-        <View style={[styles.metaCard, { backgroundColor: colors.backgroundTertiary }]}>
-          <View style={styles.metaRow}>
-            <ThemedText variant="caption" color="tertiary">Created</ThemedText>
-            <ThemedText variant="caption" color="secondary">
-              {formatDate(item.createdAt)}
+          {/* Icon and title */}
+          <View style={styles.headerContent}>
+            <View style={styles.iconContainer}>
+              <Ionicons
+                name={config.icon as any}
+                size={36}
+                color="rgba(255, 255, 255, 0.95)"
+              />
+            </View>
+            <ThemedText variant="title" style={styles.headerTitle}>
+              {item.label}
             </ThemedText>
+            <View style={styles.typeBadge}>
+              <ThemedText variant="caption" style={styles.typeBadgeText}>
+                {config.label}
+              </ThemedText>
+            </View>
           </View>
-          <View style={styles.metaRow}>
-            <ThemedText variant="caption" color="tertiary">Last Updated</ThemedText>
-            <ThemedText variant="caption" color="secondary">
-              {formatDate(item.updatedAt)}
-            </ThemedText>
-          </View>
-        </View>
+        </LinearGradient>
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Button
-            title="Edit Item"
-            onPress={handleEdit}
-            variant="outline"
-            icon="create-outline"
-            fullWidth
-            style={styles.actionButton}
-          />
-          <Button
-            title={isDeleting ? 'Deleting...' : 'Delete Item'}
-            onPress={handleDelete}
-            variant="danger"
-            icon="trash-outline"
-            fullWidth
-            loading={isDeleting}
-            disabled={isDeleting}
-          />
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Fields */}
+          <View style={[styles.fieldsCard, { backgroundColor: colors.card }, shadows.md]}>
+            <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
+              Details
+            </ThemedText>
+            
+            {displayFields.map(field => (
+              <SecureField
+                key={field.key}
+                label={field.label}
+                value={field.value}
+                sensitive={field.sensitive}
+                copyable
+              />
+            ))}
+          </View>
+
+          {/* Images */}
+          {item.images && item.images.length > 0 && (
+            <View style={[styles.imagesCard, { backgroundColor: colors.card }, shadows.md]}>
+              <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
+                Attachments ({item.images.length})
+              </ThemedText>
+              <ThemedText variant="caption" color="tertiary" style={styles.imageHint}>
+                Tap an image to resize and share
+              </ThemedText>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imagesContainer}
+              >
+                {item.images.map((image) => (
+                  <TouchableOpacity
+                    key={image.id}
+                    style={[styles.imageThumb, { borderColor: colors.border }]}
+                    onPress={() => setSelectedImage(image)}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: image.uri }} style={styles.imageThumbInner} />
+                    <View style={styles.imageDimensions}>
+                      <ThemedText variant="caption" style={styles.imageDimensionsText}>
+                        {image.width}×{image.height}
+                      </ThemedText>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Metadata */}
+          <View style={[styles.metaCard, { backgroundColor: colors.backgroundTertiary }]}>
+            <View style={styles.metaRow}>
+              <ThemedText variant="caption" color="tertiary">Created</ThemedText>
+              <ThemedText variant="caption" color="secondary">
+                {formatDate(item.createdAt)}
+              </ThemedText>
+            </View>
+            <View style={styles.metaRow}>
+              <ThemedText variant="caption" color="tertiary">Last Updated</ThemedText>
+              <ThemedText variant="caption" color="secondary">
+                {formatDate(item.updatedAt)}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Button
+              title="Edit Item"
+              onPress={handleEdit}
+              variant="outline"
+              icon="create-outline"
+              fullWidth
+              style={styles.actionButton}
+            />
+            <Button
+              title={isDeleting ? 'Deleting...' : 'Delete Item'}
+              onPress={handleDelete}
+              variant="danger"
+              icon="trash-outline"
+              fullWidth
+              loading={isDeleting}
+              disabled={isDeleting}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -279,7 +309,7 @@ export default function ItemDetailScreen() {
         image={selectedImage}
         onClose={() => setSelectedImage(null)}
       />
-    </SafeThemedView>
+    </ThemedView>
   );
 }
 
@@ -290,8 +320,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  content: {
-    padding: spacing.base,
+  scrollContent: {
     paddingBottom: spacing['3xl'],
   },
   loadingContainer: {
@@ -304,28 +333,75 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
-  headerCard: {
+  // Header styles
+  header: {
+    paddingBottom: spacing['2xl'],
+    paddingHorizontal: spacing.base,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  decorativeCircle1: {
+    position: 'absolute',
+    top: -40,
+    right: -40,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    bottom: -30,
+    left: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  headerNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  navButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
-    padding: spacing.xl,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.md,
+    justifyContent: 'center',
+  },
+  headerContent: {
+    alignItems: 'center',
   },
   iconContainer: {
-    width: 72,
-    height: 72,
+    width: 80,
+    height: 80,
     borderRadius: borderRadius.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  itemLabel: {
+  headerTitle: {
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   typeBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
+  },
+  typeBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  // Content styles
+  content: {
+    padding: spacing.base,
+    marginTop: -spacing.lg,
   },
   fieldsCard: {
     padding: spacing.base,
@@ -368,6 +444,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingVertical: 4,
     paddingHorizontal: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   imageDimensionsText: {
     color: '#FFFFFF',
@@ -391,4 +468,3 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
 });
-

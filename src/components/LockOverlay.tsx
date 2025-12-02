@@ -1,11 +1,13 @@
 /**
  * Lock overlay with automatic authentication
  * Shows overlay and triggers auth popup automatically
+ * Redesigned with modern styling
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
 import {
     Platform,
@@ -67,25 +69,35 @@ export function LockOverlay() {
 
   if (!isLocked) return null;
 
-  // Background color based on theme
-  const bgColor = isDark ? '#121212' : '#f5f5f5';
-
   return (
     <Animated.View
       entering={FadeIn.duration(200)}
       exiting={FadeOut.duration(150)}
-      style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]}
+      style={StyleSheet.absoluteFill}
     >
-      {/* iOS: Use native blur, Android: Use solid background */}
-      {Platform.OS === 'ios' ? (
+      {/* Background */}
+      <LinearGradient
+        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* iOS: Use native blur for extra effect */}
+      {Platform.OS === 'ios' && (
         <BlurView
-          intensity={95}
-          tint={isDark ? 'dark' : 'light'}
+          intensity={20}
+          tint="dark"
           style={StyleSheet.absoluteFill}
         />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]} />
       )}
+
+      {/* Decorative circles */}
+      <View style={styles.decorativeCircles}>
+        <View style={styles.circle1} />
+        <View style={styles.circle2} />
+        <View style={styles.circle3} />
+      </View>
 
       {/* Content */}
       <TouchableOpacity 
@@ -94,56 +106,157 @@ export function LockOverlay() {
         onPress={handleRetry}
         disabled={isAuthenticating}
       >
-        <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-          <Ionicons
-            name={getBiometricIcon()}
-            size={28}
-            color="#FFFFFF"
-          />
+        {/* Logo/Icon container */}
+        <View style={styles.logoContainer}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="shield-checkmark" size={48} color="#FFFFFF" />
+          </View>
+          <ThemedText variant="title" style={styles.appName}>
+            IdLocker
+          </ThemedText>
         </View>
 
-        <ThemedText variant="body" style={styles.title}>
-          {isAuthenticating ? 'Verifying...' : error ? 'Tap to retry' : 'Unlocking...'}
-        </ThemedText>
-        
-        <ThemedText variant="caption" color="secondary">
-          {hasBiometrics ? biometricName : 'Device passcode'}
-        </ThemedText>
-
-        {error && (
-          <View style={[styles.errorBox, { backgroundColor: colors.error + '20' }]}>
-            <ThemedText variant="caption" color="error">
-              {error}
+        {/* Auth button */}
+        <View style={styles.authContainer}>
+          <View style={[styles.authButton, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+            <View style={styles.authIconContainer}>
+              <Ionicons
+                name={getBiometricIcon()}
+                size={32}
+                color="#FFFFFF"
+              />
+            </View>
+            
+            <ThemedText variant="subtitle" style={styles.authTitle}>
+              {isAuthenticating ? 'Verifying...' : error ? 'Tap to Retry' : 'Unlock Vault'}
+            </ThemedText>
+            
+            <ThemedText variant="caption" style={styles.authSubtitle}>
+              {hasBiometrics ? `Use ${biometricName}` : 'Use device passcode'}
             </ThemedText>
           </View>
-        )}
+
+          {error && (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={16} color={colors.error} />
+              <ThemedText variant="caption" style={styles.errorText}>
+                {error}
+              </ThemedText>
+            </View>
+          )}
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <ThemedText variant="caption" style={styles.footerText}>
+            Your data is encrypted and secure
+          </ThemedText>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  decorativeCircles: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  circle1: {
+    position: 'absolute',
+    top: -100,
+    right: -50,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  circle2: {
+    position: 'absolute',
+    bottom: -80,
+    left: -80,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  circle3: {
+    position: 'absolute',
+    top: '40%',
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing['3xl'],
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: spacing['4xl'],
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  title: {
+  appName: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  authContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  authButton: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    borderRadius: borderRadius.xl,
+  },
+  authIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  authTitle: {
+    color: '#FFFFFF',
     marginBottom: spacing.xs,
   },
+  authSubtitle: {
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
   errorBox: {
-    marginTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  errorText: {
+    color: '#FCA5A5',
+    marginLeft: spacing.xs,
+  },
+  footer: {
+    alignItems: 'center',
+  },
+  footerText: {
+    color: 'rgba(255, 255, 255, 0.5)',
   },
 });

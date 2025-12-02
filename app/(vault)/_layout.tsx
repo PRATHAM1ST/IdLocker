@@ -1,12 +1,14 @@
 /**
- * Vault group layout - protected screens with lock overlay
+ * Vault group layout - protected screens with tab navigation and lock overlay
  */
 
 import { View, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Tabs, Stack } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { LockOverlay } from '../../src/components/LockOverlay';
+import { spacing } from '../../src/styles/theme';
 
 export default function VaultLayout() {
   const { colors } = useTheme();
@@ -16,7 +18,7 @@ export default function VaultLayout() {
 
   return (
     <View style={styles.container}>
-      <Stack
+      <Tabs
         screenOptions={{
           headerStyle: {
             backgroundColor: colors.background,
@@ -26,48 +28,105 @@ export default function VaultLayout() {
             fontWeight: '600',
           },
           headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.background },
+          tabBarStyle: {
+            backgroundColor: colors.backgroundSecondary,
+            borderTopColor: colors.border,
+            paddingTop: spacing.xs,
+            height: 85,
+          },
+          tabBarActiveTintColor: colors.accent,
+          tabBarInactiveTintColor: colors.textTertiary,
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '500',
+            marginTop: 2,
+          },
         }}
       >
-        <Stack.Screen
+        <Tabs.Screen
           name="index"
           options={{
-            title: 'Vault',
+            title: 'Home',
             headerShown: false,
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons 
+                name={focused ? 'shield' : 'shield-outline'} 
+                size={24} 
+                color={color} 
+              />
+            ),
           }}
         />
-        <Stack.Screen
-          name="item/[id]"
+        <Tabs.Screen
+          name="categories"
           options={{
-            title: 'Details',
-            headerBackTitle: 'Back',
-            presentation: 'card',
+            title: 'Categories',
+            headerShown: false,
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons 
+                name={focused ? 'grid' : 'grid-outline'} 
+                size={24} 
+                color={color} 
+              />
+            ),
           }}
         />
-        <Stack.Screen
-          name="add"
+        <Tabs.Screen
+          name="search"
           options={{
-            title: 'Add Item',
-            headerBackTitle: 'Cancel',
-            presentation: 'modal',
+            title: 'Search',
+            headerShown: false,
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons 
+                name={focused ? 'search' : 'search-outline'} 
+                size={24} 
+                color={color} 
+              />
+            ),
           }}
         />
-        <Stack.Screen
-          name="edit/[id]"
-          options={{
-            title: 'Edit Item',
-            headerBackTitle: 'Cancel',
-            presentation: 'modal',
-          }}
-        />
-        <Stack.Screen
+        <Tabs.Screen
           name="settings"
           options={{
             title: 'Settings',
-            headerBackTitle: 'Back',
+            headerShown: true,
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons 
+                name={focused ? 'person' : 'person-outline'} 
+                size={24} 
+                color={color} 
+              />
+            ),
           }}
         />
-      </Stack>
+        {/* Hide these from tab bar - they're accessed via navigation */}
+        <Tabs.Screen
+          name="item/[id]"
+          options={{
+            href: null,
+            headerShown: true,
+            title: 'Details',
+          }}
+        />
+        <Tabs.Screen
+          name="add"
+          options={{
+            href: null,
+            headerShown: true,
+            title: 'Add Item',
+            presentation: 'modal',
+          }}
+        />
+        <Tabs.Screen
+          name="edit/[id]"
+          options={{
+            href: null,
+            headerShown: true,
+            title: 'Edit Item',
+            presentation: 'modal',
+          }}
+        />
+      </Tabs>
       
       {/* Lock overlay appears on top of all vault screens when locked */}
       <LockOverlay />
@@ -80,4 +139,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-

@@ -1,5 +1,6 @@
 /**
  * Category tabs component for filtering vault items
+ * Redesigned with modern chip-style tabs
  */
 
 import React from 'react';
@@ -10,11 +11,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
 import { ThemedText } from './ThemedText';
-import { spacing, borderRadius } from '../styles/theme';
+import { spacing, borderRadius, getCategoryColor } from '../styles/theme';
 import type { VaultItemType } from '../utils/types';
-import { ITEM_TYPE_CONFIGS, VAULT_ITEM_TYPES } from '../utils/constants';
+import { VAULT_ITEM_TYPES } from '../utils/constants';
 
 type CategoryFilter = VaultItemType | 'all';
 
@@ -41,6 +43,7 @@ export function CategoryTabs({ selected, onSelect, counts }: CategoryTabsProps) 
       {categories.map(({ type, label, icon }) => {
         const isSelected = selected === type;
         const count = counts?.[type];
+        const categoryColor = type !== 'all' ? getCategoryColor(type, isDark) : null;
         
         return (
           <TouchableOpacity
@@ -49,7 +52,7 @@ export function CategoryTabs({ selected, onSelect, counts }: CategoryTabsProps) 
               styles.tab,
               {
                 backgroundColor: isSelected 
-                  ? colors.primary 
+                  ? categoryColor?.gradientStart || colors.accent
                   : colors.backgroundTertiary,
               },
             ]}
@@ -100,6 +103,82 @@ export function CategoryTabs({ selected, onSelect, counts }: CategoryTabsProps) 
   );
 }
 
+/**
+ * Visual category cards for home screen horizontal scroll
+ */
+interface CategoryCardsProps {
+  onCategoryPress: (type: VaultItemType) => void;
+  counts?: Record<VaultItemType, number>;
+}
+
+export function CategoryCards({ onCategoryPress, counts }: CategoryCardsProps) {
+  const { colors, isDark } = useTheme();
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.cardsContainer}
+    >
+      {VAULT_ITEM_TYPES.map(({ type, label, icon }) => {
+        const categoryColor = getCategoryColor(type, isDark);
+        const count = counts?.[type] || 0;
+
+        return (
+          <TouchableOpacity
+            key={type}
+            style={styles.card}
+            onPress={() => onCategoryPress(type)}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardGradient}
+            >
+              {/* Decorative circle */}
+              <View style={styles.cardDecorativeCircle} />
+
+              {/* Icon */}
+              <View style={styles.cardIconContainer}>
+                <Ionicons
+                  name={icon as any}
+                  size={20}
+                  color="rgba(255, 255, 255, 0.9)"
+                />
+              </View>
+
+              {/* Menu */}
+              <TouchableOpacity style={styles.cardMenu} activeOpacity={0.7}>
+                <Ionicons
+                  name="ellipsis-vertical"
+                  size={14}
+                  color="rgba(255, 255, 255, 0.6)"
+                />
+              </TouchableOpacity>
+
+              {/* Label & Count */}
+              <View style={styles.cardFooter}>
+                <ThemedText variant="caption" style={styles.cardLabel}>
+                  {label}
+                </ThemedText>
+                {count > 0 && (
+                  <View style={styles.cardBadge}>
+                    <ThemedText variant="caption" style={styles.cardBadgeText}>
+                      {count}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing.base,
@@ -127,5 +206,68 @@ const styles = StyleSheet.create({
     minWidth: 18,
     alignItems: 'center',
   },
+  // Card styles
+  cardsContainer: {
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+  },
+  card: {
+    width: 140,
+    height: 100,
+    borderRadius: borderRadius.xl,
+    marginRight: spacing.md,
+    overflow: 'hidden',
+  },
+  cardGradient: {
+    flex: 1,
+    padding: spacing.md,
+    position: 'relative',
+  },
+  cardDecorativeCircle: {
+    position: 'absolute',
+    top: -15,
+    right: -15,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  cardIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardMenu: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    padding: spacing.xs,
+  },
+  cardFooter: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardLabel: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  cardBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  cardBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
 });
-

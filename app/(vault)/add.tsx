@@ -1,5 +1,6 @@
 /**
  * Add item screen - dynamic form based on item type
+ * Redesigned with modern styling
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -14,14 +15,16 @@ import {
 } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeThemedView } from '../../src/components/ThemedView';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { Input, Select } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
 import { ImagePicker } from '../../src/components/ImagePicker';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
-import { spacing, borderRadius, getCategoryColor } from '../../src/styles/theme';
+import { spacing, borderRadius, getCategoryColor, shadows } from '../../src/styles/theme';
 import { ITEM_TYPE_CONFIGS, VAULT_ITEM_TYPES } from '../../src/utils/constants';
 import { validateVaultItem, sanitizeInput } from '../../src/utils/validation';
 import type { VaultItemType, FieldDefinition, ImageAttachment } from '../../src/utils/types';
@@ -29,6 +32,7 @@ import type { VaultItemType, FieldDefinition, ImageAttachment } from '../../src/
 export default function AddItemScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: VaultItemType }>();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { addItem } = useVault();
 
@@ -106,7 +110,7 @@ export default function AddItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save item. Please try again.');
     }
-  }, [selectedType, label, fields, addItem, router]);
+  }, [selectedType, label, fields, images, addItem, router]);
 
   const renderTypeSelector = () => (
     <View style={styles.typeSelectorContainer}>
@@ -120,19 +124,24 @@ export default function AddItemScreen() {
           return (
             <TouchableOpacity
               key={type}
-              style={[
-                styles.typeCard,
-                { backgroundColor: colors.card },
-              ]}
+              style={styles.typeCard}
               onPress={() => handleTypeSelect(type)}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
-              <View style={[styles.typeIconContainer, { backgroundColor: color.bg }]}>
-                <Ionicons name={icon as any} size={28} color={color.icon} />
-              </View>
-              <ThemedText variant="label" style={styles.typeLabel}>
-                {typeLabel}
-              </ThemedText>
+              <LinearGradient
+                colors={[color.gradientStart, color.gradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.typeCardGradient}
+              >
+                <View style={styles.typeCardDecor} />
+                <View style={styles.typeIconContainer}>
+                  <Ionicons name={icon as any} size={28} color="rgba(255,255,255,0.95)" />
+                </View>
+                <ThemedText variant="label" style={styles.typeLabel}>
+                  {typeLabel}
+                </ThemedText>
+              </LinearGradient>
             </TouchableOpacity>
           );
         })}
@@ -183,18 +192,30 @@ export default function AddItemScreen() {
     return (
       <View style={styles.formContainer}>
         {/* Type indicator */}
-        <View style={[styles.typeIndicator, { backgroundColor: colors.card }]}>
-          <View style={[styles.typeIconSmall, { backgroundColor: categoryColor.bg }]}>
-            <Ionicons name={config.icon as any} size={20} color={categoryColor.icon} />
-          </View>
-          <ThemedText variant="label">{config.label}</ThemedText>
-          <TouchableOpacity 
-            onPress={() => setSelectedType(null)}
-            style={styles.changeTypeButton}
+        <TouchableOpacity 
+          style={[styles.typeIndicator, shadows.sm]}
+          onPress={() => setSelectedType(null)}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.typeIndicatorGradient}
           >
-            <ThemedText variant="caption" color="accent">Change</ThemedText>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.typeIndicatorIcon}>
+              <Ionicons name={config.icon as any} size={20} color="rgba(255,255,255,0.95)" />
+            </View>
+            <ThemedText variant="label" style={styles.typeIndicatorLabel}>
+              {config.label}
+            </ThemedText>
+            <View style={styles.changeTypeButton}>
+              <ThemedText variant="caption" style={styles.changeTypeText}>
+                Change
+              </ThemedText>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Label field */}
         <Input
@@ -240,22 +261,39 @@ export default function AddItemScreen() {
   };
 
   return (
-    <SafeThemedView style={styles.container} edges={['bottom']}>
+    <ThemedView style={styles.container}>
       <Stack.Screen
         options={{
-          title: selectedType ? `Add ${config?.label}` : 'Add Item',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ThemedText variant="body" color="accent">Cancel</ThemedText>
-            </TouchableOpacity>
-          ),
+          headerShown: false,
         }}
       />
+
+      {/* Header */}
+      <LinearGradient
+        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <ThemedText variant="subtitle" style={styles.headerTitle}>
+            {selectedType ? `Add ${config?.label}` : 'Add Item'}
+          </ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView 
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={styles.scrollView}
@@ -266,13 +304,37 @@ export default function AddItemScreen() {
           {!selectedType ? renderTypeSelector() : renderForm()}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeThemedView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.base,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40,
   },
   keyboardAvoid: {
     flex: 1,
@@ -298,46 +360,79 @@ const styles = StyleSheet.create({
   },
   typeCard: {
     width: '48%',
-    alignItems: 'center',
-    padding: spacing.lg,
+    aspectRatio: 1.2,
     borderRadius: borderRadius.xl,
     marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  typeCardGradient: {
+    flex: 1,
+    padding: spacing.lg,
+    position: 'relative',
+  },
+  typeCardDecor: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   typeIconContainer: {
     width: 56,
     height: 56,
     borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   typeLabel: {
-    textAlign: 'center',
+    color: '#FFFFFF',
+    fontWeight: '600',
+    position: 'absolute',
+    bottom: spacing.lg,
+    left: spacing.lg,
   },
   formContainer: {
     paddingTop: spacing.sm,
   },
   typeIndicator: {
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  typeIndicatorGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.lg,
   },
-  typeIconSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.sm,
+  typeIndicatorIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
+  typeIndicatorLabel: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    flex: 1,
+  },
   changeTypeButton: {
-    marginLeft: 'auto',
-    paddingHorizontal: spacing.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  changeTypeText: {
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
   saveContainer: {
     marginTop: spacing.lg,
   },
 });
-

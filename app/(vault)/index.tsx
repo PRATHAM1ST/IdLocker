@@ -1,5 +1,5 @@
 /**
- * Vault home screen - displays all vault items with search and filter
+ * Vault home screen - redesigned with illustrated header and bottom sheet style
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -7,26 +7,27 @@ import {
   View,
   StyleSheet,
   FlatList,
-  TextInput,
+  ScrollView,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { VaultItemCard } from '../../src/components/VaultItemCard';
-import { CategoryTabs } from '../../src/components/CategoryTabs';
+import { CategoryCard } from '../../src/components/CategoryCard';
+import { IllustratedHeader } from '../../src/components/IllustratedHeader';
 import { EmptyState } from '../../src/components/EmptyState';
-import { IconButton } from '../../src/components/Button';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault, useGroupedItems } from '../../src/context/VaultProvider';
 import { spacing, borderRadius } from '../../src/styles/theme';
+import { VAULT_ITEM_TYPES } from '../../src/utils/constants';
 import type { VaultItem, VaultItemType } from '../../src/utils/types';
 
-type CategoryFilter = VaultItemType | 'all';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function VaultHomeScreen() {
   const router = useRouter();
@@ -35,14 +36,11 @@ export default function VaultHomeScreen() {
   const { items, isLoading, refreshVault } = useVault();
   const groupedItems = useGroupedItems();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Calculate category counts
   const categoryCounts = useMemo(() => {
-    const counts: Record<CategoryFilter, number> = {
-      all: items.length,
+    const counts: Record<VaultItemType, number> = {
       bankAccount: groupedItems.get('bankAccount')?.length || 0,
       card: groupedItems.get('card')?.length || 0,
       govId: groupedItems.get('govId')?.length || 0,
@@ -51,45 +49,14 @@ export default function VaultHomeScreen() {
       other: groupedItems.get('other')?.length || 0,
     };
     return counts;
-  }, [items, groupedItems]);
+  }, [groupedItems]);
 
-  // Filter items based on search and category
-  const filteredItems = useMemo(() => {
-    let result = items;
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      result = result.filter(item => item.type === selectedCategory);
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(item => {
-        // Search in label
-        if (item.label.toLowerCase().includes(query)) return true;
-
-        // Search in non-sensitive fields
-        const searchableFields = ['bankName', 'serviceName', 'cardNickname', 'idType', 'title'];
-        for (const key of searchableFields) {
-          if (item.fields[key]?.toLowerCase().includes(query)) return true;
-        }
-
-        // Match last 4 digits exactly
-        if (/^\d{4}$/.test(query)) {
-          if (item.fields.lastFourDigits === query) return true;
-          if (item.fields.accountNumber?.endsWith(query)) return true;
-        }
-
-        return false;
-      });
-    }
-
-    // Sort by updated date
-    return result.sort((a, b) => 
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
-  }, [items, selectedCategory, searchQuery]);
+  // Get recent items (last 10)
+  const recentItems = useMemo(() => {
+    return [...items]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 10);
+  }, [items]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -101,147 +68,144 @@ export default function VaultHomeScreen() {
     router.push(`/(vault)/item/${item.id}` as any);
   }, [router]);
 
-  const handleAddItem = useCallback((type?: VaultItemType) => {
-    if (type) {
-      router.push(`/(vault)/add?type=${type}` as any);
-    } else {
-      router.push('/(vault)/add' as any);
-    }
+  const handleCategoryPress = useCallback((type: VaultItemType) => {
+    router.push(`/(vault)/categories?filter=${type}` as any);
   }, [router]);
 
-  const handleSettings = useCallback(() => {
-    router.push('/(vault)/settings' as any);
+  const handleSearchPress = useCallback(() => {
+    router.push('/(vault)/search' as any);
   }, [router]);
 
-  const renderItem = useCallback(({ item }: { item: VaultItem }) => (
-    <VaultItemCard item={item} onPress={handleItemPress} />
-  ), [handleItemPress]);
+  const handleAddItem = useCallback(() => {
+    router.push('/(vault)/add' as any);
+  }, [router]);
 
-  const renderHeader = () => (
-    <View>
-      {/* Category tabs */}
-      <CategoryTabs
-        selected={selectedCategory}
-        onSelect={setSelectedCategory}
-        counts={categoryCounts}
-      />
+  const renderCategorySection = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <ThemedText variant="title" style={styles.sectionTitle}>
+          Categories
+        </ThemedText>
+        <ThemedText variant="caption" color="secondary">
+          Quick access
+        </ThemedText>
+      </View>
+      
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoryScroll}
+      >
+        {VAULT_ITEM_TYPES.map(({ type }) => (
+          <CategoryCard
+            key={type}
+            type={type}
+            count={categoryCounts[type]}
+            onPress={() => handleCategoryPress(type)}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 
-  const renderEmpty = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      );
-    }
-
-    if (searchQuery) {
-      return (
+  const renderRecentSection = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <ThemedText variant="title" style={styles.sectionTitle}>
+          Recent Items
+        </ThemedText>
+        {recentItems.length > 0 && (
+          <TouchableOpacity 
+            onPress={() => router.push('/(vault)/categories' as any)}
+            activeOpacity={0.7}
+          >
+            <ThemedText variant="caption" color="accent" style={styles.seeAllText}>
+              See All
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      {recentItems.length > 0 ? (
+        recentItems.map((item) => (
+          <VaultItemCard
+            key={item.id}
+            item={item}
+            onPress={handleItemPress}
+          />
+        ))
+      ) : (
         <EmptyState
-          icon="search-outline"
-          title="No results found"
-          description={`No items match "${searchQuery}"`}
+          icon="shield-outline"
+          title="Your vault is empty"
+          description="Start adding your sensitive information to keep it secure"
+          actionLabel="Add Your First Item"
+          onAction={handleAddItem}
         />
-      );
-    }
+      )}
+    </View>
+  );
 
-    if (selectedCategory !== 'all') {
-      return (
-        <EmptyState
-          icon="folder-open-outline"
-          title="No items in this category"
-          description="Add your first item to get started"
-          actionLabel="Add Item"
-          onAction={() => handleAddItem(selectedCategory)}
-        />
-      );
-    }
-
+  if (isLoading && items.length === 0) {
     return (
-      <EmptyState
-        icon="shield-outline"
-        title="Your vault is empty"
-        description="Start adding your sensitive information to keep it secure"
-        actionLabel="Add Your First Item"
-        onAction={() => handleAddItem()}
-      />
-    );
-  };
-
-  return (
-    <ThemedView style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <View style={styles.headerTop}>
-          <View style={styles.titleRow}>
-            <View style={[styles.logoMini, { backgroundColor: colors.primary }]}>
-              <Ionicons name="lock-closed" size={16} color="#FFFFFF" />
-            </View>
-            <ThemedText variant="title">Vault</ThemedText>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <IllustratedHeader onSearchPress={handleSearchPress} />
+        <View style={[styles.bottomSheet, { backgroundColor: colors.background }]}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
-          <IconButton
-            icon="settings-outline"
-            onPress={handleSettings}
-            color={colors.textSecondary}
-          />
-        </View>
-
-        {/* Search bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.backgroundTertiary }]}>
-          <Ionicons name="search" size={20} color={colors.textTertiary} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search vault..."
-            placeholderTextColor={colors.placeholder}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
+    );
+  }
 
-      {/* Item list */}
-      <FlatList
-        data={filteredItems}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={[
-          styles.listContent,
-          filteredItems.length === 0 && styles.emptyListContent,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+  return (
+    <View style={[styles.container, { backgroundColor: colors.headerGradientStart }]}>
+      {/* Illustrated Header */}
+      <IllustratedHeader onSearchPress={handleSearchPress} />
+
+      {/* Bottom Sheet Content */}
+      <View style={[styles.bottomSheet, { backgroundColor: colors.background }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          {/* Drag indicator */}
+          <View style={styles.dragIndicatorContainer}>
+            <View style={[styles.dragIndicator, { backgroundColor: colors.border }]} />
+          </View>
+
+          {/* Categories */}
+          {renderCategorySection()}
+
+          {/* Recent Items */}
+          {renderRecentSection()}
+        </ScrollView>
+      </View>
 
       {/* FAB */}
       <TouchableOpacity
         style={[
           styles.fab,
-          { backgroundColor: colors.primary, bottom: insets.bottom + spacing.lg },
+          { 
+            backgroundColor: colors.accent,
+            bottom: insets.bottom + 100,
+          },
         ]}
         onPress={handleAddItem}
         activeOpacity={0.8}
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
-    </ThemedView>
+    </View>
   );
 }
 
@@ -249,46 +213,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.md,
+  bottomSheet: {
+    flex: 1,
+    marginTop: -24,
+    borderTopLeftRadius: borderRadius['3xl'],
+    borderTopRightRadius: borderRadius['3xl'],
+    overflow: 'hidden',
   },
-  headerTop: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  dragIndicatorContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  dragIndicator: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+  },
+  section: {
+    paddingTop: spacing.md,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
     marginBottom: spacing.md,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
   },
-  logoMini: {
-    width: 28,
-    height: 28,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
+  seeAllText: {
+    fontWeight: '600',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
-  emptyListContent: {
-    flexGrow: 1,
+  categoryScroll: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.sm,
   },
   loadingContainer: {
     flex: 1,
@@ -304,11 +270,10 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
 });
-

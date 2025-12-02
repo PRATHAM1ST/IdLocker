@@ -53,7 +53,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
   const borderColor = error 
     ? colors.error 
     : isFocused 
-      ? colors.primary 
+      ? colors.accent 
       : colors.inputBorder;
 
   return (
@@ -238,7 +238,7 @@ export function Select({
                 {option.label}
               </ThemedText>
               {option.value === value && (
-                <Ionicons name="checkmark" size={18} color={colors.primary} />
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
               )}
             </TouchableOpacity>
           ))}
