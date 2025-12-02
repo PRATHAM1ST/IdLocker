@@ -2,19 +2,32 @@
  * Vault group layout - protected screens with tab navigation and lock overlay
  */
 
-import { View, StyleSheet } from 'react-native';
-import { Tabs, Stack } from 'expo-router';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Tabs, useRouter, usePathname } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { LockOverlay } from '../../src/components/LockOverlay';
-import { spacing } from '../../src/styles/theme';
+import { spacing, shadows, darkShadows, borderRadius } from '../../src/styles/theme';
 
 export default function VaultLayout() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const router = useRouter();
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
   // Prevent screen capture on all vault screens
   usePreventScreenCapture();
+
+  // Check if we're on screens that shouldn't show the add button
+  const hideAddButton = pathname.includes('/add') || pathname.includes('/edit') || pathname.includes('/item/');
+
+  const currentShadows = isDark ? darkShadows : shadows;
+
+  // Tab item styles for left and right positioning
+  const leftTabStyle = { marginRight: spacing.sm };
+  const rightTabStyle = { marginLeft: spacing.sm };
 
   return (
     <View style={styles.container}>
@@ -32,6 +45,7 @@ export default function VaultLayout() {
             backgroundColor: colors.backgroundSecondary,
             borderTopColor: colors.border,
             paddingTop: spacing.xs,
+            paddingHorizontal: spacing.md,
             height: 85,
           },
           tabBarActiveTintColor: colors.accent,
@@ -48,6 +62,7 @@ export default function VaultLayout() {
           options={{
             title: 'Home',
             headerShown: false,
+            tabBarItemStyle: leftTabStyle,
             tabBarIcon: ({ color, focused }) => (
               <Ionicons 
                 name={focused ? 'shield' : 'shield-outline'} 
@@ -62,6 +77,7 @@ export default function VaultLayout() {
           options={{
             title: 'Categories',
             headerShown: false,
+            tabBarItemStyle: { marginRight: spacing.xl },
             tabBarIcon: ({ color, focused }) => (
               <Ionicons 
                 name={focused ? 'grid' : 'grid-outline'} 
@@ -71,11 +87,24 @@ export default function VaultLayout() {
             ),
           }}
         />
+        {/* Hidden spacer for the floating add button */}
+        <Tabs.Screen
+          name="add"
+          options={{
+            href: null,
+            headerShown: false,
+            title: 'Add Item',
+            tabBarItemStyle: { width: 70 },
+            tabBarIcon: () => <View style={{ width: 70 }} />,
+            tabBarLabel: () => null,
+          }}
+        />
         <Tabs.Screen
           name="search"
           options={{
             title: 'Search',
             headerShown: false,
+            tabBarItemStyle: { marginLeft: spacing.xl },
             tabBarIcon: ({ color, focused }) => (
               <Ionicons 
                 name={focused ? 'search' : 'search-outline'} 
@@ -90,6 +119,7 @@ export default function VaultLayout() {
           options={{
             title: 'Settings',
             headerShown: true,
+            tabBarItemStyle: rightTabStyle,
             tabBarIcon: ({ color, focused }) => (
               <Ionicons 
                 name={focused ? 'person' : 'person-outline'} 
@@ -109,14 +139,6 @@ export default function VaultLayout() {
           }}
         />
         <Tabs.Screen
-          name="add"
-          options={{
-            href: null,
-            headerShown: false,
-            title: 'Add Item',
-          }}
-        />
-        <Tabs.Screen
           name="edit/[id]"
           options={{
             href: null,
@@ -125,6 +147,24 @@ export default function VaultLayout() {
           }}
         />
       </Tabs>
+
+      {/* Floating Add Button - Squircle style */}
+      {!hideAddButton && (
+        <TouchableOpacity
+          style={[
+            styles.floatingAddButton,
+            {
+              backgroundColor: colors.accent,
+              bottom: 50 + Math.max(insets.bottom, spacing.sm),
+              ...currentShadows.xl,
+            },
+          ]}
+          onPress={() => router.push('/add')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={32} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
       
       {/* Lock overlay appears on top of all vault screens when locked */}
       <LockOverlay />
@@ -135,5 +175,15 @@ export default function VaultLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    alignSelf: 'center',
+    width: 58,
+    height: 58,
+    borderRadius: borderRadius.xl, // Squircle: 20px radius for rounded square
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
   },
 });

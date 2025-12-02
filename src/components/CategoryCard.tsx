@@ -3,20 +3,20 @@
  * Squircle design language
  */
 
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
   Dimensions,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeProvider';
-import { ThemedText } from './ThemedText';
-import { spacing, borderRadius, getCategoryColor, shadows } from '../styles/theme';
-import type { VaultItemType } from '../utils/types';
+import { borderRadius, getCategoryColor, shadows, spacing } from '../styles/theme';
 import { ITEM_TYPE_CONFIGS } from '../utils/constants';
+import type { VaultItemType } from '../utils/types';
+import { ThemedText } from './ThemedText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - spacing.md) / 2;
@@ -120,7 +120,80 @@ export function CategoryCardLarge({ type, count, onPress }: CategoryCardLargePro
 }
 
 /**
- * Minimal category chip for filter/selection
+ * Category filter card - looks like CategoryCard but works as a selectable filter
+ */
+interface CategoryFilterCardProps {
+  type: VaultItemType | 'all';
+  label: string;
+  icon: string;
+  isSelected: boolean;
+  count?: number;
+  onPress: () => void;
+}
+
+const FILTER_CARD_WIDTH = 90;
+const FILTER_CARD_HEIGHT = 72;
+
+export function CategoryFilterCard({ type, label, icon, isSelected, count, onPress }: CategoryFilterCardProps) {
+  const { colors, isDark } = useTheme();
+  
+  const categoryColor = type !== 'all' ? getCategoryColor(type, isDark) : null;
+  
+  // For 'all' type, use accent color
+  const gradientColors: [string, string] = type !== 'all' && categoryColor
+    ? [categoryColor.gradientStart, categoryColor.gradientEnd]
+    : [colors.accent, colors.accentLight];
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.filterCard,
+        isSelected && shadows.md,
+        !isSelected && { opacity: 0.6 },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <LinearGradient
+        colors={gradientColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.filterGradient}
+      >
+        {/* Icon */}
+        <View style={styles.filterIconContainer}>
+          <Ionicons
+            name={icon as any}
+            size={16}
+            color="rgba(255, 255, 255, 0.9)"
+          />
+        </View>
+
+        {/* Label and count */}
+        <View style={styles.filterLabelContainer}>
+          <ThemedText variant="caption" style={styles.filterLabel} numberOfLines={1}>
+            {label}
+          </ThemedText>
+          {count !== undefined && (
+            <ThemedText variant="caption" style={styles.filterCount}>
+              {count}
+            </ThemedText>
+          )}
+        </View>
+
+        {/* Selection indicator */}
+        {isSelected && (
+          <View style={styles.selectedIndicator}>
+            <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
+          </View>
+        )}
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Minimal category chip for filter/selection (legacy)
  */
 interface CategoryChipProps {
   type: VaultItemType | 'all';
@@ -262,12 +335,54 @@ const styles = StyleSheet.create({
   largeSubtitle: {
     color: 'rgba(255, 255, 255, 0.8)',
   },
+  // Filter card styles (like CategoryCard but smaller, for filters)
+  filterCard: {
+    width: FILTER_CARD_WIDTH,
+    height: FILTER_CARD_HEIGHT,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+    marginRight: spacing.sm,
+  },
+  filterGradient: {
+    flex: 1,
+    padding: spacing.sm,
+    justifyContent: 'space-between',
+  },
+  filterIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  filterLabel: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 11,
+    flex: 1,
+  },
+  filterCount: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+  },
   // Chip styles
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
     marginRight: spacing.sm,
   },
@@ -277,7 +392,7 @@ const styles = StyleSheet.create({
   },
   chipBadge: {
     marginLeft: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     minWidth: 18,

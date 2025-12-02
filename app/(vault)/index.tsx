@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '../../src/components/ThemedText';
 import { VaultItemCard } from '../../src/components/VaultItemCard';
@@ -179,21 +178,6 @@ export default function VaultHomeScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* FAB */}
-      <TouchableOpacity
-        style={[
-          styles.fab,
-          { 
-            backgroundColor: colors.accent,
-            bottom: layout.tabBarHeight + spacing.md,
-          },
-        ]}
-        onPress={handleAddItem}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -241,19 +225,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.base,
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
   },
 });
