@@ -1,34 +1,36 @@
 /**
  * Edit item screen - modify existing vault item
  * Redesigned with modern styling
+ * Supports custom categories and item-level custom fields
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '../../../src/components/ThemedView';
-import { ThemedText } from '../../../src/components/ThemedText';
-import { Input, Select } from '../../../src/components/Input';
 import { Button } from '../../../src/components/Button';
+import { CustomFieldEditor } from '../../../src/components/CustomFieldEditor';
 import { ImagePicker } from '../../../src/components/ImagePicker';
+import { Input, Select } from '../../../src/components/Input';
+import { ThemedText } from '../../../src/components/ThemedText';
+import { ThemedView } from '../../../src/components/ThemedView';
+import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
-import { spacing, borderRadius, getCategoryColor, shadows } from '../../../src/styles/theme';
-import { ITEM_TYPE_CONFIGS } from '../../../src/utils/constants';
-import { validateVaultItem, sanitizeInput } from '../../../src/utils/validation';
-import type { FieldDefinition, ImageAttachment } from '../../../src/utils/types';
+import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
+import type { CustomField, FieldDefinition, ImageAttachment } from '../../../src/utils/types';
+import { sanitizeInput } from '../../../src/utils/validation';
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,13 +38,15 @@ export default function EditItemScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { getItem, updateItem, isLoading } = useVault();
+  const { getCategoryById } = useCategories();
 
   const item = useMemo(() => getItem(id), [getItem, id]);
-  const config = item ? ITEM_TYPE_CONFIGS[item.type] : null;
-  const categoryColor = item ? getCategoryColor(item.type, isDark) : null;
+  const category = useMemo(() => item ? getCategoryById(item.type) : null, [item, getCategoryById]);
+  const categoryColor = category?.color || null;
 
   const [label, setLabel] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -53,6 +57,7 @@ export default function EditItemScreen() {
     if (item) {
       setLabel(item.label);
       setFields({ ...item.fields });
+      setCustomFields(item.customFields || []);
       setImages(item.images || []);
     }
   }, [item]);
@@ -88,16 +93,29 @@ export default function EditItemScreen() {
     setHasChanges(true);
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!item) return;
+  const handleCustomFieldsChange = useCallback((newCustomFields: CustomField[]) => {
+    setCustomFields(newCustomFields);
+    setHasChanges(true);
+  }, []);
 
-    // Validate
-    const validation = validateVaultItem(item.type, label, fields);
-    if (!validation.isValid) {
-      const errorMap: Record<string, string> = {};
-      for (const error of validation.errors) {
-        errorMap[error.field] = error.message;
+  const handleSave = useCallback(async () => {
+    if (!item || !category) return;
+
+    // Basic validation
+    const errorMap: Record<string, string> = {};
+    
+    if (!label.trim()) {
+      errorMap.label = 'Label is required';
+    }
+    
+    // Validate required fields from category
+    for (const fieldDef of category.fields) {
+      if (fieldDef.required && !fields[fieldDef.key]?.trim()) {
+        errorMap[fieldDef.key] = `${fieldDef.label} is required`;
       }
+    }
+    
+    if (Object.keys(errorMap).length > 0) {
       setErrors(errorMap);
       return;
     }
@@ -106,6 +124,7 @@ export default function EditItemScreen() {
     const updatedItem = await updateItem(item.id, {
       label: label.trim(),
       fields,
+      customFields: customFields.length > 0 ? customFields : undefined,
       images: images.length > 0 ? images : undefined,
     });
     setIsSaving(false);
@@ -115,7 +134,7 @@ export default function EditItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
     }
-  }, [item, label, fields, images, updateItem, router]);
+  }, [item, category, label, fields, customFields, images, updateItem, router]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -169,7 +188,7 @@ export default function EditItemScreen() {
     );
   };
 
-  if (!item || !config || !categoryColor) {
+  if (!item || !category || !categoryColor) {
     return (
       <ThemedView style={styles.container}>
         <Stack.Screen options={{ title: 'Edit Item', headerShown: true }} />
@@ -214,7 +233,7 @@ export default function EditItemScreen() {
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <ThemedText variant="subtitle" style={styles.headerTitle}>
-            Edit {config.label}
+            Edit {category.label}
           </ThemedText>
           <View style={styles.headerSpacer} />
         </View>
@@ -234,9 +253,9 @@ export default function EditItemScreen() {
           {/* Type indicator */}
           <View style={[styles.typeIndicator, { backgroundColor: colors.card }, shadows.sm]}>
             <View style={[styles.typeIconSmall, { backgroundColor: categoryColor.bg }]}>
-              <Ionicons name={config.icon as any} size={20} color={categoryColor.icon} />
+              <Ionicons name={category.icon as any} size={20} color={categoryColor.icon} />
             </View>
-            <ThemedText variant="label">{config.label}</ThemedText>
+            <ThemedText variant="label">{category.label}</ThemedText>
             <View style={[styles.typeBadge, { backgroundColor: categoryColor.bg }]}>
               <ThemedText variant="caption" style={{ color: categoryColor.text }}>
                 Editing
@@ -253,8 +272,14 @@ export default function EditItemScreen() {
             error={errors.label}
           />
 
-          {/* Dynamic fields */}
-          {config.fields.map(renderField)}
+          {/* Dynamic fields from category */}
+          {category.fields.map(renderField)}
+
+          {/* Custom fields section */}
+          <CustomFieldEditor
+            customFields={customFields}
+            onCustomFieldsChange={handleCustomFieldsChange}
+          />
 
           {/* Image attachments */}
           <ImagePicker

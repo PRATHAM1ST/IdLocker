@@ -14,6 +14,7 @@ export { ImagePicker } from './ImagePicker';
 export { ImageResizer } from './ImageResizer';
 export { ImageShareModal } from './ImageShareModal';
 export { IllustratedHeader, SimpleHeader } from './IllustratedHeader';
-export { CategoryCard, CategoryCardLarge, CategoryChip } from './CategoryCard';
+export { CategoryCard, CategoryCardLarge, CategoryChip, DynamicCategoryCard, DynamicCategoryFilterCard } from './CategoryCard';
 export { BottomTabBar } from './BottomTabBar';
+export { CustomFieldEditor } from './CustomFieldEditor';
 

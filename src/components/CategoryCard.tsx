@@ -1,6 +1,7 @@
 /**
  * Category Card component with gradient background
  * Squircle design language
+ * Supports both preset and custom categories
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,7 @@ import {
 import { useTheme } from '../context/ThemeProvider';
 import { borderRadius, getCategoryColor, shadows, spacing } from '../styles/theme';
 import { ITEM_TYPE_CONFIGS } from '../utils/constants';
-import type { VaultItemType } from '../utils/types';
+import type { CustomCategory, VaultItemType } from '../utils/types';
 import { ThemedText } from './ThemedText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -120,6 +121,51 @@ export function CategoryCardLarge({ type, count, onPress }: CategoryCardLargePro
 }
 
 /**
+ * Dynamic category card that works with CustomCategory
+ */
+interface DynamicCategoryCardProps {
+  category: CustomCategory;
+  count: number;
+  onPress: () => void;
+}
+
+export function DynamicCategoryCard({ category, count, onPress }: DynamicCategoryCardProps) {
+  return (
+    <TouchableOpacity
+      style={[styles.largeContainer, shadows.md]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <LinearGradient
+        colors={[category.color.gradientStart, category.color.gradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.largeGradient}
+      >
+        {/* Icon */}
+        <View style={styles.largeIconContainer}>
+          <Ionicons
+            name={category.icon as any}
+            size={32}
+            color="rgba(255, 255, 255, 0.95)"
+          />
+        </View>
+
+        {/* Content */}
+        <View style={styles.largeContent}>
+          <ThemedText variant="subtitle" style={styles.largeLabel}>
+            {category.label}
+          </ThemedText>
+          <ThemedText variant="caption" style={styles.largeSubtitle}>
+            {count} {count === 1 ? 'item' : 'items'}
+          </ThemedText>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+/**
  * Category filter card - looks like CategoryCard but works as a selectable filter
  */
 interface CategoryFilterCardProps {
@@ -179,6 +225,73 @@ export function CategoryFilterCard({ type, label, icon, isSelected, count, onPre
               {count}
             </ThemedText>
           )}
+        </View>
+
+        {/* Selection indicator */}
+        {isSelected && (
+          <View style={styles.selectedIndicator}>
+            <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
+          </View>
+        )}
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Dynamic category filter card that works with CustomCategory
+ */
+interface DynamicCategoryFilterCardProps {
+  category: CustomCategory | null; // null for 'all'
+  isSelected: boolean;
+  count: number;
+  onPress: () => void;
+}
+
+export function DynamicCategoryFilterCard({ category, isSelected, count, onPress }: DynamicCategoryFilterCardProps) {
+  const { colors } = useTheme();
+  
+  // For 'all' type (null category), use accent color
+  const gradientColors: [string, string] = category
+    ? [category.color.gradientStart, category.color.gradientEnd]
+    : [colors.accent, colors.accentLight];
+
+  const icon = category ? category.icon : 'grid-outline';
+  const label = category ? category.label : 'All';
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.filterCard,
+        isSelected && shadows.md,
+        !isSelected && { opacity: 0.6 },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <LinearGradient
+        colors={gradientColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.filterGradient}
+      >
+        {/* Icon */}
+        <View style={styles.filterIconContainer}>
+          <Ionicons
+            name={icon as any}
+            size={16}
+            color="rgba(255, 255, 255, 0.9)"
+          />
+        </View>
+
+        {/* Label and count */}
+        <View style={styles.filterLabelContainer}>
+          <ThemedText variant="caption" style={styles.filterLabel} numberOfLines={1}>
+            {label}
+          </ThemedText>
+          <ThemedText variant="caption" style={styles.filterCount}>
+            {count}
+          </ThemedText>
         </View>
 
         {/* Selection indicator */}

@@ -334,9 +334,17 @@ export function getThemeShadows(isDark: boolean) {
 }
 
 // Get category color based on theme
+// Returns fallback colors for unknown/custom categories
 export function getCategoryColor(
-  type: keyof typeof categoryColors,
+  type: string,
   isDark: boolean
 ) {
-  return isDark ? categoryColors[type].dark : categoryColors[type].light;
+  // Check if it's a known preset category
+  if (type in categoryColors) {
+    const colors = categoryColors[type as keyof typeof categoryColors];
+    return isDark ? colors.dark : colors.light;
+  }
+  
+  // Fallback for custom categories (uses 'other' colors)
+  return isDark ? categoryColors.other.dark : categoryColors.other.light;
 }

@@ -15,17 +15,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  CategoryCardLarge,
-  CategoryFilterCard,
+  DynamicCategoryCard,
+  DynamicCategoryFilterCard,
 } from "../../src/components/CategoryCard";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ThemedText } from "../../src/components/ThemedText";
 import { ThemedView } from "../../src/components/ThemedView";
 import { VaultItemGridCard } from "../../src/components/VaultItemGridCard";
+import { useCategories } from "../../src/context/CategoryProvider";
 import { useTheme } from "../../src/context/ThemeProvider";
 import { useGroupedItems, useVault } from "../../src/context/VaultProvider";
 import { borderRadius, layout, spacing } from "../../src/styles/theme";
-import { VAULT_ITEM_TYPES } from "../../src/utils/constants";
 import type { VaultItem, VaultItemType } from "../../src/utils/types";
 
 type FilterType = VaultItemType | "all";
@@ -35,25 +35,26 @@ export default function VaultHomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { items, isLoading, refreshVault } = useVault();
+  const { categories, refreshCategories } = useCategories();
   const groupedItems = useGroupedItems();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
-  // Calculate category counts
+  // Calculate category counts dynamically
   const categoryCounts = useMemo(() => {
-    const counts: Record<FilterType, number> = {
+    const counts: Record<string, number> = {
       all: items.length,
-      bankAccount: groupedItems.get("bankAccount")?.length || 0,
-      card: groupedItems.get("card")?.length || 0,
-      govId: groupedItems.get("govId")?.length || 0,
-      login: groupedItems.get("login")?.length || 0,
-      note: groupedItems.get("note")?.length || 0,
-      other: groupedItems.get("other")?.length || 0,
     };
+    
+    // Calculate counts for each category
+    for (const category of categories) {
+      counts[category.id] = items.filter(item => item.type === category.id).length;
+    }
+    
     return counts;
-  }, [items, groupedItems]);
+  }, [items, categories]);
 
   // Filter items based on selection
   const filteredItems = useMemo(() => {
@@ -71,9 +72,9 @@ export default function VaultHomeScreen() {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await refreshVault();
+    await Promise.all([refreshVault(), refreshCategories()]);
     setIsRefreshing(false);
-  }, [refreshVault]);
+  }, [refreshVault, refreshCategories]);
 
   const handleItemPress = useCallback(
     (item: VaultItem) => {
@@ -82,8 +83,8 @@ export default function VaultHomeScreen() {
     [router]
   );
 
-  const handleCategoryPress = useCallback((type: VaultItemType) => {
-    setSelectedFilter(type);
+  const handleCategoryPress = useCallback((categoryId: string) => {
+    setSelectedFilter(categoryId);
     setViewMode("list");
   }, []);
 
@@ -105,6 +106,16 @@ export default function VaultHomeScreen() {
   const handleSettingsPress = useCallback(() => {
     router.push("/(vault)/settings" as any);
   }, [router]);
+
+  const handleCategoriesPress = useCallback(() => {
+    router.push("/(vault)/categories" as any);
+  }, [router]);
+
+  // Get the selected category
+  const selectedCategory = useMemo(() => {
+    if (selectedFilter === "all") return null;
+    return categories.find(c => c.id === selectedFilter) || null;
+  }, [selectedFilter, categories]);
 
   return (
     <ThemedView style={styles.container}>
@@ -143,6 +154,13 @@ export default function VaultHomeScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.headerButton}
+                onPress={handleCategoriesPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="layers-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.headerButton}
                 onPress={handleSettingsPress}
                 activeOpacity={0.7}
               >
@@ -175,23 +193,19 @@ export default function VaultHomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterScroll}
           >
-            <CategoryFilterCard
-              type="all"
-              label="All"
-              icon="grid-outline"
+            <DynamicCategoryFilterCard
+              category={null}
               isSelected={selectedFilter === "all"}
               count={categoryCounts.all}
               onPress={() => setSelectedFilter("all")}
             />
-            {VAULT_ITEM_TYPES.map(({ type, label, icon }) => (
-              <CategoryFilterCard
-                key={type}
-                type={type}
-                label={label}
-                icon={icon}
-                isSelected={selectedFilter === type}
-                count={categoryCounts[type]}
-                onPress={() => setSelectedFilter(type)}
+            {categories.map((category) => (
+              <DynamicCategoryFilterCard
+                key={category.id}
+                category={category}
+                isSelected={selectedFilter === category.id}
+                count={categoryCounts[category.id] || 0}
+                onPress={() => setSelectedFilter(category.id)}
               />
             ))}
           </ScrollView>
@@ -201,8 +215,7 @@ export default function VaultHomeScreen() {
             <ThemedText variant="subtitle" style={styles.sectionTitle}>
               {selectedFilter === "all"
                 ? "All Items"
-                : VAULT_ITEM_TYPES.find((t) => t.type === selectedFilter)
-                    ?.label}
+                : selectedCategory?.label || "Items"}
             </ThemedText>
             <ThemedText variant="caption" color="secondary">
               {filteredItems.length}{" "}
@@ -213,12 +226,12 @@ export default function VaultHomeScreen() {
           {/* Grid or List view */}
           {viewMode === "grid" && selectedFilter === "all" ? (
             <View style={styles.gridContainer}>
-              {VAULT_ITEM_TYPES.map(({ type }) => (
-                <CategoryCardLarge
-                  key={type}
-                  type={type}
-                  count={categoryCounts[type]}
-                  onPress={() => handleCategoryPress(type)}
+              {categories.map((category) => (
+                <DynamicCategoryCard
+                  key={category.id}
+                  category={category}
+                  count={categoryCounts[category.id] || 0}
+                  onPress={() => handleCategoryPress(category.id)}
                 />
               ))}
             </View>
@@ -241,9 +254,7 @@ export default function VaultHomeScreen() {
                   description={
                     selectedFilter === "all"
                       ? "Your vault is empty. Add your first item to get started."
-                      : `No ${VAULT_ITEM_TYPES.find(
-                          (t) => t.type === selectedFilter
-                        )?.label.toLowerCase()} items yet.`
+                      : `No ${selectedCategory?.label.toLowerCase() || "matching"} items yet.`
                   }
                   actionLabel="Add Item"
                   onAction={() =>

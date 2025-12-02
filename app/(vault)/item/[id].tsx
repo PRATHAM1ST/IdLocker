@@ -3,31 +3,32 @@
  * Redesigned with category-colored gradient header
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '../../../src/components/ThemedView';
-import { ThemedText } from '../../../src/components/ThemedText';
-import { SecureField } from '../../../src/components/SecureField';
-import { Button, IconButton } from '../../../src/components/Button';
+import { Button } from '../../../src/components/Button';
 import { ImageShareModal } from '../../../src/components/ImageShareModal';
+import { SecureField } from '../../../src/components/SecureField';
+import { ThemedText } from '../../../src/components/ThemedText';
+import { ThemedView } from '../../../src/components/ThemedView';
+import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
-import { spacing, borderRadius, getCategoryColor, shadows } from '../../../src/styles/theme';
-import { ITEM_TYPE_CONFIGS, SENSITIVE_FIELDS } from '../../../src/utils/constants';
+import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
+import { SENSITIVE_FIELDS } from '../../../src/utils/constants';
+import type { ImageAttachment } from '../../../src/utils/types';
 import { formatCardExpiry } from '../../../src/utils/validation';
-import type { VaultItem, ImageAttachment } from '../../../src/utils/types';
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,6 +36,7 @@ export default function ItemDetailScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { getItem, deleteItem, isLoading } = useVault();
+  const { getCategoryById } = useCategories();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageAttachment | null>(null);
@@ -54,8 +56,8 @@ export default function ItemDetailScreen() {
     }
   }, [item]);
   
-  const config = item ? ITEM_TYPE_CONFIGS[item.type] : null;
-  const categoryColor = item ? getCategoryColor(item.type, isDark) : null;
+  const category = useMemo(() => item ? getCategoryById(item.type) : null, [item, getCategoryById]);
+  const categoryColor = category?.color || null;
 
   const handleEdit = useCallback(() => {
     if (item) {
@@ -89,7 +91,7 @@ export default function ItemDetailScreen() {
     );
   }, [item, deleteItem, router]);
 
-  if (!item || !config || !categoryColor) {
+  if (!item || !category || !categoryColor) {
     return (
       <ThemedView style={styles.container}>
         <Stack.Screen options={{ title: 'Details', headerShown: true }} />
@@ -110,10 +112,10 @@ export default function ItemDetailScreen() {
     );
   }
 
-  // Build display fields
+  // Build display fields from category template
   const displayFields: { key: string; label: string; value: string; sensitive: boolean }[] = [];
   
-  for (const fieldDef of config.fields) {
+  for (const fieldDef of category.fields) {
     const value = item.fields[fieldDef.key];
     if (value) {
       // Special formatting for expiry
@@ -138,6 +140,9 @@ export default function ItemDetailScreen() {
       });
     }
   }
+
+  // Add custom fields to display
+  const customFieldsDisplay = item.customFields || [];
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -196,7 +201,7 @@ export default function ItemDetailScreen() {
           <View style={styles.headerContent}>
             <View style={styles.iconContainer}>
               <Ionicons
-                name={config.icon as any}
+                name={category.icon as any}
                 size={36}
                 color="rgba(255, 255, 255, 0.95)"
               />
@@ -206,7 +211,7 @@ export default function ItemDetailScreen() {
             </ThemedText>
             <View style={styles.typeBadge}>
               <ThemedText variant="caption" style={styles.typeBadgeText}>
-                {config.label}
+                {category.label}
               </ThemedText>
             </View>
           </View>
@@ -230,6 +235,25 @@ export default function ItemDetailScreen() {
               />
             ))}
           </View>
+
+          {/* Custom Fields */}
+          {customFieldsDisplay.length > 0 && (
+            <View style={[styles.fieldsCard, { backgroundColor: colors.card }, shadows.md]}>
+              <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
+                Custom Fields
+              </ThemedText>
+              
+              {customFieldsDisplay.map(field => (
+                <SecureField
+                  key={field.id}
+                  label={field.label}
+                  value={field.value}
+                  sensitive={false}
+                  copyable
+                />
+              ))}
+            </View>
+          )}
 
           {/* Images */}
           {item.images && item.images.length > 0 && (

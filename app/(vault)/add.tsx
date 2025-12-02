@@ -1,33 +1,35 @@
 /**
  * Add item screen - dynamic form based on item type
  * Redesigned with modern styling
+ * Supports custom categories and item-level custom fields
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '../../src/components/ThemedView';
-import { ThemedText } from '../../src/components/ThemedText';
-import { Input, Select } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
+import { CustomFieldEditor } from '../../src/components/CustomFieldEditor';
 import { ImagePicker } from '../../src/components/ImagePicker';
+import { Input, Select } from '../../src/components/Input';
+import { ThemedText } from '../../src/components/ThemedText';
+import { ThemedView } from '../../src/components/ThemedView';
+import { useCategories } from '../../src/context/CategoryProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
-import { spacing, borderRadius, getCategoryColor, shadows } from '../../src/styles/theme';
-import { ITEM_TYPE_CONFIGS, VAULT_ITEM_TYPES } from '../../src/utils/constants';
-import { validateVaultItem, sanitizeInput } from '../../src/utils/validation';
-import type { VaultItemType, FieldDefinition, ImageAttachment } from '../../src/utils/types';
+import { borderRadius, shadows, spacing } from '../../src/styles/theme';
+import type { CustomCategory, CustomField, FieldDefinition, ImageAttachment, VaultItemType } from '../../src/utils/types';
+import { sanitizeInput } from '../../src/utils/validation';
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -35,26 +37,38 @@ export default function AddItemScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { addItem } = useVault();
+  const { categories, getCategoryById } = useCategories();
 
   const [selectedType, setSelectedType] = useState<VaultItemType | null>(
     params.type || null
   );
   const [label, setLabel] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  const config = selectedType ? ITEM_TYPE_CONFIGS[selectedType] : null;
-  const categoryColor = selectedType ? getCategoryColor(selectedType, isDark) : null;
+  // Get the selected category
+  const selectedCategory = useMemo(() => {
+    if (!selectedType) return null;
+    return getCategoryById(selectedType) || null;
+  }, [selectedType, getCategoryById]);
 
-  const handleTypeSelect = useCallback((type: VaultItemType) => {
-    setSelectedType(type);
+  const categoryColor = selectedCategory?.color || null;
+
+  const handleTypeSelect = useCallback((category: CustomCategory) => {
+    setSelectedType(category.id);
     setLabel('');
     setFields({});
+    setCustomFields([]);
     setImages([]);
     setErrors({});
   }, []);
+
+  const handleCreateCategory = useCallback(() => {
+    router.push('/(vault)/category/new' as any);
+  }, [router]);
 
   const handleFieldChange = useCallback((key: string, value: string) => {
     const sanitized = sanitizeInput(value);
@@ -70,15 +84,23 @@ export default function AddItemScreen() {
   }, [errors]);
 
   const handleSave = useCallback(async () => {
-    if (!selectedType) return;
+    if (!selectedType || !selectedCategory) return;
 
-    // Validate
-    const validation = validateVaultItem(selectedType, label, fields);
-    if (!validation.isValid) {
-      const errorMap: Record<string, string> = {};
-      for (const error of validation.errors) {
-        errorMap[error.field] = error.message;
+    // Basic validation
+    const errorMap: Record<string, string> = {};
+    
+    if (!label.trim()) {
+      errorMap.label = 'Label is required';
+    }
+    
+    // Validate required fields from category
+    for (const fieldDef of selectedCategory.fields) {
+      if (fieldDef.required && !fields[fieldDef.key]?.trim()) {
+        errorMap[fieldDef.key] = `${fieldDef.label} is required`;
       }
+    }
+    
+    if (Object.keys(errorMap).length > 0) {
       setErrors(errorMap);
       return;
     }
@@ -90,13 +112,14 @@ export default function AddItemScreen() {
       type: selectedType,
       label: label.trim(),
       imageCount: images.length,
-      images: images,
+      customFieldCount: customFields.length,
     });
     
     const newItem = await addItem({
       type: selectedType,
       label: label.trim(),
       fields,
+      customFields: customFields.length > 0 ? customFields : undefined,
       images: images.length > 0 ? images : undefined,
     });
     
@@ -110,7 +133,7 @@ export default function AddItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save item. Please try again.');
     }
-  }, [selectedType, label, fields, images, addItem, router]);
+  }, [selectedType, selectedCategory, label, fields, customFields, images, addItem, router]);
 
   const renderTypeSelector = () => (
     <View style={styles.typeSelectorContainer}>
@@ -119,32 +142,45 @@ export default function AddItemScreen() {
       </ThemedText>
       
       <View style={styles.typeGrid}>
-        {VAULT_ITEM_TYPES.map(({ type, label: typeLabel, icon }) => {
-          const color = getCategoryColor(type, isDark);
-          return (
-            <TouchableOpacity
-              key={type}
-              style={styles.typeCard}
-              onPress={() => handleTypeSelect(type)}
-              activeOpacity={0.85}
+        {categories.map((category) => (
+          <TouchableOpacity
+            key={category.id}
+            style={styles.typeCard}
+            onPress={() => handleTypeSelect(category)}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[category.color.gradientStart, category.color.gradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.typeCardGradient}
             >
-              <LinearGradient
-                colors={[color.gradientStart, color.gradientEnd]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.typeCardGradient}
-              >
-                <View style={styles.typeCardDecor} />
-                <View style={styles.typeIconContainer}>
-                  <Ionicons name={icon as any} size={28} color="rgba(255,255,255,0.95)" />
-                </View>
-                <ThemedText variant="label" style={styles.typeLabel}>
-                  {typeLabel}
-                </ThemedText>
-              </LinearGradient>
-            </TouchableOpacity>
-          );
-        })}
+              <View style={styles.typeCardDecor} />
+              <View style={styles.typeIconContainer}>
+                <Ionicons name={category.icon as any} size={28} color="rgba(255,255,255,0.95)" />
+              </View>
+              <ThemedText variant="label" style={styles.typeLabel}>
+                {category.label}
+              </ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+        ))}
+        
+        {/* Create new category option */}
+        <TouchableOpacity
+          style={styles.typeCard}
+          onPress={handleCreateCategory}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.createCategoryCard, { borderColor: colors.border }]}>
+            <View style={[styles.createCategoryIcon, { backgroundColor: colors.primary + '15' }]}>
+              <Ionicons name="add" size={28} color={colors.primary} />
+            </View>
+            <ThemedText variant="label" style={[styles.createCategoryLabel, { color: colors.primary }]}>
+              New Category
+            </ThemedText>
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -187,7 +223,7 @@ export default function AddItemScreen() {
   };
 
   const renderForm = () => {
-    if (!config || !categoryColor) return null;
+    if (!selectedCategory || !categoryColor) return null;
 
     return (
       <View style={styles.formContainer}>
@@ -204,10 +240,10 @@ export default function AddItemScreen() {
             style={styles.typeIndicatorGradient}
           >
             <View style={styles.typeIndicatorIcon}>
-              <Ionicons name={config.icon as any} size={20} color="rgba(255,255,255,0.95)" />
+              <Ionicons name={selectedCategory.icon as any} size={20} color="rgba(255,255,255,0.95)" />
             </View>
             <ThemedText variant="label" style={styles.typeIndicatorLabel}>
-              {config.label}
+              {selectedCategory.label}
             </ThemedText>
             <View style={styles.changeTypeButton}>
               <ThemedText variant="caption" style={styles.changeTypeText}>
@@ -235,8 +271,14 @@ export default function AddItemScreen() {
           error={errors.label}
         />
 
-        {/* Dynamic fields */}
-        {config.fields.map(renderField)}
+        {/* Dynamic fields from category */}
+        {selectedCategory.fields.map(renderField)}
+
+        {/* Custom fields section */}
+        <CustomFieldEditor
+          customFields={customFields}
+          onCustomFieldsChange={setCustomFields}
+        />
 
         {/* Image attachments */}
         <ImagePicker
@@ -284,7 +326,7 @@ export default function AddItemScreen() {
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <ThemedText variant="subtitle" style={styles.headerTitle}>
-            {selectedType ? `Add ${config?.label}` : 'Add Item'}
+            {selectedType ? `Add ${selectedCategory?.label}` : 'Add Item'}
           </ThemedText>
           <View style={styles.headerSpacer} />
         </View>
@@ -403,6 +445,26 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: spacing.lg,
     left: spacing.lg,
+  },
+  createCategoryCard: {
+    flex: 1,
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: borderRadius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createCategoryIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  createCategoryLabel: {
+    fontWeight: '600',
   },
   formContainer: {
     paddingTop: spacing.sm,

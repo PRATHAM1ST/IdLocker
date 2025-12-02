@@ -5,9 +5,9 @@
 
 import * as SecureStore from 'expo-secure-store';
 import { v4 as uuidv4 } from 'uuid';
-import type { VaultData, VaultItem, VaultMeta, AppSettings } from '../utils/types';
-import { isVaultData, isAppSettings } from '../utils/types';
-import { STORAGE_KEYS, CHUNK_SIZE, DEFAULT_SETTINGS } from '../utils/constants';
+import type { VaultData, VaultItem, VaultMeta, AppSettings, CategoriesData, CustomCategory } from '../utils/types';
+import { isVaultData, isAppSettings, isCategoriesData } from '../utils/types';
+import { STORAGE_KEYS, CHUNK_SIZE, DEFAULT_SETTINGS, DEFAULT_CATEGORIES } from '../utils/constants';
 import { logger } from '../utils/logger';
 import { deleteImages } from './imageStorage';
 
@@ -442,6 +442,183 @@ export async function checkVaultAvailability(): Promise<boolean> {
     const available = await SecureStore.isAvailableAsync();
     return available;
   } catch {
+    return false;
+  }
+}
+
+// ============================================
+// Categories Storage
+// ============================================
+
+/**
+ * Load categories from SecureStore
+ * Returns default categories if none are stored
+ */
+export async function loadCategories(): Promise<CategoriesData> {
+  try {
+    const isAvailable = await SecureStore.isAvailableAsync();
+    if (!isAvailable) {
+      logger.debug('SecureStore not available, using default categories');
+      return { version: 1, categories: DEFAULT_CATEGORIES };
+    }
+
+    const categoriesStr = await SecureStore.getItemAsync(
+      STORAGE_KEYS.CATEGORIES,
+      SECURE_STORE_OPTIONS
+    );
+    
+    if (!categoriesStr) {
+      logger.debug('No categories found, using defaults');
+      return { version: 1, categories: DEFAULT_CATEGORIES };
+    }
+    
+    const data = JSON.parse(categoriesStr);
+    
+    if (!isCategoriesData(data)) {
+      logger.warn('Invalid categories data format, using defaults');
+      return { version: 1, categories: DEFAULT_CATEGORIES };
+    }
+    
+    logger.debug('Categories loaded:', data.categories.length);
+    return data;
+  } catch (error) {
+    logger.debug('Could not load categories, using defaults');
+    return { version: 1, categories: DEFAULT_CATEGORIES };
+  }
+}
+
+/**
+ * Save categories to SecureStore
+ */
+export async function saveCategories(data: CategoriesData): Promise<boolean> {
+  try {
+    const isAvailable = await SecureStore.isAvailableAsync();
+    if (!isAvailable) {
+      logger.debug('SecureStore not available, categories will not persist');
+      return false;
+    }
+
+    await SecureStore.setItemAsync(
+      STORAGE_KEYS.CATEGORIES,
+      JSON.stringify(data),
+      SECURE_STORE_OPTIONS
+    );
+    
+    logger.debug('Categories saved:', data.categories.length);
+    return true;
+  } catch (error) {
+    logger.debug('Categories not persisted (expected in Expo Go)');
+    return false;
+  }
+}
+
+/**
+ * Add a new category
+ */
+export async function addCategory(
+  category: Omit<CustomCategory, 'createdAt' | 'updatedAt'>
+): Promise<CustomCategory | null> {
+  try {
+    const data = await loadCategories();
+    
+    const now = new Date().toISOString();
+    const newCategory: CustomCategory = {
+      ...category,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    data.categories.push(newCategory);
+    await saveCategories(data);
+    
+    logger.debug('Category added:', newCategory.id);
+    return newCategory;
+  } catch (error) {
+    logger.debug('Could not add category');
+    return null;
+  }
+}
+
+/**
+ * Update an existing category
+ */
+export async function updateCategory(
+  id: string,
+  updates: Partial<Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>>
+): Promise<CustomCategory | null> {
+  try {
+    const data = await loadCategories();
+    
+    const index = data.categories.findIndex(cat => cat.id === id);
+    if (index === -1) {
+      logger.debug('Category not found for update');
+      return null;
+    }
+    
+    const updatedCategory: CustomCategory = {
+      ...data.categories[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    data.categories[index] = updatedCategory;
+    await saveCategories(data);
+    
+    logger.debug('Category updated:', id);
+    return updatedCategory;
+  } catch (error) {
+    logger.debug('Could not update category');
+    return null;
+  }
+}
+
+/**
+ * Delete a category
+ */
+export async function deleteCategory(id: string): Promise<boolean> {
+  try {
+    const data = await loadCategories();
+    
+    const index = data.categories.findIndex(cat => cat.id === id);
+    if (index === -1) {
+      logger.debug('Category not found for deletion');
+      return false;
+    }
+    
+    data.categories.splice(index, 1);
+    await saveCategories(data);
+    
+    logger.debug('Category deleted:', id);
+    return true;
+  } catch (error) {
+    logger.debug('Could not delete category');
+    return false;
+  }
+}
+
+/**
+ * Get a single category by ID
+ */
+export async function getCategory(id: string): Promise<CustomCategory | null> {
+  try {
+    const data = await loadCategories();
+    return data.categories.find(cat => cat.id === id) || null;
+  } catch (error) {
+    logger.debug('Could not get category');
+    return null;
+  }
+}
+
+/**
+ * Reset categories to defaults
+ */
+export async function resetCategoriesToDefaults(): Promise<boolean> {
+  try {
+    await saveCategories({ version: 1, categories: DEFAULT_CATEGORIES });
+    logger.debug('Categories reset to defaults');
+    return true;
+  } catch (error) {
+    logger.debug('Could not reset categories');
     return false;
   }
 }

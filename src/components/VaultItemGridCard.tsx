@@ -14,10 +14,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
+import { useCategories } from '../context/CategoryProvider';
 import { ThemedText } from './ThemedText';
-import { spacing, borderRadius, getCategoryColor, shadows } from '../styles/theme';
+import { spacing, borderRadius, shadows } from '../styles/theme';
 import type { VaultItem } from '../utils/types';
-import { ITEM_TYPE_CONFIGS } from '../utils/constants';
 import { getItemPreview, formatCardExpiry } from '../utils/validation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,15 +31,16 @@ interface VaultItemGridCardProps {
 
 export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
   const { colors, isDark } = useTheme();
+  const { getCategoryById } = useCategories();
   
-  const config = ITEM_TYPE_CONFIGS[item.type];
-  const categoryColor = getCategoryColor(item.type, isDark);
+  const category = useMemo(() => getCategoryById(item.type), [item.type, getCategoryById]);
+  const categoryColor = category?.color || { gradientStart: '#6B7280', gradientEnd: '#9CA3AF', icon: '#6B7280', bg: '#F3F4F6', text: '#374151' };
   const preview = useMemo(() => getItemPreview(item), [item]);
   const hasImages = item.images && item.images.length > 0;
   const imageCount = item.images?.length || 0;
   const primaryImage = hasImages ? item.images![0] : null;
   
-  // Get secondary info based on item type
+  // Get secondary info based on item type or category
   const secondaryInfo = useMemo(() => {
     switch (item.type) {
       case 'bankAccount':
@@ -54,9 +55,9 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
       case 'note':
         return 'Secure Note';
       default:
-        return config.label;
+        return category?.label || 'Item';
     }
-  }, [item, config]);
+  }, [item, category]);
 
   // Format last updated time
   const lastUpdated = useMemo(() => {
@@ -110,7 +111,7 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
           <View style={styles.imageHeaderBadges}>
             <View style={[styles.categoryBadge, { backgroundColor: categoryColor.gradientStart }]}>
               <Ionicons
-                name={config.icon as any}
+                name={(category?.icon || 'folder-outline') as any}
                 size={12}
                 color="#FFFFFF"
               />
@@ -127,7 +128,7 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
           {/* Type badge at bottom */}
           <View style={styles.typeBadgeOnImage}>
             <ThemedText style={styles.typeBadgeText}>
-              {config.label}
+              {category?.label || 'Item'}
             </ThemedText>
           </View>
         </View>
@@ -140,14 +141,14 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
         >
           <View style={styles.iconContainer}>
             <Ionicons
-              name={config.icon as any}
+              name={(category?.icon || 'folder-outline') as any}
               size={28}
               color="#FFFFFF"
             />
           </View>
           <View style={styles.typeBadge}>
             <ThemedText style={styles.typeBadgeText}>
-              {config.label}
+              {category?.label || 'Item'}
             </ThemedText>
           </View>
         </LinearGradient>

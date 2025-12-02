@@ -2,8 +2,12 @@
  * Core type definitions for IdLocker vault app
  */
 
-// Vault item types
-export type VaultItemType = 'bankAccount' | 'card' | 'govId' | 'login' | 'note' | 'other';
+// Vault item types - now supports both preset and custom category IDs
+export type VaultItemType = string;
+
+// Preset category IDs for type checking
+export const PRESET_CATEGORY_IDS = ['bankAccount', 'card', 'govId', 'login', 'note', 'other'] as const;
+export type PresetCategoryId = typeof PRESET_CATEGORY_IDS[number];
 
 // Government ID subtypes
 export type GovIdSubtype = 
@@ -37,12 +41,20 @@ export interface ImageAttachment {
   createdAt: string;
 }
 
+// Custom field for item-level custom fields
+export interface CustomField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 // Core vault item interface
 export interface VaultItem {
   id: string;
   type: VaultItemType;
   label: string;
   fields: Record<string, string>;
+  customFields?: CustomField[]; // Item-level custom fields
   images?: ImageAttachment[];
   createdAt: string;
   updatedAt: string;
@@ -74,7 +86,35 @@ export interface FieldDefinition {
   options?: { value: string; label: string }[]; // For select fields
 }
 
-// Type-specific field configurations
+// Category color configuration
+export interface CategoryColor {
+  gradientStart: string;
+  gradientEnd: string;
+  bg: string;
+  icon: string;
+  text: string;
+}
+
+// Custom category definition (user-created or preset)
+export interface CustomCategory {
+  id: string;
+  label: string;
+  icon: string;
+  color: CategoryColor;
+  fields: FieldDefinition[];
+  previewField?: string; // Field to show in list preview (masked)
+  isPreset?: boolean; // True for built-in categories
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Categories data structure stored in SecureStore
+export interface CategoriesData {
+  version: number;
+  categories: CustomCategory[];
+}
+
+// Type-specific field configurations (kept for backward compatibility)
 export interface ItemTypeConfig {
   type: VaultItemType;
   label: string;
@@ -155,6 +195,8 @@ export type VaultStackParamList = {
   add: { type?: VaultItemType };
   'edit/[id]': { id: string };
   settings: undefined;
+  categories: undefined;
+  'category/[id]': { id: string };
 };
 
 // Type guards
@@ -198,6 +240,29 @@ export function isImageAttachment(obj: unknown): obj is ImageAttachment {
     'filename' in obj &&
     'width' in obj &&
     'height' in obj
+  );
+}
+
+export function isCustomCategory(obj: unknown): obj is CustomCategory {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'label' in obj &&
+    'icon' in obj &&
+    'color' in obj &&
+    'fields' in obj &&
+    Array.isArray((obj as CustomCategory).fields)
+  );
+}
+
+export function isCategoriesData(obj: unknown): obj is CategoriesData {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'version' in obj &&
+    'categories' in obj &&
+    Array.isArray((obj as CategoriesData).categories)
   );
 }
 
