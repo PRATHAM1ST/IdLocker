@@ -19,7 +19,7 @@ export function ThemedView({
   variant = 'primary',
   style,
 }: ThemedViewProps) {
-  const { colors, shadows, isDark } = useTheme();
+  const { colors, shadows } = useTheme();
   
   const backgroundColor = {
     primary: colors.background,

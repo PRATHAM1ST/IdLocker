@@ -34,7 +34,7 @@ export function SecureField({
   copyable = true,
   maskLength = 4,
 }: SecureFieldProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [isRevealed, setIsRevealed] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
 
