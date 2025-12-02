@@ -3,21 +3,23 @@
  * Handles biometric auth, auto-lock on background, and idle timeout
  */
 
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import * as LocalAuthentication from 'expo-local-authentication';
 import React, {
   createContext,
-  useContext,
-  useState,
-  useEffect,
   useCallback,
+  useContext,
+  useEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react';
-import { AppState, AppStateStatus, Platform, View, PanResponder, Modal, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import * as LocalAuthentication from 'expo-local-authentication';
-import type { AuthState, AppSettings } from '../utils/types';
+import { AppState, AppStateStatus, Modal, PanResponder, Platform, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { loadSettings, updateSettings } from '../storage/vaultStorage';
-import { logger } from '../utils/logger';
+import { borderRadius, darkColors, lightColors, spacing } from '../styles/theme';
 import { DEFAULT_SETTINGS } from '../utils/constants';
+import { logger } from '../utils/logger';
 
 // Countdown timer duration in seconds for logout warning
 const LOGOUT_WARNING_SECONDS = 20;
@@ -50,6 +52,11 @@ interface AuthLockProviderProps {
 }
 
 export function AuthLockProvider({ children }: AuthLockProviderProps) {
+  // Theme
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const colors = isDark ? darkColors : lightColors;
+
   // Auth state
   const [isLocked, setIsLocked] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -376,35 +383,46 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
           animationType="fade"
           onRequestClose={handleStayLoggedIn}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.timerCircle}>
-                <Text style={styles.timerText}>{countdown}</Text>
+          <BlurView
+            style={styles.modalOverlay}
+            intensity={isDark ? 40 : 60}
+            tint={isDark ? 'dark' : 'light'}
+          >
+            <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>              
+              {/* Countdown Circle */}
+              <View style={[styles.timerCircle, { backgroundColor: colors.error + '15', borderColor: colors.error }]}>
+                <Text style={[styles.timerText, { color: colors.error }]}>{countdown}</Text>
+                <Text style={[styles.timerLabel, { color: colors.error }]}>seconds</Text>
               </View>
               
-              <Text style={styles.modalTitle}>Session Timeout</Text>
-              <Text style={styles.modalMessage}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Session Timeout</Text>
+              <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
                 You will be logged out due to inactivity.{'\n'}
                 Would you like to stay logged in?
               </Text>
               
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[styles.button, styles.logoutButton]}
+                  style={[styles.button, styles.logoutButton, { 
+                    backgroundColor: colors.error + '15',
+                    borderColor: colors.error + '30',
+                  }]}
                   onPress={handleLogout}
                 >
-                  <Text style={styles.logoutButtonText}>Log Out</Text>
+                  <Ionicons name="log-out-outline" size={18} color={colors.error} style={styles.buttonIcon} />
+                  <Text style={[styles.logoutButtonText, { color: colors.error }]}>Log Out</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={[styles.button, styles.stayButton]}
+                  style={[styles.button, styles.stayButton, { backgroundColor: colors.primary }]}
                   onPress={handleStayLoggedIn}
                 >
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF" style={styles.buttonIcon} />
                   <Text style={styles.stayButtonText}>Stay Logged In</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </BlurView>
         </Modal>
       </View>
     </AuthLockContext.Provider>
@@ -414,78 +432,88 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.lg,
   },
   modalContent: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
     width: '100%',
     maxWidth: 340,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  timerCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 3,
-    borderColor: '#ef4444',
+  timerContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.md,
+  },
+  timerCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   timerText: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#ef4444',
+  },
+  timerLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: -2,
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 12,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   modalMessage: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.sm,
     width: '100%',
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    flexDirection: 'row',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: spacing.xs,
   },
   logoutButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   logoutButtonText: {
-    color: '#ef4444',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  stayButton: {
-    backgroundColor: '#3b82f6',
-  },
+  stayButton: {},
   stayButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '600',
   },
 });
