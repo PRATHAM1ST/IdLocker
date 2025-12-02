@@ -3,20 +3,20 @@
  * Modern design with floating style and accent indicators
  */
 
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
+    Platform,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeProvider';
+import { spacing } from '../styles/theme';
 import { ThemedText } from './ThemedText';
-import { spacing, borderRadius } from '../styles/theme';
 
-export type TabRoute = 'index' | 'categories' | 'search' | 'settings';
+export type TabRoute = 'index' | 'assets' | 'categories' | 'search' | 'settings';
 
 interface TabConfig {
   key: TabRoute;
@@ -27,6 +27,7 @@ interface TabConfig {
 
 const TABS: TabConfig[] = [
   { key: 'index', label: 'Home', icon: 'shield-outline', iconFilled: 'shield' },
+  { key: 'assets', label: 'Assets', icon: 'folder-outline', iconFilled: 'folder' },
   { key: 'categories', label: 'Categories', icon: 'grid-outline', iconFilled: 'grid' },
   { key: 'search', label: 'Search', icon: 'search-outline', iconFilled: 'search' },
   { key: 'settings', label: 'Settings', icon: 'person-outline', iconFilled: 'person' },

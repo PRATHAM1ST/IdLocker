@@ -2,17 +2,18 @@
  * Root layout with providers and global configuration
  */
 
-import { useEffect, useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ThemeProvider, useTheme } from '../src/context/ThemeProvider';
+import { AssetProvider } from '../src/context/AssetProvider';
 import { AuthLockProvider } from '../src/context/AuthLockProvider';
-import { VaultProvider } from '../src/context/VaultProvider';
 import { CategoryProvider } from '../src/context/CategoryProvider';
+import { ThemeProvider, useTheme } from '../src/context/ThemeProvider';
+import { VaultProvider } from '../src/context/VaultProvider';
 import { loadSettings } from '../src/storage/vaultStorage';
 import type { AppSettings } from '../src/utils/types';
 
@@ -76,7 +77,9 @@ export default function RootLayout() {
           <AuthLockProvider>
             <CategoryProvider>
               <VaultProvider>
-                <RootLayoutNav />
+                <AssetProvider>
+                  <RootLayoutNav />
+                </AssetProvider>
               </VaultProvider>
             </CategoryProvider>
           </AuthLockProvider>

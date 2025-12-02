@@ -9,26 +9,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AssetPicker } from '../../src/components/AssetPicker';
 import { Button } from '../../src/components/Button';
 import { CustomFieldEditor } from '../../src/components/CustomFieldEditor';
-import { ImagePicker } from '../../src/components/ImagePicker';
 import { Input, Select } from '../../src/components/Input';
 import { ThemedText } from '../../src/components/ThemedText';
 import { ThemedView } from '../../src/components/ThemedView';
+import { useAssets } from '../../src/context/AssetProvider';
 import { useCategories } from '../../src/context/CategoryProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
 import { borderRadius, shadows, spacing } from '../../src/styles/theme';
-import type { CustomCategory, CustomField, FieldDefinition, ImageAttachment, VaultItemType } from '../../src/utils/types';
+import type { AssetReference, CustomCategory, CustomField, FieldDefinition, VaultItemType } from '../../src/utils/types';
 import { sanitizeInput } from '../../src/utils/validation';
 
 export default function AddItemScreen() {
@@ -38,6 +39,7 @@ export default function AddItemScreen() {
   const { colors, isDark } = useTheme();
   const { addItem } = useVault();
   const { categories, getCategoryById } = useCategories();
+  const { getAssetsByIds } = useAssets();
 
   const [selectedType, setSelectedType] = useState<VaultItemType | null>(
     params.type || null
@@ -45,7 +47,7 @@ export default function AddItemScreen() {
   const [label, setLabel] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [images, setImages] = useState<ImageAttachment[]>([]);
+  const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -62,7 +64,7 @@ export default function AddItemScreen() {
     setLabel('');
     setFields({});
     setCustomFields([]);
-    setImages([]);
+    setAssetRefs([]);
     setErrors({});
   }, []);
 
@@ -108,10 +110,10 @@ export default function AddItemScreen() {
     setIsSaving(true);
     
     // Debug: Log what we're saving
-    console.log('[AddItem] Saving item with images:', {
+    console.log('[AddItem] Saving item with assets:', {
       type: selectedType,
       label: label.trim(),
-      imageCount: images.length,
+      assetRefCount: assetRefs.length,
       customFieldCount: customFields.length,
     });
     
@@ -120,7 +122,7 @@ export default function AddItemScreen() {
       label: label.trim(),
       fields,
       customFields: customFields.length > 0 ? customFields : undefined,
-      images: images.length > 0 ? images : undefined,
+      assetRefs: assetRefs.length > 0 ? assetRefs : undefined,
     });
     
     // Debug: Log the saved item
@@ -136,7 +138,7 @@ export default function AddItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save item. Please try again.');
     }
-  }, [selectedType, selectedCategory, label, fields, customFields, images, addItem, router]);
+  }, [selectedType, selectedCategory, label, fields, customFields, assetRefs, addItem, router]);
 
   const renderTypeSelector = () => (
     <View style={styles.typeSelectorContainer}>
@@ -283,10 +285,10 @@ export default function AddItemScreen() {
           onCustomFieldsChange={setCustomFields}
         />
 
-        {/* Image attachments */}
-        <ImagePicker
-          images={images}
-          onImagesChange={setImages}
+        {/* Asset attachments (images, PDFs, documents) */}
+        <AssetPicker
+          assetRefs={assetRefs}
+          onAssetRefsChange={setAssetRefs}
         />
 
         {/* Save button */}

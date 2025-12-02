@@ -2,14 +2,14 @@
  * Vault group layout - protected screens with floating add button and lock overlay
  */
 
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Stack, useRouter, usePathname } from 'expo-router';
-import { usePreventScreenCapture } from 'expo-screen-capture';
 import { Ionicons } from '@expo/vector-icons';
+import { Stack, usePathname, useRouter } from 'expo-router';
+import { usePreventScreenCapture } from 'expo-screen-capture';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/context/ThemeProvider';
 import { LockOverlay } from '../../src/components/LockOverlay';
-import { spacing, shadows, darkShadows, borderRadius } from '../../src/styles/theme';
+import { useTheme } from '../../src/context/ThemeProvider';
+import { borderRadius, darkShadows, shadows, spacing } from '../../src/styles/theme';
 
 export default function VaultLayout() {
   const { colors, isDark } = useTheme();
@@ -85,6 +85,12 @@ export default function VaultLayout() {
           name="categories"
           options={{
             href: null,
+          }}
+        />
+        <Stack.Screen
+          name="assets"
+          options={{
+            headerShown: false,
           }}
         />
       </Stack>

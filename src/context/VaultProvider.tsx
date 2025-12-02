@@ -5,19 +5,19 @@
  */
 
 import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
 } from 'react';
-import type { VaultItem, VaultItemType, VaultData } from '../utils/types';
-import * as vaultStorage from '../storage/vaultStorage';
-import { useAuthLock } from './AuthLockProvider';
-import { logger } from '../utils/logger';
 import { shouldUseDummyData } from '../config';
 import { DUMMY_VAULT_ITEMS, getDummyDataSummary } from '../data/dummyData';
+import * as vaultStorage from '../storage/vaultStorage';
+import { logger } from '../utils/logger';
+import type { VaultItem, VaultItemType } from '../utils/types';
+import { useAuthLock } from './AuthLockProvider';
 
 /**
  * Generate a simple UUID v4
@@ -116,7 +116,9 @@ export function VaultProvider({ children }: VaultProviderProps) {
       type: item.type,
       label: item.label,
       fields: { ...item.fields },
-      images: item.images, // Include images
+      customFields: item.customFields, // Include custom fields
+      images: item.images, // Include legacy images for backward compatibility
+      assetRefs: item.assetRefs, // Include asset references
       createdAt: now,
       updatedAt: now,
     };
@@ -157,7 +159,9 @@ export function VaultProvider({ children }: VaultProviderProps) {
       type: updates.type ?? existingItem.type,
       label: updates.label ?? existingItem.label,
       fields: updates.fields ? { ...updates.fields } : { ...existingItem.fields },
-      images: updates.images !== undefined ? updates.images : existingItem.images, // Include images
+      customFields: updates.customFields !== undefined ? updates.customFields : existingItem.customFields,
+      images: updates.images !== undefined ? updates.images : existingItem.images, // Include legacy images
+      assetRefs: updates.assetRefs !== undefined ? updates.assetRefs : existingItem.assetRefs, // Include asset refs
       createdAt: existingItem.createdAt,
       updatedAt: new Date().toISOString(),
     };

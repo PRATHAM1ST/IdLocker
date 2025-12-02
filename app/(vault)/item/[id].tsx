@@ -8,26 +8,29 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../../src/components/Button';
-import { ImageShareModal } from '../../../src/components/ImageShareModal';
 import { SecureField } from '../../../src/components/SecureField';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { ThemedView } from '../../../src/components/ThemedView';
+import { useAssets } from '../../../src/context/AssetProvider';
 import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
+import { formatFileSize, shareAsset } from '../../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
 import { SENSITIVE_FIELDS } from '../../../src/utils/constants';
-import type { ImageAttachment } from '../../../src/utils/types';
+import type { Asset, AssetType } from '../../../src/utils/types';
 import { formatCardExpiry } from '../../../src/utils/validation';
 
 export default function ItemDetailScreen() {
@@ -37,24 +40,41 @@ export default function ItemDetailScreen() {
   const { colors, isDark } = useTheme();
   const { getItem, deleteItem, isLoading } = useVault();
   const { getCategoryById } = useCategories();
+  const { getAssetsForItem, migrateItemAssets } = useAssets();
 
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<ImageAttachment | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [itemAssets, setItemAssets] = useState<Asset[]>([]);
 
   const item = useMemo(() => getItem(id), [getItem, id]);
   
-  // Debug: Log item to see if images are present
+  // Load assets for item (with migration if needed)
   useEffect(() => {
-    if (item) {
-      console.log('[ItemDetail] Item loaded:', {
-        id: item.id,
-        label: item.label,
-        hasImages: !!item.images,
-        imageCount: item.images?.length || 0,
-        images: item.images,
-      });
-    }
-  }, [item]);
+    const loadAssets = async () => {
+      if (item) {
+        console.log('[ItemDetail] Item loaded:', {
+          id: item.id,
+          label: item.label,
+          hasAssetRefs: !!item.assetRefs,
+          assetRefCount: item.assetRefs?.length || 0,
+          hasLegacyImages: !!item.images,
+          legacyImageCount: item.images?.length || 0,
+        });
+        
+        // Get assets for this item (handles both assetRefs and legacy images)
+        let assets = getAssetsForItem(item);
+        
+        // If item has legacy images but no assets found, try migration
+        if (assets.length === 0 && item.images && item.images.length > 0) {
+          await migrateItemAssets(item);
+          assets = getAssetsForItem(item);
+        }
+        
+        setItemAssets(assets);
+      }
+    };
+    loadAssets();
+  }, [item, getAssetsForItem, migrateItemAssets]);
   
   const category = useMemo(() => item ? getCategoryById(item.type) : null, [item, getCategoryById]);
   const categoryColor = category?.color || null;
@@ -90,6 +110,23 @@ export default function ItemDetailScreen() {
       ]
     );
   }, [item, deleteItem, router]);
+
+  const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {
+    switch (type) {
+      case 'image':
+        return 'image-outline';
+      case 'pdf':
+        return 'document-text-outline';
+      case 'document':
+        return 'document-outline';
+      default:
+        return 'attach-outline';
+    }
+  };
+
+  const handleShareAsset = useCallback(async (asset: Asset) => {
+    await shareAsset(asset.uri, asset.mimeType);
+  }, []);
 
   if (!item || !category || !categoryColor) {
     return (
@@ -255,32 +292,48 @@ export default function ItemDetailScreen() {
             </View>
           )}
 
-          {/* Images */}
-          {item.images && item.images.length > 0 && (
+          {/* Assets (Images, PDFs, Documents) */}
+          {itemAssets.length > 0 && (
             <View style={[styles.imagesCard, { backgroundColor: colors.card }, shadows.md]}>
               <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
-                Attachments ({item.images.length})
+                Attachments ({itemAssets.length})
               </ThemedText>
               <ThemedText variant="caption" color="tertiary" style={styles.imageHint}>
-                Tap an image to resize and share
+                Tap an attachment to preview or share
               </ThemedText>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.imagesContainer}
               >
-                {item.images.map((image) => (
+                {itemAssets.map((asset) => (
                   <TouchableOpacity
-                    key={image.id}
+                    key={asset.id}
                     style={[styles.imageThumb, { borderColor: colors.border }]}
-                    onPress={() => setSelectedImage(image)}
+                    onPress={() => setSelectedAsset(asset)}
                     activeOpacity={0.8}
                   >
-                    <Image source={{ uri: image.uri }} style={styles.imageThumbInner} />
+                    {asset.type === 'image' ? (
+                      <Image source={{ uri: asset.uri }} style={styles.imageThumbInner} />
+                    ) : (
+                      <View style={[styles.docThumbInner, { backgroundColor: colors.backgroundTertiary }]}>
+                        <Ionicons name={getAssetIcon(asset.type)} size={28} color={colors.primary} />
+                        <ThemedText variant="caption" numberOfLines={1} style={styles.docThumbName}>
+                          {asset.originalFilename}
+                        </ThemedText>
+                      </View>
+                    )}
                     <View style={styles.imageDimensions}>
                       <ThemedText variant="caption" style={styles.imageDimensionsText}>
-                        {image.width}×{image.height}
+                        {asset.type === 'image' 
+                          ? `${asset.width}×${asset.height}`
+                          : formatFileSize(asset.size)
+                        }
                       </ThemedText>
+                    </View>
+                    {/* Type badge */}
+                    <View style={[styles.typeBadge, { backgroundColor: colors.accent }]}>
+                      <Ionicons name={getAssetIcon(asset.type)} size={10} color="#FFFFFF" />
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -327,12 +380,68 @@ export default function ItemDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Image Share Modal */}
-      <ImageShareModal
-        visible={selectedImage !== null}
-        image={selectedImage}
-        onClose={() => setSelectedImage(null)}
-      />
+      {/* Asset Preview Modal */}
+      <Modal
+        visible={selectedAsset !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedAsset(null)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.9)' }]}>
+          <View style={styles.modalContent}>
+            {selectedAsset && (
+              <>
+                {selectedAsset.type === 'image' ? (
+                  <Image
+                    source={{ uri: selectedAsset.uri }}
+                    style={styles.previewImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.documentPreview}>
+                    <Ionicons name={getAssetIcon(selectedAsset.type)} size={64} color="#FFFFFF" />
+                    <ThemedText variant="body" style={styles.previewDocName}>
+                      {selectedAsset.originalFilename}
+                    </ThemedText>
+                    <ThemedText variant="caption" style={styles.previewDocInfo}>
+                      {formatFileSize(selectedAsset.size)} • {selectedAsset.mimeType}
+                    </ThemedText>
+                  </View>
+                )}
+                
+                {/* Info panel */}
+                <View style={[styles.previewInfoPanel, { backgroundColor: colors.backgroundSecondary }]}>
+                  <ThemedText variant="body" numberOfLines={1}>
+                    {selectedAsset.originalFilename}
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary">
+                    {selectedAsset.type === 'image' 
+                      ? `${selectedAsset.width}×${selectedAsset.height} • ${formatFileSize(selectedAsset.size)}`
+                      : formatFileSize(selectedAsset.size)
+                    }
+                  </ThemedText>
+                </View>
+
+                {/* Action button */}
+                <TouchableOpacity
+                  style={[styles.shareButton, { backgroundColor: colors.primary }]}
+                  onPress={() => handleShareAsset(selectedAsset)}
+                >
+                  <Ionicons name="share-outline" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                {/* Close button */}
+                <TouchableOpacity
+                  style={[styles.closeButton, { backgroundColor: colors.backgroundSecondary }]}
+                  onPress={() => setSelectedAsset(null)}
+                >
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -478,6 +587,84 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     textAlign: 'center',
+  },
+  typeBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docThumbInner: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xs,
+  },
+  docThumbName: {
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    fontSize: 9,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: Dimensions.get('window').width - spacing.xl * 2,
+    height: Dimensions.get('window').height * 0.5,
+  },
+  documentPreview: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  previewDocName: {
+    color: '#FFFFFF',
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  previewDocInfo: {
+    color: '#AAAAAA',
+    marginTop: spacing.sm,
+  },
+  previewInfoPanel: {
+    position: 'absolute',
+    bottom: 120,
+    left: spacing.lg,
+    right: spacing.lg,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  shareButton: {
+    position: 'absolute',
+    bottom: 60,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 60,
+    right: spacing.lg,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metaCard: {
     padding: spacing.md,

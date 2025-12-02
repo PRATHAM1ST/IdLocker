@@ -2,19 +2,20 @@
  * Component exports
  */
 
-export { ThemedText } from './ThemedText';
-export { ThemedView, SafeThemedView } from './ThemedView';
-export { SecureField } from './SecureField';
-export { VaultItemCard, VaultItemCardCompact } from './VaultItemCard';
-export { CategoryTabs } from './CategoryTabs';
+export { AssetPicker } from './AssetPicker';
+export { BottomTabBar } from './BottomTabBar';
 export { Button, IconButton } from './Button';
-export { Input, Select } from './Input';
+export { CategoryCard, CategoryCardLarge, CategoryChip, DynamicCategoryCard, DynamicCategoryFilterCard } from './CategoryCard';
+export { CategoryTabs } from './CategoryTabs';
+export { CustomFieldEditor } from './CustomFieldEditor';
 export { EmptyState } from './EmptyState';
+export { IllustratedHeader, SimpleHeader } from './IllustratedHeader';
 export { ImagePicker } from './ImagePicker';
 export { ImageResizer } from './ImageResizer';
 export { ImageShareModal } from './ImageShareModal';
-export { IllustratedHeader, SimpleHeader } from './IllustratedHeader';
-export { CategoryCard, CategoryCardLarge, CategoryChip, DynamicCategoryCard, DynamicCategoryFilterCard } from './CategoryCard';
-export { BottomTabBar } from './BottomTabBar';
-export { CustomFieldEditor } from './CustomFieldEditor';
+export { Input, Select } from './Input';
+export { SecureField } from './SecureField';
+export { ThemedText } from './ThemedText';
+export { SafeThemedView, ThemedView } from './ThemedView';
+export { VaultItemCard, VaultItemCardCompact } from './VaultItemCard';
 

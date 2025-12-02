@@ -9,27 +9,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AssetPicker } from '../../../src/components/AssetPicker';
 import { Button } from '../../../src/components/Button';
 import { CustomFieldEditor } from '../../../src/components/CustomFieldEditor';
-import { ImagePicker } from '../../../src/components/ImagePicker';
 import { Input, Select } from '../../../src/components/Input';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { ThemedView } from '../../../src/components/ThemedView';
+import { useAssets } from '../../../src/context/AssetProvider';
 import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
-import type { CustomField, FieldDefinition, ImageAttachment } from '../../../src/utils/types';
+import type { AssetReference, CustomField, FieldDefinition } from '../../../src/utils/types';
 import { sanitizeInput } from '../../../src/utils/validation';
 
 export default function EditItemScreen() {
@@ -39,6 +40,7 @@ export default function EditItemScreen() {
   const { colors, isDark } = useTheme();
   const { getItem, updateItem, isLoading } = useVault();
   const { getCategoryById } = useCategories();
+  const { migrateItemAssets } = useAssets();
 
   const item = useMemo(() => getItem(id), [getItem, id]);
   const category = useMemo(() => item ? getCategoryById(item.type) : null, [item, getCategoryById]);
@@ -47,20 +49,31 @@ export default function EditItemScreen() {
   const [label, setLabel] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [images, setImages] = useState<ImageAttachment[]>([]);
+  const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Initialize form with item data
+  // Initialize form with item data and migrate legacy images if needed
   useEffect(() => {
-    if (item) {
-      setLabel(item.label);
-      setFields({ ...item.fields });
-      setCustomFields(item.customFields || []);
-      setImages(item.images || []);
-    }
-  }, [item]);
+    const initForm = async () => {
+      if (item) {
+        setLabel(item.label);
+        setFields({ ...item.fields });
+        setCustomFields(item.customFields || []);
+        
+        // Use existing assetRefs or migrate from legacy images
+        if (item.assetRefs && item.assetRefs.length > 0) {
+          setAssetRefs(item.assetRefs);
+        } else if (item.images && item.images.length > 0) {
+          // Migrate legacy images to assets
+          const migratedRefs = await migrateItemAssets(item);
+          setAssetRefs(migratedRefs);
+        }
+      }
+    };
+    initForm();
+  }, [item, migrateItemAssets]);
 
   const handleFieldChange = useCallback((key: string, value: string) => {
     const sanitized = sanitizeInput(value);
@@ -88,8 +101,8 @@ export default function EditItemScreen() {
     }
   }, [errors]);
 
-  const handleImagesChange = useCallback((newImages: ImageAttachment[]) => {
-    setImages(newImages);
+  const handleAssetRefsChange = useCallback((newRefs: AssetReference[]) => {
+    setAssetRefs(newRefs);
     setHasChanges(true);
   }, []);
 
@@ -125,7 +138,7 @@ export default function EditItemScreen() {
       label: label.trim(),
       fields,
       customFields: customFields.length > 0 ? customFields : undefined,
-      images: images.length > 0 ? images : undefined,
+      assetRefs: assetRefs.length > 0 ? assetRefs : undefined,
     });
     setIsSaving(false);
 
@@ -284,10 +297,10 @@ export default function EditItemScreen() {
             onCustomFieldsChange={handleCustomFieldsChange}
           />
 
-          {/* Image attachments */}
-          <ImagePicker
-            images={images}
-            onImagesChange={handleImagesChange}
+          {/* Asset attachments (images, PDFs, documents) */}
+          <AssetPicker
+            assetRefs={assetRefs}
+            onAssetRefsChange={handleAssetRefsChange}
           />
 
           {/* Save button */}

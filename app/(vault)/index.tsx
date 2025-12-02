@@ -7,18 +7,18 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  DynamicCategoryCard,
-  DynamicCategoryFilterCard,
+    DynamicCategoryCard,
+    DynamicCategoryFilterCard,
 } from "../../src/components/CategoryCard";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ThemedText } from "../../src/components/ThemedText";
@@ -105,6 +105,10 @@ export default function VaultHomeScreen() {
     router.push("/(vault)/search" as any);
   }, [router]);
 
+  const handleAssetsPress = useCallback(() => {
+    router.push("/(vault)/assets" as any);
+  }, [router]);
+
   const handleSettingsPress = useCallback(() => {
     router.push("/(vault)/settings" as any);
   }, [router]);
@@ -182,6 +186,13 @@ export default function VaultHomeScreen() {
               IdLocker
             </ThemedText>
             <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={handleAssetsPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="folder-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.headerButton}
                 onPress={handleSearchPress}
