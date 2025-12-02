@@ -1,5 +1,6 @@
 /**
  * Themed button component
+ * Squircle design language
  */
 
 import React from 'react';
@@ -161,7 +162,7 @@ export function IconButton({
           backgroundColor: backgroundColor || 'transparent',
           width: size + spacing.md * 2,
           height: size + spacing.md * 2,
-          borderRadius: (size + spacing.md * 2) / 2,
+          borderRadius: borderRadius.md,
           opacity: disabled ? 0.5 : 1,
         },
         style,
@@ -177,7 +178,7 @@ export function IconButton({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -204,4 +205,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-

@@ -1,17 +1,15 @@
 /**
- * Vault home screen - redesigned with illustrated header and bottom sheet style
+ * Vault home screen - fully scrollable with illustrated header
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  FlatList,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,11 +21,9 @@ import { IllustratedHeader } from '../../src/components/IllustratedHeader';
 import { EmptyState } from '../../src/components/EmptyState';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault, useGroupedItems } from '../../src/context/VaultProvider';
-import { spacing, borderRadius } from '../../src/styles/theme';
+import { spacing, borderRadius, layout } from '../../src/styles/theme';
 import { VAULT_ITEM_TYPES } from '../../src/utils/constants';
 import type { VaultItem, VaultItemType } from '../../src/utils/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function VaultHomeScreen() {
   const router = useRouter();
@@ -80,116 +76,109 @@ export default function VaultHomeScreen() {
     router.push('/(vault)/add' as any);
   }, [router]);
 
-  const renderCategorySection = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <ThemedText variant="title" style={styles.sectionTitle}>
-          Categories
-        </ThemedText>
-        <ThemedText variant="caption" color="secondary">
-          Quick access
-        </ThemedText>
-      </View>
-      
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScroll}
-      >
-        {VAULT_ITEM_TYPES.map(({ type }) => (
-          <CategoryCard
-            key={type}
-            type={type}
-            count={categoryCounts[type]}
-            onPress={() => handleCategoryPress(type)}
-          />
-        ))}
-      </ScrollView>
-    </View>
-  );
-
-  const renderRecentSection = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <ThemedText variant="title" style={styles.sectionTitle}>
-          Recent Items
-        </ThemedText>
-        {recentItems.length > 0 && (
-          <TouchableOpacity 
-            onPress={() => router.push('/(vault)/categories' as any)}
-            activeOpacity={0.7}
-          >
-            <ThemedText variant="caption" color="accent" style={styles.seeAllText}>
-              See All
-            </ThemedText>
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      {recentItems.length > 0 ? (
-        recentItems.map((item) => (
-          <VaultItemCard
-            key={item.id}
-            item={item}
-            onPress={handleItemPress}
-          />
-        ))
-      ) : (
-        <EmptyState
-          icon="shield-outline"
-          title="Your vault is empty"
-          description="Start adding your sensitive information to keep it secure"
-          actionLabel="Add Your First Item"
-          onAction={handleAddItem}
-        />
-      )}
-    </View>
-  );
-
   if (isLoading && items.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <IllustratedHeader onSearchPress={handleSearchPress} />
-        <View style={[styles.bottomSheet, { backgroundColor: colors.background }]}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.headerGradientStart }]}>
-      {/* Illustrated Header */}
-      <IllustratedHeader onSearchPress={handleSearchPress} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: layout.tabBarHeight + spacing.xl }
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        {/* Illustrated Header - scrolls with content */}
+        <IllustratedHeader
+          title="IdLocker"
+          subtitle="Your secure vault"
+          onSearchPress={handleSearchPress}
+        />
 
-      {/* Bottom Sheet Content */}
-      <View style={[styles.bottomSheet, { backgroundColor: colors.background }]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          {/* Drag indicator */}
-          <View style={styles.dragIndicatorContainer}>
-            <View style={[styles.dragIndicator, { backgroundColor: colors.border }]} />
+        {/* Main Content */}
+        <View style={[styles.content, { backgroundColor: colors.background }]}>
+          {/* Categories Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText variant="subtitle" style={styles.sectionTitle}>
+                Categories
+              </ThemedText>
+              <ThemedText variant="caption" color="secondary">
+                {items.length} items total
+              </ThemedText>
+            </View>
+            
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScroll}
+            >
+              {VAULT_ITEM_TYPES.map(({ type }) => (
+                <CategoryCard
+                  key={type}
+                  type={type}
+                  count={categoryCounts[type]}
+                  onPress={() => handleCategoryPress(type)}
+                />
+              ))}
+            </ScrollView>
           </View>
 
-          {/* Categories */}
-          {renderCategorySection()}
-
-          {/* Recent Items */}
-          {renderRecentSection()}
-        </ScrollView>
-      </View>
+          {/* Recent Items Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText variant="subtitle" style={styles.sectionTitle}>
+                Recent Items
+              </ThemedText>
+              {recentItems.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => router.push('/(vault)/categories' as any)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText variant="caption" color="accent" style={styles.seeAllText}>
+                    See All
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {recentItems.length > 0 ? (
+              <View style={styles.itemsList}>
+                {recentItems.map((item) => (
+                  <VaultItemCard
+                    key={item.id}
+                    item={item}
+                    onPress={handleItemPress}
+                  />
+                ))}
+              </View>
+            ) : (
+              <EmptyState
+                icon="shield-outline"
+                title="Your vault is empty"
+                description="Start adding your sensitive information to keep it secure"
+                actionLabel="Add Your First Item"
+                onAction={handleAddItem}
+              />
+            )}
+          </View>
+        </View>
+      </ScrollView>
 
       {/* FAB */}
       <TouchableOpacity
@@ -197,7 +186,7 @@ export default function VaultHomeScreen() {
           styles.fab,
           { 
             backgroundColor: colors.accent,
-            bottom: insets.bottom + 100,
+            bottom: layout.tabBarHeight + spacing.md,
           },
         ]}
         onPress={handleAddItem}
@@ -213,30 +202,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  bottomSheet: {
-    flex: 1,
-    marginTop: -24,
-    borderTopLeftRadius: borderRadius['3xl'],
-    borderTopRightRadius: borderRadius['3xl'],
-    overflow: 'hidden',
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120,
+    flexGrow: 1,
   },
-  dragIndicatorContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  dragIndicator: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+  content: {
+    flex: 1,
+    marginTop: -spacing.lg,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing.lg,
   },
   section: {
-    paddingTop: spacing.md,
+    marginBottom: spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -246,7 +226,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontSize: 20,
     fontWeight: '700',
   },
   seeAllText: {
@@ -254,20 +233,21 @@ const styles = StyleSheet.create({
   },
   categoryScroll: {
     paddingHorizontal: spacing.base,
-    paddingBottom: spacing.sm,
+  },
+  itemsList: {
+    // Items have their own horizontal margin
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 100,
   },
   fab: {
     position: 'absolute',
-    right: spacing.lg,
+    right: spacing.base,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,

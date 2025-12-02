@@ -1,12 +1,11 @@
 /**
- * Categories screen - grid view of all categories and filtered item list
+ * Categories screen - fully scrollable with grid view and filtered list
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  FlatList,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -22,7 +21,7 @@ import { CategoryCardLarge, CategoryChip } from '../../src/components/CategoryCa
 import { EmptyState } from '../../src/components/EmptyState';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault, useGroupedItems } from '../../src/context/VaultProvider';
-import { spacing, borderRadius } from '../../src/styles/theme';
+import { spacing, borderRadius, layout } from '../../src/styles/theme';
 import { VAULT_ITEM_TYPES } from '../../src/utils/constants';
 import type { VaultItem, VaultItemType } from '../../src/utils/types';
 
@@ -85,122 +84,21 @@ export default function CategoriesScreen() {
   }, []);
 
   const handleAddItem = useCallback((type?: VaultItemType) => {
-    if (type && type !== 'all') {
+    if (type) {
       router.push(`/(vault)/add?type=${type}` as any);
     } else {
       router.push('/(vault)/add' as any);
     }
   }, [router]);
 
-  const renderHeader = () => (
-    <View>
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-      >
-        <View style={styles.headerContent}>
-          <ThemedText variant="title" style={styles.headerTitle}>
-            Categories
-          </ThemedText>
-          <TouchableOpacity
-            style={styles.viewToggle}
-            onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={viewMode === 'grid' ? 'list' : 'grid'}
-              size={22}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      {/* Filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipScroll}
-        style={styles.chipScrollContainer}
-      >
-        <CategoryChip
-          type="all"
-          label="All"
-          icon="grid-outline"
-          isSelected={selectedFilter === 'all'}
-          count={categoryCounts.all}
-          onPress={() => setSelectedFilter('all')}
-        />
-        {VAULT_ITEM_TYPES.map(({ type, label, icon }) => (
-          <CategoryChip
-            key={type}
-            type={type}
-            label={label}
-            icon={icon}
-            isSelected={selectedFilter === type}
-            count={categoryCounts[type]}
-            onPress={() => setSelectedFilter(type)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Section header */}
-      <View style={styles.sectionHeader}>
-        <ThemedText variant="label" color="secondary">
-          {selectedFilter === 'all' ? 'All Items' : VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label}
-        </ThemedText>
-        <ThemedText variant="caption" color="tertiary">
-          {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'}
-        </ThemedText>
-      </View>
-    </View>
-  );
-
-  const renderGridView = () => (
-    <View style={styles.gridContainer}>
-      {VAULT_ITEM_TYPES.map(({ type }) => (
-        <CategoryCardLarge
-          key={type}
-          type={type}
-          count={categoryCounts[type]}
-          onPress={() => handleCategoryPress(type)}
-        />
-      ))}
-    </View>
-  );
-
-  const renderListView = () => (
-    <>
-      {filteredItems.length > 0 ? (
-        filteredItems.map((item) => (
-          <VaultItemCard
-            key={item.id}
-            item={item}
-            onPress={handleItemPress}
-          />
-        ))
-      ) : (
-        <EmptyState
-          icon="folder-open-outline"
-          title="No items found"
-          description={selectedFilter === 'all' 
-            ? "Your vault is empty. Add your first item to get started."
-            : `No ${VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label.toLowerCase()} items yet.`}
-          actionLabel="Add Item"
-          onAction={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
-        />
-      )}
-    </>
-  );
-
   return (
     <ThemedView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: layout.tabBarHeight + spacing.xl }
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -210,13 +108,108 @@ export default function CategoriesScreen() {
           />
         }
       >
-        {renderHeader()}
-        
-        {viewMode === 'grid' && selectedFilter === 'all' ? (
-          renderGridView()
-        ) : (
-          renderListView()
-        )}
+        {/* Header - scrolls with content */}
+        <LinearGradient
+          colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+        >
+          <View style={styles.headerContent}>
+            <ThemedText variant="title" style={styles.headerTitle}>
+              Categories
+            </ThemedText>
+            <TouchableOpacity
+              style={styles.viewToggle}
+              onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={viewMode === 'grid' ? 'list' : 'grid'}
+                size={20}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Main Content */}
+        <View style={[styles.content, { backgroundColor: colors.background }]}>
+          {/* Filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipScroll}
+          >
+            <CategoryChip
+              type="all"
+              label="All"
+              icon="grid-outline"
+              isSelected={selectedFilter === 'all'}
+              count={categoryCounts.all}
+              onPress={() => setSelectedFilter('all')}
+            />
+            {VAULT_ITEM_TYPES.map(({ type, label, icon }) => (
+              <CategoryChip
+                key={type}
+                type={type}
+                label={label}
+                icon={icon}
+                isSelected={selectedFilter === type}
+                count={categoryCounts[type]}
+                onPress={() => setSelectedFilter(type)}
+              />
+            ))}
+          </ScrollView>
+
+          {/* Section header */}
+          <View style={styles.sectionHeader}>
+            <ThemedText variant="subtitle" style={styles.sectionTitle}>
+              {selectedFilter === 'all' ? 'All Items' : VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label}
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary">
+              {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'}
+            </ThemedText>
+          </View>
+
+          {/* Grid or List view */}
+          {viewMode === 'grid' && selectedFilter === 'all' ? (
+            <View style={styles.gridContainer}>
+              {VAULT_ITEM_TYPES.map(({ type }) => (
+                <CategoryCardLarge
+                  key={type}
+                  type={type}
+                  count={categoryCounts[type]}
+                  onPress={() => handleCategoryPress(type)}
+                />
+              ))}
+            </View>
+          ) : (
+            <>
+              {filteredItems.length > 0 ? (
+                <View style={styles.itemsList}>
+                  {filteredItems.map((item) => (
+                    <VaultItemCard
+                      key={item.id}
+                      item={item}
+                      onPress={handleItemPress}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <EmptyState
+                  icon="folder-open-outline"
+                  title="No items found"
+                  description={selectedFilter === 'all' 
+                    ? "Your vault is empty. Add your first item to get started."
+                    : `No ${VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label.toLowerCase()} items yet.`}
+                  actionLabel="Add Item"
+                  onAction={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
+                />
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
 
       {/* FAB */}
@@ -225,7 +218,7 @@ export default function CategoriesScreen() {
           styles.fab,
           { 
             backgroundColor: colors.accent,
-            bottom: insets.bottom + 100,
+            bottom: layout.tabBarHeight + spacing.md,
           },
         ]}
         onPress={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
@@ -241,6 +234,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   header: {
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.base,
@@ -252,7 +251,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#FFFFFF',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
   },
   viewToggle: {
@@ -263,8 +262,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipScrollContainer: {
-    marginTop: -spacing.sm,
+  content: {
+    flex: 1,
+    marginTop: -spacing.md,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing.md,
   },
   chipScroll: {
     paddingHorizontal: spacing.base,
@@ -275,27 +278,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
+  sectionTitle: {
+    fontWeight: '700',
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.sm,
+  },
+  itemsList: {
+    // Items have their own horizontal margin
   },
   fab: {
     position: 'absolute',
-    right: spacing.lg,
+    right: spacing.base,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
@@ -305,4 +307,3 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
 });
-

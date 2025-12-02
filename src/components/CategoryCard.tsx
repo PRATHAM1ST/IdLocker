@@ -1,6 +1,6 @@
 /**
  * Category Card component with gradient background
- * Used for horizontal scrolling category cards on home screen
+ * Squircle design language
  */
 
 import React from 'react';
@@ -20,7 +20,7 @@ import { ITEM_TYPE_CONFIGS } from '../utils/constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - spacing.md) / 2;
-const CARD_HEIGHT = 120;
+const CARD_HEIGHT = 110;
 
 interface CategoryCardProps {
   type: VaultItemType;
@@ -45,9 +45,6 @@ export function CategoryCard({ type, count, onPress }: CategoryCardProps) {
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        {/* Decorative circle */}
-        <View style={styles.decorativeCircle} />
-        
         {/* Icon */}
         <View style={styles.iconContainer}>
           <Ionicons
@@ -56,11 +53,6 @@ export function CategoryCard({ type, count, onPress }: CategoryCardProps) {
             color="rgba(255, 255, 255, 0.9)"
           />
         </View>
-
-        {/* Menu button */}
-        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-          <Ionicons name="ellipsis-vertical" size={16} color="rgba(255, 255, 255, 0.7)" />
-        </TouchableOpacity>
 
         {/* Label */}
         <View style={styles.labelContainer}>
@@ -87,8 +79,8 @@ interface CategoryCardLargeProps extends CategoryCardProps {
   subtitle?: string;
 }
 
-export function CategoryCardLarge({ type, count, onPress, subtitle }: CategoryCardLargeProps) {
-  const { isDark, colors } = useTheme();
+export function CategoryCardLarge({ type, count, onPress }: CategoryCardLargeProps) {
+  const { isDark } = useTheme();
   const config = ITEM_TYPE_CONFIGS[type];
   const categoryColor = getCategoryColor(type, isDark);
 
@@ -104,10 +96,6 @@ export function CategoryCardLarge({ type, count, onPress, subtitle }: CategoryCa
         end={{ x: 1, y: 1 }}
         style={styles.largeGradient}
       >
-        {/* Decorative elements */}
-        <View style={styles.largeDecorativeCircle1} />
-        <View style={styles.largeDecorativeCircle2} />
-        
         {/* Icon */}
         <View style={styles.largeIconContainer}>
           <Ionicons
@@ -205,43 +193,24 @@ const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     marginRight: spacing.md,
   },
   gradient: {
     flex: 1,
-    padding: spacing.md,
-    position: 'relative',
-  },
-  decorativeCircle: {
-    position: 'absolute',
-    top: -20,
-    right: -20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: spacing.base,
+    justifyContent: 'space-between',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuButton: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    padding: spacing.xs,
-  },
   labelContainer: {
-    position: 'absolute',
-    bottom: spacing.md,
-    left: spacing.md,
-    right: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -254,7 +223,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
   },
   countText: {
     color: '#FFFFFF',
@@ -265,46 +234,25 @@ const styles = StyleSheet.create({
   largeContainer: {
     width: '48%',
     aspectRatio: 1,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
   },
   largeGradient: {
     flex: 1,
-    padding: spacing.lg,
-    position: 'relative',
-  },
-  largeDecorativeCircle1: {
-    position: 'absolute',
-    top: -30,
-    right: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  largeDecorativeCircle2: {
-    position: 'absolute',
-    bottom: -20,
-    left: -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    padding: spacing.base,
+    justifyContent: 'space-between',
   },
   largeIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   largeContent: {
-    position: 'absolute',
-    bottom: spacing.lg,
-    left: spacing.lg,
-    right: spacing.lg,
+    // Bottom aligned via space-between
   },
   largeLabel: {
     color: '#FFFFFF',
@@ -320,7 +268,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
     marginRight: spacing.sm,
   },
   chipLabel: {
@@ -329,11 +277,10 @@ const styles = StyleSheet.create({
   },
   chipBadge: {
     marginLeft: spacing.xs,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
     minWidth: 18,
     alignItems: 'center',
   },
 });
-

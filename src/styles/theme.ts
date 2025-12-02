@@ -134,15 +134,22 @@ export const spacing = {
   '4xl': 48,
 };
 
-// Border radius scale
+// Border radius scale - consistent squircle design
 export const borderRadius = {
-  sm: 6,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  '2xl': 20,
-  '3xl': 24,
-  full: 9999,
+  none: 0,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  '2xl': 24,
+};
+
+// Layout constants
+export const layout = {
+  tabBarHeight: 85,
+  headerHeight: 56,
+  cardPadding: 16,
+  screenPadding: 16,
 };
 
 // Shadow styles

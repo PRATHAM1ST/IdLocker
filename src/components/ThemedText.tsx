@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Text, TextStyle, StyleSheet } from 'react-native';
+import { Text, TextStyle, StyleSheet, StyleProp } from 'react-native';
 import { useTheme } from '../context/ThemeProvider';
 import { typography } from '../styles/theme';
 
@@ -20,7 +20,7 @@ interface ThemedTextProps {
   children: React.ReactNode;
   variant?: TextVariant;
   color?: 'primary' | 'secondary' | 'tertiary' | 'accent' | 'error' | 'success';
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
   selectable?: boolean;
 }

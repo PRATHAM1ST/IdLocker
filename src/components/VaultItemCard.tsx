@@ -1,6 +1,6 @@
 /**
  * Vault item card component for list display
- * Redesigned with modern styling and larger touch targets
+ * Squircle design language
  */
 
 import React, { useMemo } from 'react';
@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
 import { ThemedText } from './ThemedText';
 import { spacing, borderRadius, getCategoryColor, shadows } from '../styles/theme';
-import type { VaultItem, VaultItemType } from '../utils/types';
+import type { VaultItem } from '../utils/types';
 import { ITEM_TYPE_CONFIGS } from '../utils/constants';
 import { getItemPreview } from '../utils/validation';
 
@@ -133,103 +133,13 @@ export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
   );
 }
 
-/**
- * Schedule-style card (inspired by the schedule design)
- */
-interface ScheduleCardProps {
-  item: VaultItem;
-  onPress: (item: VaultItem) => void;
-  isHighlighted?: boolean;
-}
-
-export function VaultItemScheduleCard({ item, onPress, isHighlighted = false }: ScheduleCardProps) {
-  const { colors, isDark } = useTheme();
-  
-  const config = ITEM_TYPE_CONFIGS[item.type];
-  const categoryColor = getCategoryColor(item.type, isDark);
-  const preview = useMemo(() => getItemPreview(item), [item]);
-
-  const updatedDate = new Date(item.updatedAt);
-  const timeStr = updatedDate.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false 
-  });
-
-  return (
-    <View style={styles.scheduleRow}>
-      {/* Time column */}
-      <View style={styles.scheduleTime}>
-        <ThemedText variant="body" style={{ fontWeight: '600' }}>
-          {timeStr}
-        </ThemedText>
-      </View>
-
-      {/* Card */}
-      <TouchableOpacity
-        style={[
-          styles.scheduleCard,
-          isHighlighted 
-            ? { backgroundColor: categoryColor.gradientStart }
-            : { backgroundColor: colors.card },
-          shadows.sm,
-        ]}
-        onPress={() => onPress(item)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.scheduleCardHeader}>
-          <ThemedText 
-            variant="subtitle" 
-            style={{ color: isHighlighted ? '#FFFFFF' : colors.text }}
-          >
-            {item.label}
-          </ThemedText>
-          <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-            <Ionicons
-              name="ellipsis-vertical"
-              size={16}
-              color={isHighlighted ? 'rgba(255,255,255,0.7)' : colors.textTertiary}
-            />
-          </TouchableOpacity>
-        </View>
-        
-        <ThemedText 
-          variant="caption" 
-          style={{ color: isHighlighted ? 'rgba(255,255,255,0.8)' : colors.textSecondary }}
-        >
-          {preview}
-        </ThemedText>
-
-        <View style={styles.scheduleCardMeta}>
-          <View style={styles.scheduleMetaItem}>
-            <Ionicons
-              name={config.icon as any}
-              size={14}
-              color={isHighlighted ? 'rgba(255,255,255,0.7)' : categoryColor.icon}
-            />
-            <ThemedText 
-              variant="caption" 
-              style={{ 
-                color: isHighlighted ? 'rgba(255,255,255,0.7)' : colors.textSecondary,
-                marginLeft: spacing.xs 
-              }}
-            >
-              {config.label}
-            </ThemedText>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    padding: spacing.base,
     paddingLeft: spacing.sm,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
     marginHorizontal: spacing.base,
     marginVertical: spacing.xs,
     overflow: 'hidden',
@@ -243,7 +153,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -262,13 +172,13 @@ const styles = StyleSheet.create({
   compactContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   compactIcon: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -277,35 +187,5 @@ const styles = StyleSheet.create({
   compactContent: {
     flex: 1,
     marginRight: spacing.sm,
-  },
-  // Schedule card styles
-  scheduleRow: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.base,
-    marginBottom: spacing.md,
-  },
-  scheduleTime: {
-    width: 60,
-    paddingTop: spacing.md,
-  },
-  scheduleCard: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.xl,
-  },
-  scheduleCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  scheduleCardMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  scheduleMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

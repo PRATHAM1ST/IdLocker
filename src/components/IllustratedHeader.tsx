@@ -1,13 +1,12 @@
 /**
  * Illustrated Header component with gradient background and decorative elements
- * Used for home and category screens
+ * Scrollable design - scrolls with content
  */
 
 import React from 'react';
 import {
   View,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,14 +14,14 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Defs, RadialGradient, Stop, G } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeProvider';
-import { spacing } from '../styles/theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const HEADER_HEIGHT = 280;
+import { ThemedText } from './ThemedText';
+import { spacing, borderRadius } from '../styles/theme';
 
 interface IllustratedHeaderProps {
+  title?: string;
+  subtitle?: string;
   onSearchPress?: () => void;
-  children?: React.ReactNode;
+  rightAction?: React.ReactNode;
 }
 
 /**
@@ -30,7 +29,7 @@ interface IllustratedHeaderProps {
  */
 function VaultIllustration() {
   return (
-    <Svg width={200} height={180} viewBox="0 0 200 180">
+    <Svg width={160} height={140} viewBox="0 0 200 180">
       <Defs>
         <RadialGradient id="shieldGrad" cx="50%" cy="30%" r="70%">
           <Stop offset="0%" stopColor="#52B788" stopOpacity="1" />
@@ -103,57 +102,7 @@ function VaultIllustration() {
   );
 }
 
-export function IllustratedHeader({ onSearchPress, children }: IllustratedHeaderProps) {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.gradient, { paddingTop: insets.top }]}
-      >
-        {/* Decorative background circles */}
-        <View style={styles.decorativeCircles}>
-          <View style={[styles.circle, styles.circle1]} />
-          <View style={[styles.circle, styles.circle2]} />
-          <View style={[styles.circle, styles.circle3]} />
-        </View>
-
-        {/* Search button */}
-        {onSearchPress && (
-          <TouchableOpacity
-            style={[styles.searchButton, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
-            onPress={onSearchPress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="search" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
-
-        {/* Illustration */}
-        <View style={styles.illustrationContainer}>
-          <VaultIllustration />
-        </View>
-
-        {children}
-      </LinearGradient>
-    </View>
-  );
-}
-
-/**
- * Compact header variant for inner screens
- */
-interface CompactHeaderProps {
-  title: string;
-  subtitle?: string;
-  icon?: keyof typeof Ionicons.glyphMap;
-}
-
-export function CompactHeader({ title, subtitle, icon }: CompactHeaderProps) {
+export function IllustratedHeader({ title, subtitle, onSearchPress, rightAction }: IllustratedHeaderProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -162,29 +111,105 @@ export function CompactHeader({ title, subtitle, icon }: CompactHeaderProps) {
       colors={[colors.headerGradientStart, colors.headerGradientEnd]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.compactGradient, { paddingTop: insets.top + spacing.md }]}
+      style={[styles.gradient, { paddingTop: insets.top + spacing.md }]}
     >
-      {icon && (
-        <View style={styles.compactIconContainer}>
-          <Ionicons name={icon} size={28} color="#FFFFFF" />
+      {/* Decorative background circles */}
+      <View style={styles.decorativeCircles}>
+        <View style={[styles.circle, styles.circle1]} />
+        <View style={[styles.circle, styles.circle2]} />
+      </View>
+
+      {/* Top bar with search and action */}
+      <View style={styles.topBar}>
+        {onSearchPress ? (
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
+            onPress={onSearchPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="search" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconButton} />
+        )}
+        
+        {rightAction || <View style={styles.iconButton} />}
+      </View>
+
+      {/* Illustration */}
+      <View style={styles.illustrationContainer}>
+        <VaultIllustration />
+      </View>
+
+      {/* Title and subtitle */}
+      {(title || subtitle) && (
+        <View style={styles.textContainer}>
+          {title && (
+            <ThemedText variant="title" style={styles.title}>
+              {title}
+            </ThemedText>
+          )}
+          {subtitle && (
+            <ThemedText variant="body" style={styles.subtitle}>
+              {subtitle}
+            </ThemedText>
+          )}
         </View>
       )}
     </LinearGradient>
   );
 }
 
+/**
+ * Simple gradient header for inner screens
+ */
+interface SimpleHeaderProps {
+  title?: string;
+  subtitle?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
+}
+
+export function SimpleHeader({ title, subtitle, icon, iconColor }: SimpleHeaderProps) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <LinearGradient
+      colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.simpleGradient, { paddingTop: insets.top + spacing.md }]}
+    >
+      <View style={styles.simpleContent}>
+        {icon && (
+          <View style={[styles.simpleIconContainer, { backgroundColor: iconColor || 'rgba(255,255,255,0.2)' }]}>
+            <Ionicons name={icon} size={24} color="#FFFFFF" />
+          </View>
+        )}
+        {title && (
+          <ThemedText variant="title" style={styles.simpleTitle}>
+            {title}
+          </ThemedText>
+        )}
+        {subtitle && (
+          <ThemedText variant="body" style={styles.simpleSubtitle}>
+            {subtitle}
+          </ThemedText>
+        )}
+      </View>
+    </LinearGradient>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-  },
   gradient: {
-    height: HEADER_HEIGHT,
-    width: '100%',
-    position: 'relative',
-    overflow: 'hidden',
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.base,
   },
   decorativeCircles: {
     ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
   },
   circle: {
     position: 'absolute',
@@ -192,51 +217,74 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   circle1: {
-    width: 200,
-    height: 200,
-    top: -50,
-    right: -30,
+    width: 180,
+    height: 180,
+    top: -40,
+    right: -20,
   },
   circle2: {
-    width: 150,
-    height: 150,
-    top: 100,
-    left: -60,
+    width: 120,
+    height: 120,
+    bottom: -30,
+    left: -40,
   },
-  circle3: {
-    width: 80,
-    height: 80,
-    bottom: 20,
-    right: 40,
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
-  searchButton: {
-    position: 'absolute',
-    top: 0,
-    left: spacing.base,
-    marginTop: spacing.md,
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   illustrationContainer: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.lg,
+    marginVertical: spacing.md,
   },
-  compactGradient: {
-    paddingBottom: spacing.xl,
+  textContainer: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  subtitle: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  // Simple header styles
+  simpleGradient: {
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.base,
   },
-  compactIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  simpleContent: {
+    alignItems: 'center',
+  },
+  simpleIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  simpleTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  simpleSubtitle: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
 });
-

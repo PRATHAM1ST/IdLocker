@@ -1,6 +1,6 @@
 /**
  * Category tabs component for filtering vault items
- * Redesigned with modern chip-style tabs
+ * Squircle chip-style design
  */
 
 import React from 'react';
@@ -137,9 +137,6 @@ export function CategoryCards({ onCategoryPress, counts }: CategoryCardsProps) {
               end={{ x: 1, y: 1 }}
               style={styles.cardGradient}
             >
-              {/* Decorative circle */}
-              <View style={styles.cardDecorativeCircle} />
-
               {/* Icon */}
               <View style={styles.cardIconContainer}>
                 <Ionicons
@@ -148,15 +145,6 @@ export function CategoryCards({ onCategoryPress, counts }: CategoryCardsProps) {
                   color="rgba(255, 255, 255, 0.9)"
                 />
               </View>
-
-              {/* Menu */}
-              <TouchableOpacity style={styles.cardMenu} activeOpacity={0.7}>
-                <Ionicons
-                  name="ellipsis-vertical"
-                  size={14}
-                  color="rgba(255, 255, 255, 0.6)"
-                />
-              </TouchableOpacity>
 
               {/* Label & Count */}
               <View style={styles.cardFooter}>
@@ -189,7 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
     marginRight: spacing.sm,
   },
   icon: {
@@ -202,7 +190,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
     minWidth: 18,
     alignItems: 'center',
   },
@@ -214,7 +202,7 @@ const styles = StyleSheet.create({
   card: {
     width: 140,
     height: 100,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
     marginRight: spacing.md,
     overflow: 'hidden',
   },
@@ -223,28 +211,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     position: 'relative',
   },
-  cardDecorativeCircle: {
-    position: 'absolute',
-    top: -15,
-    right: -15,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
   cardIconContainer: {
     width: 36,
     height: 36,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.sm,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cardMenu: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    padding: spacing.xs,
   },
   cardFooter: {
     position: 'absolute',
@@ -261,9 +234,9 @@ const styles = StyleSheet.create({
   },
   cardBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
   },
   cardBadgeText: {
     color: '#FFFFFF',

@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
   },
   saveContainer: {
     marginTop: spacing.lg,

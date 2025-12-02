@@ -1,5 +1,5 @@
 /**
- * Search screen - full search experience with filters
+ * Search screen - fully scrollable search experience
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -22,7 +22,7 @@ import { CategoryChip } from '../../src/components/CategoryCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
-import { spacing, borderRadius } from '../../src/styles/theme';
+import { spacing, borderRadius, layout } from '../../src/styles/theme';
 import { VAULT_ITEM_TYPES } from '../../src/utils/constants';
 import type { VaultItem, VaultItemType } from '../../src/utils/types';
 
@@ -116,165 +116,170 @@ export default function SearchScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Header with search */}
-      <LinearGradient
-        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-      >
-        <ThemedText variant="title" style={styles.headerTitle}>
-          Search
-        </ThemedText>
-        
-        {/* Search bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="rgba(255,255,255,0.6)" />
-          <TextInput
-            ref={inputRef}
-            style={styles.searchInput}
-            placeholder="Search vault items..."
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={handleClearSearch}>
-              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.6)" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </LinearGradient>
-
-      {/* Filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipScroll}
-        keyboardShouldPersistTaps="handled"
-      >
-        <CategoryChip
-          type="all"
-          label="All"
-          icon="grid-outline"
-          isSelected={selectedFilter === 'all'}
-          onPress={() => setSelectedFilter('all')}
-        />
-        {VAULT_ITEM_TYPES.map(({ type, label, icon }) => (
-          <CategoryChip
-            key={type}
-            type={type}
-            label={label}
-            icon={icon}
-            isSelected={selectedFilter === type}
-            onPress={() => setSelectedFilter(type)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Content */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: layout.tabBarHeight + spacing.xl }
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={() => Keyboard.dismiss()}
       >
-        {/* Search results */}
-        {searchResults.length > 0 && (
-          <View style={styles.resultsSection}>
-            <ThemedText variant="label" color="secondary" style={styles.sectionLabel}>
-              {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
-            </ThemedText>
-            {searchResults.map((item) => (
-              <VaultItemCard
-                key={item.id}
-                item={item}
-                onPress={handleItemPress}
+        {/* Header with search - scrolls with content */}
+        <LinearGradient
+          colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+        >
+          <ThemedText variant="title" style={styles.headerTitle}>
+            Search
+          </ThemedText>
+          
+          {/* Search bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="rgba(255,255,255,0.6)" />
+            <TextInput
+              ref={inputRef}
+              style={styles.searchInput}
+              placeholder="Search vault items..."
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={handleClearSearch}>
+                <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.6)" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </LinearGradient>
+
+        {/* Main Content */}
+        <View style={[styles.content, { backgroundColor: colors.background }]}>
+          {/* Filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipScroll}
+            keyboardShouldPersistTaps="handled"
+          >
+            <CategoryChip
+              type="all"
+              label="All"
+              icon="grid-outline"
+              isSelected={selectedFilter === 'all'}
+              onPress={() => setSelectedFilter('all')}
+            />
+            {VAULT_ITEM_TYPES.map(({ type, label, icon }) => (
+              <CategoryChip
+                key={type}
+                type={type}
+                label={label}
+                icon={icon}
+                isSelected={selectedFilter === type}
+                onPress={() => setSelectedFilter(type)}
               />
             ))}
-          </View>
-        )}
+          </ScrollView>
 
-        {/* Empty state for search */}
-        {showEmptyState && searchResults.length === 0 && (
-          <EmptyState
-            icon="search-outline"
-            title="No results found"
-            description={searchQuery 
-              ? `No items match "${searchQuery}"${selectedFilter !== 'all' ? ` in ${VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label}` : ''}`
-              : `No ${VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label.toLowerCase()} items in your vault`
-            }
-          />
-        )}
-
-        {/* Recent searches */}
-        {showRecentSearches && (
-          <View style={styles.recentSection}>
-            <View style={styles.recentHeader}>
-              <ThemedText variant="label" color="secondary">
-                Recent Searches
+          {/* Search results */}
+          {searchResults.length > 0 && (
+            <View style={styles.resultsSection}>
+              <ThemedText variant="label" color="secondary" style={styles.sectionLabel}>
+                {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
               </ThemedText>
-              <TouchableOpacity onPress={handleClearRecent}>
-                <ThemedText variant="caption" color="accent">
-                  Clear
-                </ThemedText>
-              </TouchableOpacity>
+              {searchResults.map((item) => (
+                <VaultItemCard
+                  key={item.id}
+                  item={item}
+                  onPress={handleItemPress}
+                />
+              ))}
             </View>
-            {recentSearches.map((query, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[styles.recentItem, { backgroundColor: colors.card }]}
-                onPress={() => handleRecentSearch(query)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="time-outline" size={18} color={colors.textTertiary} />
-                <ThemedText variant="body" style={styles.recentText}>
-                  {query}
-                </ThemedText>
-                <Ionicons name="arrow-forward" size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+          )}
 
-        {/* Search tips */}
-        {showSearchTips && (
-          <View style={styles.tipsSection}>
-            <View style={[styles.tipsCard, { backgroundColor: colors.card }]}>
-              <View style={[styles.tipsIcon, { backgroundColor: colors.backgroundTertiary }]}>
-                <Ionicons name="bulb-outline" size={24} color={colors.accent} />
-              </View>
-              <ThemedText variant="subtitle" style={styles.tipsTitle}>
-                Search Tips
-              </ThemedText>
-              
-              <View style={styles.tipItem}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                <ThemedText variant="bodySmall" color="secondary" style={styles.tipText}>
-                  Search by item name or label
+          {/* Empty state for search */}
+          {showEmptyState && searchResults.length === 0 && (
+            <EmptyState
+              icon="search-outline"
+              title="No results found"
+              description={searchQuery 
+                ? `No items match "${searchQuery}"${selectedFilter !== 'all' ? ` in ${VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label}` : ''}`
+                : `No ${VAULT_ITEM_TYPES.find(t => t.type === selectedFilter)?.label.toLowerCase()} items in your vault`
+              }
+            />
+          )}
+
+          {/* Recent searches */}
+          {showRecentSearches && (
+            <View style={styles.recentSection}>
+              <View style={styles.recentHeader}>
+                <ThemedText variant="subtitle" style={styles.sectionTitle}>
+                  Recent Searches
                 </ThemedText>
+                <TouchableOpacity onPress={handleClearRecent}>
+                  <ThemedText variant="caption" color="accent">
+                    Clear
+                  </ThemedText>
+                </TouchableOpacity>
               </View>
-              
-              <View style={styles.tipItem}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                <ThemedText variant="bodySmall" color="secondary" style={styles.tipText}>
-                  Enter last 4 digits to find cards or accounts
+              {recentSearches.map((query, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.recentItem, { backgroundColor: colors.card }]}
+                  onPress={() => handleRecentSearch(query)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="time-outline" size={18} color={colors.textTertiary} />
+                  <ThemedText variant="body" style={styles.recentText}>
+                    {query}
+                  </ThemedText>
+                  <Ionicons name="arrow-forward" size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Search tips */}
+          {showSearchTips && (
+            <View style={styles.tipsSection}>
+              <View style={[styles.tipsCard, { backgroundColor: colors.card }]}>
+                <View style={[styles.tipsIcon, { backgroundColor: colors.backgroundTertiary }]}>
+                  <Ionicons name="bulb-outline" size={24} color={colors.accent} />
+                </View>
+                <ThemedText variant="subtitle" style={styles.tipsTitle}>
+                  Search Tips
                 </ThemedText>
-              </View>
-              
-              <View style={styles.tipItem}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                <ThemedText variant="bodySmall" color="secondary" style={styles.tipText}>
-                  Use filters to narrow down by category
-                </ThemedText>
+                
+                <View style={styles.tipItem}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <ThemedText variant="bodySmall" color="secondary" style={styles.tipText}>
+                    Search by item name or label
+                  </ThemedText>
+                </View>
+                
+                <View style={styles.tipItem}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <ThemedText variant="bodySmall" color="secondary" style={styles.tipText}>
+                    Enter last 4 digits to find cards or accounts
+                  </ThemedText>
+                </View>
+                
+                <View style={styles.tipItem}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <ThemedText variant="bodySmall" color="secondary" style={styles.tipText}>
+                    Use filters to narrow down by category
+                  </ThemedText>
+                </View>
               </View>
             </View>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -284,13 +289,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   header: {
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.base,
   },
   headerTitle: {
     color: '#FFFFFF',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     marginBottom: spacing.md,
   },
@@ -299,25 +310,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#FFFFFF',
     marginLeft: spacing.sm,
-    paddingVertical: spacing.xs,
+  },
+  content: {
+    flex: 1,
+    marginTop: -spacing.md,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing.sm,
   },
   chipScroll: {
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
   },
   resultsSection: {
     paddingTop: spacing.sm,
@@ -325,6 +336,9 @@ const styles = StyleSheet.create({
   sectionLabel: {
     paddingHorizontal: spacing.base,
     marginBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontWeight: '700',
   },
   recentSection: {
     padding: spacing.base,
@@ -338,8 +352,8 @@ const styles = StyleSheet.create({
   recentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
   },
   recentText: {
@@ -350,19 +364,20 @@ const styles = StyleSheet.create({
     padding: spacing.base,
   },
   tipsCard: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.xl,
+    padding: spacing.base,
+    borderRadius: borderRadius.lg,
   },
   tipsIcon: {
     width: 48,
     height: 48,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
   tipsTitle: {
     marginBottom: spacing.md,
+    fontWeight: '700',
   },
   tipItem: {
     flexDirection: 'row',
@@ -374,4 +389,3 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
 });
-

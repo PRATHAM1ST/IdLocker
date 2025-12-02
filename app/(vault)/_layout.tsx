@@ -112,18 +112,16 @@ export default function VaultLayout() {
           name="add"
           options={{
             href: null,
-            headerShown: true,
+            headerShown: false,
             title: 'Add Item',
-            presentation: 'modal',
           }}
         />
         <Tabs.Screen
           name="edit/[id]"
           options={{
             href: null,
-            headerShown: true,
+            headerShown: false,
             title: 'Edit Item',
-            presentation: 'modal',
           }}
         />
       </Tabs>
