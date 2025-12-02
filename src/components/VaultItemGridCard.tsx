@@ -1,6 +1,6 @@
 /**
  * Vault item grid card component - squircle box design
- * Displays item info in a visually rich card format
+ * Displays item info in a visually rich card format with image previews
  */
 
 import React, { useMemo } from 'react';
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,6 +35,9 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
   const config = ITEM_TYPE_CONFIGS[item.type];
   const categoryColor = getCategoryColor(item.type, isDark);
   const preview = useMemo(() => getItemPreview(item), [item]);
+  const hasImages = item.images && item.images.length > 0;
+  const imageCount = item.images?.length || 0;
+  const primaryImage = hasImages ? item.images![0] : null;
   
   // Get secondary info based on item type
   const secondaryInfo = useMemo(() => {
@@ -89,26 +93,65 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
       onPress={() => onPress(item)}
       activeOpacity={0.7}
     >
-      {/* Gradient header section */}
-      <LinearGradient
-        colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
-      >
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name={config.icon as any}
-            size={28}
-            color="#FFFFFF"
+      {/* Header section - Image or Gradient */}
+      {hasImages && primaryImage ? (
+        <View style={styles.imageHeader}>
+          <Image 
+            source={{ uri: primaryImage.uri }} 
+            style={styles.headerImage}
+            resizeMode="cover"
           />
+          {/* Overlay gradient for readability */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.7)']}
+            style={styles.imageOverlay}
+          />
+          {/* Category badge on image */}
+          <View style={styles.imageHeaderBadges}>
+            <View style={[styles.categoryBadge, { backgroundColor: categoryColor.gradientStart }]}>
+              <Ionicons
+                name={config.icon as any}
+                size={12}
+                color="#FFFFFF"
+              />
+            </View>
+            {imageCount > 1 && (
+              <View style={styles.imageCountBadge}>
+                <Ionicons name="images" size={10} color="#FFFFFF" />
+                <ThemedText style={styles.imageCountText}>
+                  {imageCount}
+                </ThemedText>
+              </View>
+            )}
+          </View>
+          {/* Type badge at bottom */}
+          <View style={styles.typeBadgeOnImage}>
+            <ThemedText style={styles.typeBadgeText}>
+              {config.label}
+            </ThemedText>
+          </View>
         </View>
-        <View style={styles.typeBadge}>
-          <ThemedText style={styles.typeBadgeText}>
-            {config.label}
-          </ThemedText>
-        </View>
-      </LinearGradient>
+      ) : (
+        <LinearGradient
+          colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name={config.icon as any}
+              size={28}
+              color="#FFFFFF"
+            />
+          </View>
+          <View style={styles.typeBadge}>
+            <ThemedText style={styles.typeBadgeText}>
+              {config.label}
+            </ThemedText>
+          </View>
+        </LinearGradient>
+      )}
       
       {/* Content section */}
       <View style={styles.content}>
@@ -140,12 +183,23 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
           </ThemedText>
         </View>
         
-        {/* Footer with time */}
+        {/* Footer with time and image indicator */}
         <View style={styles.footer}>
-          <View style={[styles.dot, { backgroundColor: categoryColor.icon }]} />
-          <ThemedText variant="caption" color="tertiary" style={styles.time}>
-            {lastUpdated}
-          </ThemedText>
+          <View style={styles.footerLeft}>
+            <View style={[styles.dot, { backgroundColor: categoryColor.icon }]} />
+            <ThemedText variant="caption" color="tertiary" style={styles.time}>
+              {lastUpdated}
+            </ThemedText>
+          </View>
+          {hasImages && (
+            <View style={styles.attachmentIndicator}>
+              <Ionicons 
+                name="attach" 
+                size={12} 
+                color={colors.textTertiary} 
+              />
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -159,6 +213,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: CARD_GAP,
   },
+  // Gradient header (no image)
   headerGradient: {
     height: 72,
     padding: spacing.md,
@@ -187,6 +242,68 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  // Image header styles
+  imageHeader: {
+    height: 88,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 48,
+  },
+  imageHeaderBadges: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  imageCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
+    gap: 3,
+  },
+  imageCountText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  typeBadgeOnImage: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  // Content section
   content: {
     padding: spacing.md,
     paddingTop: spacing.sm,
@@ -211,9 +328,14 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   dot: {
     width: 6,
@@ -223,6 +345,9 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 11,
+  },
+  attachmentIndicator: {
+    opacity: 0.7,
   },
 });
 
