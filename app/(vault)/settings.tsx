@@ -12,6 +12,7 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-constants';
@@ -20,27 +21,55 @@ import { ThemedText } from '../../src/components/ThemedText';
 import { Button } from '../../src/components/Button';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useAuthLock, getBiometricTypeName } from '../../src/context/AuthLockProvider';
-import { loadSettings, updateSettings, clearVault } from '../../src/storage/vaultStorage';
+import { loadSettings, clearVault } from '../../src/storage/vaultStorage';
 import { spacing, borderRadius } from '../../src/styles/theme';
-import { AUTO_LOCK_OPTIONS } from '../../src/utils/constants';
 import type { AppSettings } from '../../src/utils/types';
+
+// Auto-lock timeout limits (in seconds)
+const MIN_TIMEOUT = 30;
+const MAX_TIMEOUT = 600; // 10 minutes
+
+// Format timeout duration for display
+function formatTimeout(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds} seconds`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) {
+    return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+  }
+  return `${minutes}m ${remainingSeconds}s`;
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, isDark, preference, setThemePreference } = useTheme();
-  const { lock, biometricType, hasBiometrics, autoLockTimeout } = useAuthLock();
+  const { lock, biometricType, hasBiometrics, autoLockTimeout, setAutoLockTimeout } = useAuthLock();
 
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [selectedTimeout, setSelectedTimeout] = useState(autoLockTimeout);
+  const [sliderValue, setSliderValue] = useState(autoLockTimeout);
 
   useEffect(() => {
     loadSettings().then(setSettings);
   }, []);
 
-  const handleTimeoutChange = useCallback(async (timeout: number) => {
-    setSelectedTimeout(timeout);
-    await updateSettings({ autoLockTimeout: timeout });
+  // Sync slider with context when autoLockTimeout changes
+  useEffect(() => {
+    setSliderValue(autoLockTimeout);
+  }, [autoLockTimeout]);
+
+  const handleTimeoutSliderChange = useCallback((value: number) => {
+    // Round to nearest 10 for smoother snapping
+    const rounded = Math.round(value / 10) * 10;
+    setSliderValue(rounded);
   }, []);
+
+  const handleTimeoutSliderComplete = useCallback(async (value: number) => {
+    // Round to nearest 10 seconds
+    const rounded = Math.round(value / 10) * 10;
+    await setAutoLockTimeout(rounded);
+  }, [setAutoLockTimeout]);
 
   const handleThemeChange = useCallback(async (theme: AppSettings['theme']) => {
     await setThemePreference(theme);
@@ -137,31 +166,40 @@ export default function SettingsScreen() {
             {renderSettingRow(
               'timer-outline',
               'Auto-Lock Timeout',
-              `Lock after ${AUTO_LOCK_OPTIONS.find(o => o.value === selectedTimeout)?.label || '1 minute'}`,
+              `Lock after ${formatTimeout(sliderValue)} of inactivity`,
             )}
             
-            <View style={[styles.timeoutOptions, { backgroundColor: colors.card }]}>
-              {AUTO_LOCK_OPTIONS.map(option => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.timeoutOption,
-                    selectedTimeout === option.value && {
-                      backgroundColor: colors.primary,
-                    },
-                  ]}
-                  onPress={() => handleTimeoutChange(option.value)}
-                >
-                  <ThemedText
-                    variant="caption"
-                    style={{
-                      color: selectedTimeout === option.value ? '#FFFFFF' : colors.text,
-                    }}
-                  >
-                    {option.label}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+            <View style={[styles.sliderContainer, { backgroundColor: colors.card }]}>
+              <View style={styles.sliderLabels}>
+                <ThemedText variant="caption" color="secondary">30s</ThemedText>
+                <ThemedText variant="body" style={{ color: colors.primary, fontWeight: '600' }}>
+                  {formatTimeout(sliderValue)}
+                </ThemedText>
+                <ThemedText variant="caption" color="secondary">10m</ThemedText>
+              </View>
+              <Slider
+                style={styles.slider}
+                minimumValue={MIN_TIMEOUT}
+                maximumValue={MAX_TIMEOUT}
+                value={sliderValue}
+                onValueChange={handleTimeoutSliderChange}
+                onSlidingComplete={handleTimeoutSliderComplete}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.border}
+                thumbTintColor={colors.primary}
+                step={10}
+              />
+              <View style={styles.sliderMarkers}>
+                {[30, 60, 120, 300, 600].map((mark) => (
+                  <View 
+                    key={mark} 
+                    style={[
+                      styles.sliderMarker,
+                      { backgroundColor: sliderValue >= mark ? colors.primary : colors.border }
+                    ]} 
+                  />
+                ))}
+              </View>
             </View>
             
             <View style={styles.separator} />
@@ -353,17 +391,30 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginLeft: 60,
   },
-  timeoutOptions: {
-    flexDirection: 'row',
+  sliderContainer: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    flexWrap: 'wrap',
-    gap: spacing.xs,
+    paddingVertical: spacing.md,
   },
-  timeoutOption: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderMarkers: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    marginTop: -spacing.xs,
+  },
+  sliderMarker: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   themeOptions: {
     flexDirection: 'row',
