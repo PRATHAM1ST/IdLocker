@@ -41,3 +41,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Development config - DO NOT COMMIT
+# Copy devConfig.example.ts to devConfig.ts and modify for local dev
+src/config/devConfig.ts

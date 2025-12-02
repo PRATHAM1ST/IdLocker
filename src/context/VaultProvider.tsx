@@ -16,6 +16,8 @@ import type { VaultItem, VaultItemType, VaultData } from '../utils/types';
 import * as vaultStorage from '../storage/vaultStorage';
 import { useAuthLock } from './AuthLockProvider';
 import { logger } from '../utils/logger';
+import { shouldUseDummyData } from '../config';
+import { DUMMY_VAULT_ITEMS, getDummyDataSummary } from '../data/dummyData';
 
 /**
  * Generate a simple UUID v4
@@ -80,6 +82,16 @@ export function VaultProvider({ children }: VaultProviderProps) {
     setError(null);
     
     try {
+      // Check if dummy data should be loaded
+      if (shouldUseDummyData()) {
+        const summary = getDummyDataSummary();
+        console.log('🧪 [DEV] Loading dummy data:', summary);
+        setItems(DUMMY_VAULT_ITEMS);
+        setHasLoaded(true);
+        logger.vaultOperation('refresh (DUMMY DATA)', DUMMY_VAULT_ITEMS.length);
+        return;
+      }
+
       const data = await vaultStorage.loadVault();
       setItems(data.items);
       setHasLoaded(true);
