@@ -13,7 +13,7 @@ import {
   Linking,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { useRouter, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-constants';
 import { SafeThemedView } from '../../src/components/ThemedView';
@@ -43,7 +43,6 @@ function formatTimeout(seconds: number): string {
 }
 
 export default function SettingsScreen() {
-  const router = useRouter();
   const { colors, isDark, preference, setThemePreference } = useTheme();
   const { lock, biometricType, hasBiometrics, autoLockTimeout, setAutoLockTimeout } = useAuthLock();
 
@@ -77,8 +76,8 @@ export default function SettingsScreen() {
 
   const handleLockNow = useCallback(() => {
     lock();
-    router.replace('/lock' as any);
-  }, [lock, router]);
+    // Lock overlay will appear automatically
+  }, [lock]);
 
   const handleClearData = useCallback(() => {
     Alert.alert(

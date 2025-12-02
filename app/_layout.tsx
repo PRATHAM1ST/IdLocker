@@ -33,20 +33,6 @@ function RootLayoutNav() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen 
-          name="onboarding" 
-          options={{ 
-            gestureEnabled: false,
-            animation: 'fade',
-          }} 
-        />
-        <Stack.Screen 
-          name="lock" 
-          options={{ 
-            gestureEnabled: false,
-            animation: 'fade',
-          }} 
-        />
-        <Stack.Screen 
           name="(vault)" 
           options={{ 
             gestureEnabled: false,
