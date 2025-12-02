@@ -101,8 +101,12 @@ export default function VaultHomeScreen() {
     router.push(`/(vault)/item/${item.id}` as any);
   }, [router]);
 
-  const handleAddItem = useCallback(() => {
-    router.push('/(vault)/add' as any);
+  const handleAddItem = useCallback((type?: VaultItemType) => {
+    if (type) {
+      router.push(`/(vault)/add?type=${type}` as any);
+    } else {
+      router.push('/(vault)/add' as any);
+    }
   }, [router]);
 
   const handleSettings = useCallback(() => {
@@ -150,7 +154,7 @@ export default function VaultHomeScreen() {
           title="No items in this category"
           description="Add your first item to get started"
           actionLabel="Add Item"
-          onAction={handleAddItem}
+          onAction={() => handleAddItem(selectedCategory)}
         />
       );
     }
@@ -161,7 +165,7 @@ export default function VaultHomeScreen() {
         title="Your vault is empty"
         description="Start adding your sensitive information to keep it secure"
         actionLabel="Add Your First Item"
-        onAction={handleAddItem}
+        onAction={() => handleAddItem()}
       />
     );
   };
