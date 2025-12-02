@@ -1,28 +1,34 @@
 /**
- * Vault home screen - fully scrollable with illustrated header
+ * Vault home screen - Categories as main view with search & settings in header
  */
 
-import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CategoryCard } from '../../src/components/CategoryCard';
-import { EmptyState } from '../../src/components/EmptyState';
-import { IllustratedHeader } from '../../src/components/IllustratedHeader';
-import { ThemedText } from '../../src/components/ThemedText';
-import { VaultItemGridCard } from '../../src/components/VaultItemGridCard';
-import { useTheme } from '../../src/context/ThemeProvider';
-import { useGroupedItems, useVault } from '../../src/context/VaultProvider';
-import { borderRadius, layout, spacing } from '../../src/styles/theme';
-import { VAULT_ITEM_TYPES } from '../../src/utils/constants';
-import type { VaultItem, VaultItemType } from '../../src/utils/types';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  CategoryCardLarge,
+  CategoryFilterCard,
+} from "../../src/components/CategoryCard";
+import { EmptyState } from "../../src/components/EmptyState";
+import { ThemedText } from "../../src/components/ThemedText";
+import { ThemedView } from "../../src/components/ThemedView";
+import { VaultItemGridCard } from "../../src/components/VaultItemGridCard";
+import { useTheme } from "../../src/context/ThemeProvider";
+import { useGroupedItems, useVault } from "../../src/context/VaultProvider";
+import { borderRadius, layout, spacing } from "../../src/styles/theme";
+import { VAULT_ITEM_TYPES } from "../../src/utils/constants";
+import type { VaultItem, VaultItemType } from "../../src/utils/types";
+
+type FilterType = VaultItemType | "all";
 
 export default function VaultHomeScreen() {
   const router = useRouter();
@@ -31,27 +37,37 @@ export default function VaultHomeScreen() {
   const { items, isLoading, refreshVault } = useVault();
   const groupedItems = useGroupedItems();
 
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   // Calculate category counts
   const categoryCounts = useMemo(() => {
-    const counts: Record<VaultItemType, number> = {
-      bankAccount: groupedItems.get('bankAccount')?.length || 0,
-      card: groupedItems.get('card')?.length || 0,
-      govId: groupedItems.get('govId')?.length || 0,
-      login: groupedItems.get('login')?.length || 0,
-      note: groupedItems.get('note')?.length || 0,
-      other: groupedItems.get('other')?.length || 0,
+    const counts: Record<FilterType, number> = {
+      all: items.length,
+      bankAccount: groupedItems.get("bankAccount")?.length || 0,
+      card: groupedItems.get("card")?.length || 0,
+      govId: groupedItems.get("govId")?.length || 0,
+      login: groupedItems.get("login")?.length || 0,
+      note: groupedItems.get("note")?.length || 0,
+      other: groupedItems.get("other")?.length || 0,
     };
     return counts;
-  }, [groupedItems]);
+  }, [items, groupedItems]);
 
-  // Get recent items (last 10)
-  const recentItems = useMemo(() => {
-    return [...items]
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, 10);
-  }, [items]);
+  // Filter items based on selection
+  const filteredItems = useMemo(() => {
+    let result = items;
+
+    if (selectedFilter !== "all") {
+      result = result.filter((item) => item.type === selectedFilter);
+    }
+
+    return result.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }, [items, selectedFilter]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -59,39 +75,43 @@ export default function VaultHomeScreen() {
     setIsRefreshing(false);
   }, [refreshVault]);
 
-  const handleItemPress = useCallback((item: VaultItem) => {
-    router.push(`/(vault)/item/${item.id}` as any);
-  }, [router]);
+  const handleItemPress = useCallback(
+    (item: VaultItem) => {
+      router.push(`/(vault)/item/${item.id}` as any);
+    },
+    [router]
+  );
 
   const handleCategoryPress = useCallback((type: VaultItemType) => {
-    router.push(`/(vault)/categories?filter=${type}` as any);
-  }, [router]);
+    setSelectedFilter(type);
+    setViewMode("list");
+  }, []);
+
+  const handleAddItem = useCallback(
+    (type?: VaultItemType) => {
+      if (type) {
+        router.push(`/(vault)/add?type=${type}` as any);
+      } else {
+        router.push("/(vault)/add" as any);
+      }
+    },
+    [router]
+  );
 
   const handleSearchPress = useCallback(() => {
-    router.push('/(vault)/search' as any);
+    router.push("/(vault)/search" as any);
   }, [router]);
 
-  const handleAddItem = useCallback(() => {
-    router.push('/(vault)/add' as any);
+  const handleSettingsPress = useCallback(() => {
+    router.push("/(vault)/settings" as any);
   }, [router]);
-
-  if (isLoading && items.length === 0) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
-    );
-  }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <ThemedView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: layout.tabBarHeight + spacing.xl }
+          { paddingBottom: layout.tabBarHeight + spacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -102,83 +122,142 @@ export default function VaultHomeScreen() {
           />
         }
       >
-        {/* Illustrated Header - scrolls with content */}
-        <IllustratedHeader
-          title="IdLocker"
-          subtitle="Your secure vault"
-          onSearchPress={handleSearchPress}
-        />
+        {/* Header - scrolls with content */}
+        <LinearGradient
+          colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+        >
+          <View style={styles.headerContent}>
+            <ThemedText variant="title" style={styles.headerTitle}>
+              IdLocker
+            </ThemedText>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={handleSearchPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="search" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={handleSettingsPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.viewToggle}
+                onPress={() =>
+                  setViewMode(viewMode === "grid" ? "list" : "grid")
+                }
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={viewMode === "grid" ? "list" : "grid"}
+                  size={20}
+                  color="#FFFFFF"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
 
         {/* Main Content */}
-        <View style={[styles.content, { backgroundColor: colors.background }]}>
-          {/* Categories Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ThemedText variant="subtitle" style={styles.sectionTitle}>
-                Categories
-              </ThemedText>
-              <ThemedText variant="caption" color="secondary">
-                {items.length} items total
-              </ThemedText>
-            </View>
-            
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryScroll}
-            >
+        <View
+          style={[styles.content, { backgroundColor: colors.background }]}
+        >
+          {/* Filter cards */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScroll}
+          >
+            <CategoryFilterCard
+              type="all"
+              label="All"
+              icon="grid-outline"
+              isSelected={selectedFilter === "all"}
+              count={categoryCounts.all}
+              onPress={() => setSelectedFilter("all")}
+            />
+            {VAULT_ITEM_TYPES.map(({ type, label, icon }) => (
+              <CategoryFilterCard
+                key={type}
+                type={type}
+                label={label}
+                icon={icon}
+                isSelected={selectedFilter === type}
+                count={categoryCounts[type]}
+                onPress={() => setSelectedFilter(type)}
+              />
+            ))}
+          </ScrollView>
+
+          {/* Section header */}
+          <View style={styles.sectionHeader}>
+            <ThemedText variant="subtitle" style={styles.sectionTitle}>
+              {selectedFilter === "all"
+                ? "All Items"
+                : VAULT_ITEM_TYPES.find((t) => t.type === selectedFilter)
+                    ?.label}
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary">
+              {filteredItems.length}{" "}
+              {filteredItems.length === 1 ? "item" : "items"}
+            </ThemedText>
+          </View>
+
+          {/* Grid or List view */}
+          {viewMode === "grid" && selectedFilter === "all" ? (
+            <View style={styles.gridContainer}>
               {VAULT_ITEM_TYPES.map(({ type }) => (
-                <CategoryCard
+                <CategoryCardLarge
                   key={type}
                   type={type}
                   count={categoryCounts[type]}
                   onPress={() => handleCategoryPress(type)}
                 />
               ))}
-            </ScrollView>
-          </View>
-
-          {/* Recent Items Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ThemedText variant="subtitle" style={styles.sectionTitle}>
-                Recent Items
-              </ThemedText>
-              {recentItems.length > 0 && (
-                <TouchableOpacity 
-                  onPress={() => router.push('/(vault)/categories' as any)}
-                  activeOpacity={0.7}
-                >
-                  <ThemedText variant="caption" color="accent" style={styles.seeAllText}>
-                    See All
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
             </View>
-            
-            {recentItems.length > 0 ? (
-              <View style={styles.gridContainer}>
-                {recentItems.map((item) => (
-                  <VaultItemGridCard
-                    key={item.id}
-                    item={item}
-                    onPress={handleItemPress}
-                  />
-                ))}
-              </View>
-            ) : (
-              <EmptyState
-                icon="shield-outline"
-                title="Your vault is empty"
-                description="Start adding your sensitive information to keep it secure"
-                actionLabel="Add Your First Item"
-                onAction={handleAddItem}
-              />
-            )}
-          </View>
+          ) : (
+            <>
+              {filteredItems.length > 0 ? (
+                <View style={styles.itemsGrid}>
+                  {filteredItems.map((item) => (
+                    <VaultItemGridCard
+                      key={item.id}
+                      item={item}
+                      onPress={handleItemPress}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <EmptyState
+                  icon="folder-open-outline"
+                  title="No items found"
+                  description={
+                    selectedFilter === "all"
+                      ? "Your vault is empty. Add your first item to get started."
+                      : `No ${VAULT_ITEM_TYPES.find(
+                          (t) => t.type === selectedFilter
+                        )?.label.toLowerCase()} items yet.`
+                  }
+                  actionLabel="Add Item"
+                  onAction={() =>
+                    handleAddItem(
+                      selectedFilter === "all" ? undefined : selectedFilter
+                    )
+                  }
+                />
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
-    </View>
+    </ThemedView>
   );
 }
 
@@ -189,44 +268,73 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
+  header: {
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.base,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerTitle: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
     flex: 1,
-    marginTop: -spacing.lg,
+    marginTop: -spacing.md,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
-  section: {
-    marginBottom: spacing.lg,
+  filterScroll: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.base,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   sectionTitle: {
-    fontWeight: '700',
-  },
-  seeAllText: {
-    fontWeight: '600',
-  },
-  categoryScroll: {
-    paddingHorizontal: spacing.base,
+    fontWeight: "700",
   },
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.base,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  itemsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.base,
   },
 });

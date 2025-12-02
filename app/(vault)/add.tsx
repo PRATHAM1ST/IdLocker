@@ -295,14 +295,16 @@ export default function AddItemScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {!selectedType ? renderTypeSelector() : renderForm()}
-        </ScrollView>
+        <View style={[styles.mainContent, { backgroundColor: colors.background }]}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {!selectedType ? renderTypeSelector() : renderForm()}
+          </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -339,11 +341,18 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
+  mainContent: {
+    flex: 1,
+    marginTop: -spacing.md,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+  },
   scrollView: {
     flex: 1,
   },
   content: {
     padding: spacing.base,
+    paddingTop: spacing.lg,
     paddingBottom: spacing['3xl'],
   },
   typeSelectorContainer: {

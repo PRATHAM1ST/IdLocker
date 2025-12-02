@@ -402,6 +402,10 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.base,
     marginTop: -spacing.lg,
+    flex: 1,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing.sm,
   },
   fieldsCard: {
     padding: spacing.base,
