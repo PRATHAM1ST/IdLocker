@@ -35,7 +35,7 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
   
   const category = useMemo(() => getCategoryById(item.type), [item.type, getCategoryById]);
   const categoryColor = category?.color || { gradientStart: '#6B7280', gradientEnd: '#9CA3AF', icon: '#6B7280', bg: '#F3F4F6', text: '#374151' };
-  const preview = useMemo(() => getItemPreview(item), [item]);
+  const preview = useMemo(() => getItemPreview(item, category), [item, category]);
   const hasImages = item.images && item.images.length > 0;
   const imageCount = item.images?.length || 0;
   const primaryImage = hasImages ? item.images![0] : null;

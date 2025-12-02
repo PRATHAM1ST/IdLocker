@@ -22,6 +22,7 @@ import { ThemedText } from './ThemedText';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - spacing.md) / 2;
 const CARD_HEIGHT = 110;
+const ENHANCED_CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - spacing.md) / 2;
 
 interface CategoryCardProps {
   type: VaultItemType;
@@ -122,46 +123,115 @@ export function CategoryCardLarge({ type, count, onPress }: CategoryCardLargePro
 
 /**
  * Dynamic category card that works with CustomCategory
+ * Enhanced with edit/delete buttons and additional info
  */
 interface DynamicCategoryCardProps {
   category: CustomCategory;
   count: number;
   onPress: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  showActions?: boolean;
 }
 
-export function DynamicCategoryCard({ category, count, onPress }: DynamicCategoryCardProps) {
+export function DynamicCategoryCard({ 
+  category, 
+  count, 
+  onPress, 
+  onEdit, 
+  onDelete,
+  showActions = false 
+}: DynamicCategoryCardProps) {
+  const { colors } = useTheme();
+  
   return (
-    <TouchableOpacity
-      style={[styles.largeContainer, shadows.md]}
-      onPress={onPress}
-      activeOpacity={0.85}
-    >
-      <LinearGradient
-        colors={[category.color.gradientStart, category.color.gradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.largeGradient}
+    <View style={[styles.enhancedCardContainer, shadows.md]}>
+      <TouchableOpacity
+        style={{ flex: 1 }}
+        onPress={onPress}
+        activeOpacity={0.85}
       >
-        {/* Icon */}
-        <View style={styles.largeIconContainer}>
-          <Ionicons
-            name={category.icon as any}
-            size={32}
-            color="rgba(255, 255, 255, 0.95)"
-          />
-        </View>
+        <LinearGradient
+          colors={[category.color.gradientStart, category.color.gradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.enhancedGradient}
+        >
+          {/* Top section with icon and actions */}
+          <View style={styles.enhancedTopSection}>
+            <View style={styles.enhancedIconContainer}>
+              <Ionicons
+                name={category.icon as any}
+                size={28}
+                color="rgba(255, 255, 255, 0.95)"
+              />
+            </View>
+            
+            {/* Action buttons overlay */}
+            {showActions && (onEdit || onDelete) && (
+              <View style={styles.enhancedActionOverlay}>
+                {onEdit && (
+                  <TouchableOpacity
+                    style={[styles.enhancedActionBtn, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="pencil" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+                {onDelete && (
+                  <TouchableOpacity
+                    style={[styles.enhancedActionBtn, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
 
-        {/* Content */}
-        <View style={styles.largeContent}>
-          <ThemedText variant="subtitle" style={styles.largeLabel}>
-            {category.label}
-          </ThemedText>
-          <ThemedText variant="caption" style={styles.largeSubtitle}>
-            {count} {count === 1 ? 'item' : 'items'}
-          </ThemedText>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
+          {/* Content section */}
+          <View style={styles.enhancedContentSection}>
+            <View style={styles.enhancedTitleRow}>
+              <ThemedText variant="subtitle" style={styles.enhancedLabel} numberOfLines={1}>
+                {category.label}
+              </ThemedText>
+              {category.isPreset && (
+                <View style={styles.enhancedPresetBadge}>
+                  <ThemedText variant="caption" style={styles.enhancedPresetText}>
+                    Preset
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+            
+            {/* Stats row */}
+            <View style={styles.enhancedStatsRow}>
+              <View style={styles.enhancedStatItem}>
+                <Ionicons name="cube-outline" size={12} color="rgba(255, 255, 255, 0.8)" />
+                <ThemedText variant="caption" style={styles.enhancedStatText}>
+                  {count}
+                </ThemedText>
+              </View>
+              <View style={styles.enhancedStatItem}>
+                <Ionicons name="list-outline" size={12} color="rgba(255, 255, 255, 0.8)" />
+                <ThemedText variant="caption" style={styles.enhancedStatText}>
+                  {category.fields.length}
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -419,13 +489,12 @@ const styles = StyleSheet.create({
   // Large card styles
   largeContainer: {
     width: '48%',
-    aspectRatio: 1,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
   },
   largeGradient: {
-    flex: 1,
+    minHeight: 140,
     padding: spacing.base,
     justifyContent: 'space-between',
   },
@@ -440,13 +509,129 @@ const styles = StyleSheet.create({
   largeContent: {
     // Bottom aligned via space-between
   },
+  largeContentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
   largeLabel: {
     color: '#FFFFFF',
     fontWeight: '700',
-    marginBottom: spacing.xs,
+    flex: 1,
+  },
+  presetBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  presetBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '600',
   },
   largeSubtitle: {
     color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 2,
+  },
+  largeFieldCount: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+  },
+  categoryActions: {
+    flexDirection: 'row',
+    padding: spacing.sm,
+    gap: spacing.xs,
+    borderBottomLeftRadius: borderRadius.lg,
+    borderBottomRightRadius: borderRadius.lg,
+  },
+  actionButton: {
+    flex: 1,
+    height: 32,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Enhanced card styles
+  enhancedCardContainer: {
+    width: ENHANCED_CARD_WIDTH,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+  },
+  enhancedGradient: {
+    minHeight: 160,
+    padding: spacing.md,
+    justifyContent: 'space-between',
+  },
+  enhancedTopSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  enhancedIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enhancedActionOverlay: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  enhancedActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+  enhancedContentSection: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  enhancedTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  enhancedLabel: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+    flex: 1,
+  },
+  enhancedPresetBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
+  },
+  enhancedPresetText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  enhancedStatsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  enhancedStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  enhancedStatText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    fontWeight: '600',
   },
   // Filter card styles (like CategoryCard but smaller, for filters)
   filterCard: {

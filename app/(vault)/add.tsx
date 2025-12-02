@@ -129,7 +129,10 @@ export default function AddItemScreen() {
     setIsSaving(false);
 
     if (newItem) {
-      router.back();
+      // Small delay to ensure navigation is ready
+      setTimeout(() => {
+        router.back();
+      }, 100);
     } else {
       Alert.alert('Error', 'Failed to save item. Please try again.');
     }

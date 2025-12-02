@@ -7,6 +7,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
+  Dimensions,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -26,7 +28,7 @@ import { useCategories } from "../../src/context/CategoryProvider";
 import { useTheme } from "../../src/context/ThemeProvider";
 import { useGroupedItems, useVault } from "../../src/context/VaultProvider";
 import { borderRadius, layout, spacing } from "../../src/styles/theme";
-import type { VaultItem, VaultItemType } from "../../src/utils/types";
+import type { CustomCategory, VaultItem, VaultItemType } from "../../src/utils/types";
 
 type FilterType = VaultItemType | "all";
 
@@ -35,7 +37,7 @@ export default function VaultHomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { items, isLoading, refreshVault } = useVault();
-  const { categories, refreshCategories } = useCategories();
+  const { categories, refreshCategories, deleteCategory } = useCategories();
   const groupedItems = useGroupedItems();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
@@ -107,9 +109,44 @@ export default function VaultHomeScreen() {
     router.push("/(vault)/settings" as any);
   }, [router]);
 
-  const handleCategoriesPress = useCallback(() => {
-    router.push("/(vault)/categories" as any);
+  const handleCreateCategory = useCallback(() => {
+    router.push("/(vault)/category/new" as any);
   }, [router]);
+
+  const handleEditCategory = useCallback((category: CustomCategory) => {
+    router.push(`/(vault)/category/${category.id}` as any);
+  }, [router]);
+
+  const handleDeleteCategory = useCallback((category: CustomCategory) => {
+    const itemCount = categoryCounts[category.id] || 0;
+    
+    if (itemCount > 0) {
+      Alert.alert(
+        'Cannot Delete',
+        `This category has ${itemCount} item${itemCount === 1 ? '' : 's'}. Please delete or move the items first.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Delete Category',
+      `Are you sure you want to delete "${category.label}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await deleteCategory(category.id);
+            if (!success) {
+              Alert.alert('Error', 'Failed to delete category.');
+            }
+          },
+        },
+      ]
+    );
+  }, [deleteCategory, categoryCounts]);
 
   // Get the selected category
   const selectedCategory = useMemo(() => {
@@ -151,13 +188,6 @@ export default function VaultHomeScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons name="search" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.headerButton}
-                onPress={handleCategoriesPress}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="layers-outline" size={20} color="#FFFFFF" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.headerButton}
@@ -213,13 +243,16 @@ export default function VaultHomeScreen() {
           {/* Section header */}
           <View style={styles.sectionHeader}>
             <ThemedText variant="subtitle" style={styles.sectionTitle}>
-              {selectedFilter === "all"
+              {viewMode === "grid" && selectedFilter === "all"
+                ? "Categories"
+                : selectedFilter === "all"
                 ? "All Items"
                 : selectedCategory?.label || "Items"}
             </ThemedText>
             <ThemedText variant="caption" color="secondary">
-              {filteredItems.length}{" "}
-              {filteredItems.length === 1 ? "item" : "items"}
+              {viewMode === "grid" && selectedFilter === "all"
+                ? `${categories.length} ${categories.length === 1 ? "category" : "categories"}`
+                : `${filteredItems.length} ${filteredItems.length === 1 ? "item" : "items"}`}
             </ThemedText>
           </View>
 
@@ -232,8 +265,29 @@ export default function VaultHomeScreen() {
                   category={category}
                   count={categoryCounts[category.id] || 0}
                   onPress={() => handleCategoryPress(category.id)}
+                  onEdit={() => handleEditCategory(category)}
+                  onDelete={() => handleDeleteCategory(category)}
+                  showActions={true}
                 />
               ))}
+              {/* Create new category card */}
+              <TouchableOpacity
+                style={[styles.createCategoryCard, { borderColor: colors.border, backgroundColor: colors.card }]}
+                onPress={handleCreateCategory}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.createCategoryIcon, { backgroundColor: colors.primary + '15' }]}>
+                  <Ionicons name="add-circle" size={32} color={colors.primary} />
+                </View>
+                <View style={styles.createCategoryContent}>
+                  <ThemedText variant="subtitle" style={[styles.createCategoryLabel, { color: colors.primary }]}>
+                    New Category
+                  </ThemedText>
+                  <ThemedText variant="caption" color="tertiary" style={styles.createCategoryHint}>
+                    Tap to create
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
             </View>
           ) : (
             <>
@@ -339,13 +393,42 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
     paddingHorizontal: spacing.base,
+    gap: spacing.md,
   },
   itemsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: spacing.base,
+  },
+  createCategoryCard: {
+    width: (Dimensions.get('window').width - spacing.base * 2 - spacing.md) / 2,
+    borderRadius: borderRadius.xl,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 160,
+  },
+  createCategoryIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  createCategoryContent: {
+    alignItems: 'center',
+  },
+  createCategoryLabel: {
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+    fontSize: 16,
+  },
+  createCategoryHint: {
+    fontSize: 11,
   },
 });

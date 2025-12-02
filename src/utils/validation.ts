@@ -3,7 +3,7 @@
  */
 
 import { ITEM_TYPE_CONFIGS } from './constants';
-import type { FieldDefinition, VaultItem, VaultItemType } from './types';
+import type { CustomCategory, FieldDefinition, VaultItem, VaultItemType } from './types';
 
 export interface ValidationError {
   field: string;
@@ -148,11 +148,17 @@ export function formatCardExpiry(month: string, year: string): string {
 
 /**
  * Get preview text for vault item in list
+ * Accepts optional category for custom categories
  */
-export function getItemPreview(item: VaultItem): string {
-  const config = ITEM_TYPE_CONFIGS[item.type];
+export function getItemPreview(item: VaultItem, category?: CustomCategory | null): string {
+  // Try to use category's previewField if provided
+  if (category?.previewField && item.fields[category.previewField]) {
+    return maskValue(item.fields[category.previewField]);
+  }
   
-  if (config.previewField && item.fields[config.previewField]) {
+  // Try legacy config for preset categories
+  const config = ITEM_TYPE_CONFIGS[item.type as keyof typeof ITEM_TYPE_CONFIGS];
+  if (config?.previewField && item.fields[config.previewField]) {
     return maskValue(item.fields[config.previewField]);
   }
   
@@ -171,6 +177,14 @@ export function getItemPreview(item: VaultItem): string {
     case 'note':
       return 'Secure Note';
     default:
+      // For custom categories, try to find first non-empty field
+      if (category) {
+        for (const fieldDef of category.fields) {
+          if (item.fields[fieldDef.key] && !fieldDef.sensitive) {
+            return item.fields[fieldDef.key];
+          }
+        }
+      }
       return item.label;
   }
 }

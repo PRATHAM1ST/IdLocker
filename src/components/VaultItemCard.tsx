@@ -13,10 +13,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
+import { useCategories } from '../context/CategoryProvider';
 import { ThemedText } from './ThemedText';
-import { spacing, borderRadius, getCategoryColor, shadows } from '../styles/theme';
+import { spacing, borderRadius, shadows } from '../styles/theme';
 import type { VaultItem } from '../utils/types';
-import { ITEM_TYPE_CONFIGS } from '../utils/constants';
 import { getItemPreview } from '../utils/validation';
 
 interface VaultItemCardProps {
@@ -27,10 +27,11 @@ interface VaultItemCardProps {
 
 export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCardProps) {
   const { colors, isDark } = useTheme();
+  const { getCategoryById } = useCategories();
   
-  const config = ITEM_TYPE_CONFIGS[item.type];
-  const categoryColor = getCategoryColor(item.type, isDark);
-  const preview = useMemo(() => getItemPreview(item), [item]);
+  const category = useMemo(() => getCategoryById(item.type), [item.type, getCategoryById]);
+  const categoryColor = category?.color || { gradientStart: '#6B7280', gradientEnd: '#9CA3AF', icon: '#6B7280', bg: '#F3F4F6', text: '#374151' };
+  const preview = useMemo(() => getItemPreview(item, category), [item, category]);
   const hasImages = item.images && item.images.length > 0;
   const imageCount = item.images?.length || 0;
   const primaryImage = hasImages ? item.images![0] : null;
@@ -74,7 +75,7 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
       ) : (
         <View style={[styles.iconContainer, { backgroundColor: categoryColor.bg }]}>
           <Ionicons
-            name={config.icon as any}
+            name={(category?.icon || 'folder-outline') as any}
             size={22}
             color={categoryColor.icon}
           />
@@ -124,10 +125,11 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
  */
 export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
   const { colors, isDark } = useTheme();
+  const { getCategoryById } = useCategories();
   
-  const config = ITEM_TYPE_CONFIGS[item.type];
-  const categoryColor = getCategoryColor(item.type, isDark);
-  const preview = useMemo(() => getItemPreview(item), [item]);
+  const category = useMemo(() => getCategoryById(item.type), [item.type, getCategoryById]);
+  const categoryColor = category?.color || { gradientStart: '#6B7280', gradientEnd: '#9CA3AF', icon: '#6B7280', bg: '#F3F4F6', text: '#374151' };
+  const preview = useMemo(() => getItemPreview(item, category), [item, category]);
   const hasImages = item.images && item.images.length > 0;
   const primaryImage = hasImages ? item.images![0] : null;
 
@@ -155,7 +157,7 @@ export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
       ) : (
         <View style={[styles.compactIcon, { backgroundColor: categoryColor.bg }]}>
           <Ionicons
-            name={config.icon as any}
+            name={(category?.icon || 'folder-outline') as any}
             size={18}
             color={categoryColor.icon}
           />

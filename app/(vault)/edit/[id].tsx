@@ -130,7 +130,10 @@ export default function EditItemScreen() {
     setIsSaving(false);
 
     if (updatedItem) {
-      router.back();
+      // Small delay to ensure navigation is ready
+      setTimeout(() => {
+        router.back();
+      }, 100);
     } else {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
     }
