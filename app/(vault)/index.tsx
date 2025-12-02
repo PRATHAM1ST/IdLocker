@@ -2,25 +2,25 @@
  * Vault home screen - fully scrollable with illustrated header
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
 import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedText } from '../../src/components/ThemedText';
-import { VaultItemCard } from '../../src/components/VaultItemCard';
 import { CategoryCard } from '../../src/components/CategoryCard';
-import { IllustratedHeader } from '../../src/components/IllustratedHeader';
 import { EmptyState } from '../../src/components/EmptyState';
+import { IllustratedHeader } from '../../src/components/IllustratedHeader';
+import { ThemedText } from '../../src/components/ThemedText';
+import { VaultItemGridCard } from '../../src/components/VaultItemGridCard';
 import { useTheme } from '../../src/context/ThemeProvider';
-import { useVault, useGroupedItems } from '../../src/context/VaultProvider';
-import { spacing, borderRadius, layout } from '../../src/styles/theme';
+import { useGroupedItems, useVault } from '../../src/context/VaultProvider';
+import { borderRadius, layout, spacing } from '../../src/styles/theme';
 import { VAULT_ITEM_TYPES } from '../../src/utils/constants';
 import type { VaultItem, VaultItemType } from '../../src/utils/types';
 
@@ -157,9 +157,9 @@ export default function VaultHomeScreen() {
             </View>
             
             {recentItems.length > 0 ? (
-              <View style={styles.itemsList}>
+              <View style={styles.gridContainer}>
                 {recentItems.map((item) => (
-                  <VaultItemCard
+                  <VaultItemGridCard
                     key={item.id}
                     item={item}
                     onPress={handleItemPress}
@@ -218,8 +218,11 @@ const styles = StyleSheet.create({
   categoryScroll: {
     paddingHorizontal: spacing.base,
   },
-  itemsList: {
-    // Items have their own horizontal margin
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
   },
   loadingContainer: {
     flex: 1,

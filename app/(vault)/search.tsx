@@ -6,26 +6,26 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-	Keyboard,
-	ScrollView,
-	StyleSheet,
-	TextInput,
-	TouchableOpacity,
-	View,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategoryFilterCard } from "../../src/components/CategoryCard";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ThemedText } from "../../src/components/ThemedText";
 import { ThemedView } from "../../src/components/ThemedView";
-import { VaultItemCard } from "../../src/components/VaultItemCard";
+import { VaultItemGridCard } from "../../src/components/VaultItemGridCard";
 import { useTheme } from "../../src/context/ThemeProvider";
 import { useVault } from "../../src/context/VaultProvider";
 import { borderRadius, layout, spacing } from "../../src/styles/theme";
@@ -235,7 +235,7 @@ export default function SearchScreen() {
 						))}
 					</ScrollView>
 
-					{/* Search results */}
+					{/* Search results - Grid layout */}
 					{searchResults.length > 0 && (
 						<View style={styles.resultsSection}>
 							<ThemedText
@@ -248,13 +248,15 @@ export default function SearchScreen() {
 									? "result"
 									: "results"}
 							</ThemedText>
-							{searchResults.map((item) => (
-								<VaultItemCard
-									key={item.id}
-									item={item}
-									onPress={handleItemPress}
-								/>
-							))}
+							<View style={styles.gridContainer}>
+								{searchResults.map((item) => (
+									<VaultItemGridCard
+										key={item.id}
+										item={item}
+										onPress={handleItemPress}
+									/>
+								))}
+							</View>
 						</View>
 					)}
 
@@ -462,11 +464,15 @@ const styles = StyleSheet.create({
 		paddingBottom: spacing.sm,
 	},
 	resultsSection: {
-		// No extra padding needed
+		paddingHorizontal: spacing.base,
+	},
+	gridContainer: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "space-between",
 	},
 	sectionLabel: {
-		paddingHorizontal: spacing.base,
-		marginBottom: spacing.sm,
+		marginBottom: spacing.md,
 	},
 	sectionTitle: {
 		fontWeight: "700",

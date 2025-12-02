@@ -7,21 +7,21 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-	RefreshControl,
-	ScrollView,
-	StyleSheet,
-	TouchableOpacity,
-	View,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-	CategoryCardLarge,
-	CategoryFilterCard,
+  CategoryCardLarge,
+  CategoryFilterCard,
 } from "../../src/components/CategoryCard";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ThemedText } from "../../src/components/ThemedText";
 import { ThemedView } from "../../src/components/ThemedView";
-import { VaultItemCard } from "../../src/components/VaultItemCard";
+import { VaultItemGridCard } from "../../src/components/VaultItemGridCard";
 import { useTheme } from "../../src/context/ThemeProvider";
 import { useGroupedItems, useVault } from "../../src/context/VaultProvider";
 import { borderRadius, layout, spacing } from "../../src/styles/theme";
@@ -220,9 +220,9 @@ export default function CategoriesScreen() {
 					) : (
 						<>
 							{filteredItems.length > 0 ? (
-								<View style={styles.itemsList}>
+								<View style={styles.itemsGrid}>
 									{filteredItems.map((item) => (
-										<VaultItemCard
+										<VaultItemGridCard
 											key={item.id}
 											item={item}
 											onPress={handleItemPress}
@@ -317,7 +317,10 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		paddingHorizontal: spacing.base,
 	},
-	itemsList: {
-		// Items have their own horizontal margin
+	itemsGrid: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "space-between",
+		paddingHorizontal: spacing.base,
 	},
 });
