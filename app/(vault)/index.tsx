@@ -23,7 +23,6 @@ import { EmptyState } from '../../src/components/EmptyState';
 import { IconButton } from '../../src/components/Button';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault, useGroupedItems } from '../../src/context/VaultProvider';
-import { useAuthLock } from '../../src/context/AuthLockProvider';
 import { spacing, borderRadius } from '../../src/styles/theme';
 import type { VaultItem, VaultItemType } from '../../src/utils/types';
 
@@ -34,7 +33,6 @@ export default function VaultHomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { items, isLoading, refreshVault } = useVault();
-  const { lock } = useAuthLock();
   const groupedItems = useGroupedItems();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,11 +109,6 @@ export default function VaultHomeScreen() {
     router.push('/(vault)/settings' as any);
   }, [router]);
 
-  const handleLock = useCallback(() => {
-    lock();
-    router.replace('/lock' as any);
-  }, [lock, router]);
-
   const renderItem = useCallback(({ item }: { item: VaultItem }) => (
     <VaultItemCard item={item} onPress={handleItemPress} />
   ), [handleItemPress]);
@@ -184,18 +177,11 @@ export default function VaultHomeScreen() {
             </View>
             <ThemedText variant="title">Vault</ThemedText>
           </View>
-          <View style={styles.headerActions}>
-            <IconButton
-              icon="settings-outline"
-              onPress={handleSettings}
-              color={colors.textSecondary}
-            />
-            <IconButton
-              icon="lock-closed-outline"
-              onPress={handleLock}
-              color={colors.textSecondary}
-            />
-          </View>
+          <IconButton
+            icon="settings-outline"
+            onPress={handleSettings}
+            color={colors.textSecondary}
+          />
         </View>
 
         {/* Search bar */}
@@ -280,10 +266,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
