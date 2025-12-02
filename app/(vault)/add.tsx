@@ -171,21 +171,6 @@ export default function AddItemScreen() {
           </TouchableOpacity>
         ))}
         
-        {/* Create new category option */}
-        <TouchableOpacity
-          style={styles.typeCard}
-          onPress={handleCreateCategory}
-          activeOpacity={0.85}
-        >
-          <View style={[styles.createCategoryCard, { borderColor: colors.border }]}>
-            <View style={[styles.createCategoryIcon, { backgroundColor: colors.primary + '15' }]}>
-              <Ionicons name="add" size={28} color={colors.primary} />
-            </View>
-            <ThemedText variant="label" style={[styles.createCategoryLabel, { color: colors.primary }]}>
-              New Category
-            </ThemedText>
-          </View>
-        </TouchableOpacity>
       </View>
     </View>
   );
