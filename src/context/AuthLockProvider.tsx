@@ -12,7 +12,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import { AppState, AppStateStatus, Platform } from 'react-native';
+import { AppState, AppStateStatus, Platform, View, PanResponder } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import type { AuthState, AppSettings } from '../utils/types';
 import { loadSettings } from '../storage/vaultStorage';
@@ -33,6 +33,7 @@ interface AuthLockContextValue {
   unlock: () => Promise<boolean>;
   lock: () => void;
   clearError: () => void;
+  resetActivity: () => void;
   
   // Settings
   autoLockTimeout: number;
@@ -230,6 +231,7 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
       unlock,
       lock,
       clearError,
+      resetActivity,
       autoLockTimeout,
     }),
     [
@@ -241,13 +243,32 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
       unlock,
       lock,
       clearError,
+      resetActivity,
       autoLockTimeout,
     ]
   );
 
+  // Create a PanResponder to detect any touch interaction
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponderCapture: () => {
+          // Reset activity on any touch, but don't capture the event
+          if (!isLocked) {
+            resetActivity();
+          }
+          return false; // Don't capture - let children handle touches
+        },
+        onMoveShouldSetPanResponderCapture: () => false,
+      }),
+    [isLocked, resetActivity]
+  );
+
   return (
     <AuthLockContext.Provider value={value}>
-      {children}
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+        {children}
+      </View>
     </AuthLockContext.Provider>
   );
 }

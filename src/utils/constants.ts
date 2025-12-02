@@ -24,7 +24,7 @@ export const CHUNK_SIZE = 2000; // bytes, leaving buffer under 2048 limit
 // Default app settings
 export const DEFAULT_SETTINGS: AppSettings = {
   hasCompletedOnboarding: false,
-  autoLockTimeout: 60, // 1 minute
+  autoLockTimeout: 120, // 2 minutes default (more reasonable for active use)
   theme: 'system',
 };
 
