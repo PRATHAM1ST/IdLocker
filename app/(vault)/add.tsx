@@ -5,17 +5,20 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ExpoImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetPicker } from '../../src/components/AssetPicker';
@@ -28,28 +31,49 @@ import { useAssets } from '../../src/context/AssetProvider';
 import { useCategories } from '../../src/context/CategoryProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
+import { formatFileSize } from '../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../src/styles/theme';
-import type { AssetReference, CustomCategory, CustomField, FieldDefinition, VaultItemType } from '../../src/utils/types';
+import type { Asset, AssetReference, AssetType, CustomCategory, CustomField, FieldDefinition, VaultItemType } from '../../src/utils/types';
 import { sanitizeInput } from '../../src/utils/validation';
 
 export default function AddItemScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ type?: VaultItemType }>();
+  // Route params for context-aware add screen:
+  // - type/categoryId: Pre-select a category
+  // - mode: 'item' (default) or 'asset' for standalone asset upload
+  const params = useLocalSearchParams<{ type?: string; categoryId?: string; mode?: string }>();
+  
+  // Debug: Log received params
+  console.log('[AddScreen] Params received:', { 
+    type: params.type, 
+    categoryId: params.categoryId, 
+    mode: params.mode 
+  });
+  
+  // Determine mode from params (default to 'item')
+  const mode = params.mode || 'item';
+  // Support both 'type' and 'categoryId' params
+  const initialCategoryId = params.categoryId || params.type || null;
   const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { addItem } = useVault();
   const { categories, getCategoryById } = useCategories();
-  const { getAssetsByIds } = useAssets();
+  const { saveImageAsset, saveDocumentAsset, refreshAssets } = useAssets();
 
-  const [selectedType, setSelectedType] = useState<VaultItemType | null>(
-    params.type || null
-  );
+  const [selectedType, setSelectedType] = useState<VaultItemType | null>(null);
   const [label, setLabel] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sync selectedType with route params when they change
+  useEffect(() => {
+    if (initialCategoryId && !selectedType) {
+      setSelectedType(initialCategoryId as VaultItemType);
+    }
+  }, [initialCategoryId, selectedType]);
 
   // Get the selected category
   const selectedCategory = useMemo(() => {
@@ -67,10 +91,6 @@ export default function AddItemScreen() {
     setAssetRefs([]);
     setErrors({});
   }, []);
-
-  const handleCreateCategory = useCallback(() => {
-    router.push('/(vault)/category/new' as any);
-  }, [router]);
 
   const handleFieldChange = useCallback((key: string, value: string) => {
     const sanitized = sanitizeInput(value);
@@ -139,6 +159,246 @@ export default function AddItemScreen() {
       Alert.alert('Error', 'Failed to save item. Please try again.');
     }
   }, [selectedType, selectedCategory, label, fields, customFields, assetRefs, addItem, router]);
+
+  // ========== Asset Upload Mode Handlers ==========
+  const [uploadedAssets, setUploadedAssets] = useState<Asset[]>([]);
+  const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+
+  const requestAssetPermissions = async (type: 'camera' | 'library'): Promise<boolean> => {
+    if (type === 'camera') {
+      const { status } = await ExpoImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Camera Permission Required',
+          'Please grant camera access in your device settings to capture photos.'
+        );
+        return false;
+      }
+    } else {
+      const { status } = await ExpoImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Photo Library Permission Required',
+          'Please grant photo library access in your device settings to select images.'
+        );
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleAssetPickImage = useCallback(async (source: 'camera' | 'library') => {
+    const hasPermission = await requestAssetPermissions(source);
+    if (!hasPermission) return;
+
+    setIsUploadingAsset(true);
+
+    try {
+      const options: ExpoImagePicker.ImagePickerOptions = {
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      };
+
+      const result = source === 'camera'
+        ? await ExpoImagePicker.launchCameraAsync(options)
+        : await ExpoImagePicker.launchImageLibraryAsync(options);
+
+      if (!result.canceled && result.assets[0]) {
+        const imageAsset = result.assets[0];
+        const originalFilename = imageAsset.fileName || `image_${Date.now()}.jpg`;
+        
+        const savedAsset = await saveImageAsset(
+          imageAsset.uri,
+          originalFilename,
+          imageAsset.width,
+          imageAsset.height
+        );
+
+        if (savedAsset) {
+          setUploadedAssets(prev => [...prev, savedAsset]);
+        } else {
+          Alert.alert('Error', 'Failed to save image. Please try again.');
+        }
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    } finally {
+      setIsUploadingAsset(false);
+    }
+  }, [saveImageAsset]);
+
+  const handleAssetPickDocument = useCallback(async () => {
+    setIsUploadingAsset(true);
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/plain',
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const docAsset = result.assets[0];
+        
+        const savedAsset = await saveDocumentAsset(
+          docAsset.uri,
+          docAsset.name,
+          docAsset.mimeType || 'application/octet-stream'
+        );
+
+        if (savedAsset) {
+          setUploadedAssets(prev => [...prev, savedAsset]);
+        } else {
+          Alert.alert('Error', 'Failed to save document. Please try again.');
+        }
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick document. Please try again.');
+    } finally {
+      setIsUploadingAsset(false);
+    }
+  }, [saveDocumentAsset]);
+
+  const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {
+    switch (type) {
+      case 'image':
+        return 'image-outline';
+      case 'pdf':
+        return 'document-text-outline';
+      case 'document':
+        return 'document-outline';
+      default:
+        return 'attach-outline';
+    }
+  };
+
+  const handleAssetUploadDone = useCallback(() => {
+    // Refresh assets list to include newly uploaded assets
+    refreshAssets();
+    router.back();
+  }, [refreshAssets, router]);
+
+  const renderAssetUploader = () => (
+    <View style={styles.assetUploaderContainer}>
+      <View style={styles.assetUploaderHeader}>
+        <View style={[styles.assetUploaderIconContainer, { backgroundColor: colors.primary + '20' }]}>
+          <Ionicons name="cloud-upload-outline" size={48} color={colors.primary} />
+        </View>
+        <ThemedText variant="subtitle" style={styles.assetUploaderTitle}>
+          Upload Files
+        </ThemedText>
+        <ThemedText variant="body" color="secondary" style={styles.assetUploaderSubtitle}>
+          Add images, PDFs, or documents to your asset library
+        </ThemedText>
+      </View>
+
+      {/* Upload options */}
+      <View style={styles.assetUploadOptions}>
+        <TouchableOpacity
+          style={[styles.assetUploadOption, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => handleAssetPickImage('camera')}
+          disabled={isUploadingAsset}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.assetUploadOptionIcon, { backgroundColor: '#4CAF50' + '20' }]}>
+            <Ionicons name="camera-outline" size={28} color="#4CAF50" />
+          </View>
+          <ThemedText variant="label">Camera</ThemedText>
+          <ThemedText variant="caption" color="secondary">Take a photo</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.assetUploadOption, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => handleAssetPickImage('library')}
+          disabled={isUploadingAsset}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.assetUploadOptionIcon, { backgroundColor: '#2196F3' + '20' }]}>
+            <Ionicons name="images-outline" size={28} color="#2196F3" />
+          </View>
+          <ThemedText variant="label">Gallery</ThemedText>
+          <ThemedText variant="caption" color="secondary">Choose image</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.assetUploadOption, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={handleAssetPickDocument}
+          disabled={isUploadingAsset}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.assetUploadOptionIcon, { backgroundColor: '#FF9800' + '20' }]}>
+            <Ionicons name="document-outline" size={28} color="#FF9800" />
+          </View>
+          <ThemedText variant="label">Document</ThemedText>
+          <ThemedText variant="caption" color="secondary">PDF, Word, etc.</ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      {/* Uploaded assets preview */}
+      {uploadedAssets.length > 0 && (
+        <View style={styles.uploadedAssetsSection}>
+          <ThemedText variant="label" style={styles.uploadedAssetsTitle}>
+            Uploaded ({uploadedAssets.length})
+          </ThemedText>
+          <View style={styles.uploadedAssetsList}>
+            {uploadedAssets.map((asset) => (
+              <View
+                key={asset.id}
+                style={[styles.uploadedAssetItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
+                {asset.type === 'image' ? (
+                  <Image source={{ uri: asset.uri }} style={styles.uploadedAssetThumbnail} />
+                ) : (
+                  <View style={[styles.uploadedAssetDocIcon, { backgroundColor: colors.backgroundTertiary }]}>
+                    <Ionicons name={getAssetIcon(asset.type)} size={24} color={colors.primary} />
+                  </View>
+                )}
+                <View style={styles.uploadedAssetInfo}>
+                  <ThemedText variant="body" numberOfLines={1}>
+                    {asset.originalFilename}
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary">
+                    {formatFileSize(asset.size)} • {asset.type.toUpperCase()}
+                  </ThemedText>
+                </View>
+                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Loading indicator */}
+      {isUploadingAsset && (
+        <View style={styles.uploadingIndicator}>
+          <Ionicons name="hourglass-outline" size={24} color={colors.primary} />
+          <ThemedText variant="body" color="secondary" style={{ marginLeft: spacing.sm }}>
+            Uploading...
+          </ThemedText>
+        </View>
+      )}
+
+      {/* Done button */}
+      {uploadedAssets.length > 0 && (
+        <View style={styles.saveContainer}>
+          <Button
+            title="Done"
+            onPress={handleAssetUploadDone}
+            icon="checkmark"
+            fullWidth
+            size="lg"
+          />
+        </View>
+      )}
+    </View>
+  );
 
   const renderTypeSelector = () => (
     <View style={styles.typeSelectorContainer}>
@@ -316,7 +576,11 @@ export default function AddItemScreen() {
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <ThemedText variant="subtitle" style={styles.headerTitle}>
-            {selectedType ? `Add ${selectedCategory?.label}` : 'Add Item'}
+            {mode === 'asset' 
+              ? 'Add Asset' 
+              : selectedType 
+                ? `Add ${selectedCategory?.label}` 
+                : 'Add Item'}
           </ThemedText>
           <View style={styles.headerSpacer} />
         </View>
@@ -334,7 +598,11 @@ export default function AddItemScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {!selectedType ? renderTypeSelector() : renderForm()}
+            {mode === 'asset' 
+              ? renderAssetUploader() 
+              : !selectedType 
+                ? renderTypeSelector() 
+                : renderForm()}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -495,5 +763,89 @@ const styles = StyleSheet.create({
   },
   saveContainer: {
     marginTop: spacing.lg,
+  },
+  // Asset uploader styles
+  assetUploaderContainer: {
+    paddingTop: spacing.lg,
+  },
+  assetUploaderHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  assetUploaderIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  assetUploaderTitle: {
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  assetUploaderSubtitle: {
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  assetUploadOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xl,
+  },
+  assetUploadOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    marginHorizontal: spacing.xs,
+  },
+  assetUploadOptionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  uploadedAssetsSection: {
+    marginTop: spacing.md,
+  },
+  uploadedAssetsTitle: {
+    marginBottom: spacing.md,
+  },
+  uploadedAssetsList: {
+    gap: spacing.sm,
+  },
+  uploadedAssetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+  },
+  uploadedAssetThumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+  },
+  uploadedAssetDocIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadedAssetInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  uploadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
   },
 });

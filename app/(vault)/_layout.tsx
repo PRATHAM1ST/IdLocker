@@ -5,6 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
+import { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LockOverlay } from '../../src/components/LockOverlay';
@@ -22,6 +23,36 @@ export default function VaultLayout() {
 
   // Check if we're on screens that shouldn't show the add button
   const hideAddButton = pathname.includes('/add') || pathname.includes('/edit') || pathname.includes('/item/');
+
+  // Determine context-aware add button params based on current route
+  const addButtonConfig = useMemo(() => {
+    // On assets screen - open asset upload mode
+    if (pathname.includes('/assets')) {
+      return {
+        pathname: '/(vault)/add' as const,
+        params: { mode: 'asset' },
+        icon: 'cloud-upload-outline' as const,
+      };
+    }
+    
+    // On category detail screen - pre-select that category
+    const categoryMatch = pathname.match(/\/category\/([^\/]+)/);
+    if (categoryMatch && categoryMatch[1] && categoryMatch[1] !== 'new') {
+      const categoryId = categoryMatch[1];
+      return {
+        pathname: '/(vault)/add' as const,
+        params: { categoryId },
+        icon: 'add' as const,
+      };
+    }
+    
+    // Default - show category selector
+    return {
+      pathname: '/(vault)/add' as const,
+      params: {},
+      icon: 'add' as const,
+    };
+  }, [pathname]);
 
   const currentShadows = isDark ? darkShadows : shadows;
 
@@ -95,7 +126,7 @@ export default function VaultLayout() {
         />
       </Stack>
 
-      {/* Floating Add Button - Squircle style */}
+      {/* Floating Add Button - Squircle style with context-aware behavior */}
       {!hideAddButton && (
         <TouchableOpacity
           style={[
@@ -106,10 +137,13 @@ export default function VaultLayout() {
               ...currentShadows.xl,
             },
           ]}
-          onPress={() => router.push('/add')}
+          onPress={() => router.push({
+            pathname: addButtonConfig.pathname,
+            params: addButtonConfig.params,
+          } as any)}
           activeOpacity={0.85}
         >
-          <Ionicons name="add" size={32} color="#FFFFFF" />
+          <Ionicons name={addButtonConfig.icon} size={32} color="#FFFFFF" />
         </TouchableOpacity>
       )}
       
