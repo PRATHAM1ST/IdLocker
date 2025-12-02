@@ -104,6 +104,7 @@ export function VaultProvider({ children }: VaultProviderProps) {
       type: item.type,
       label: item.label,
       fields: { ...item.fields },
+      images: item.images, // Include images
       createdAt: now,
       updatedAt: now,
     };
@@ -144,6 +145,7 @@ export function VaultProvider({ children }: VaultProviderProps) {
       type: updates.type ?? existingItem.type,
       label: updates.label ?? existingItem.label,
       fields: updates.fields ? { ...updates.fields } : { ...existingItem.fields },
+      images: updates.images !== undefined ? updates.images : existingItem.images, // Include images
       createdAt: existingItem.createdAt,
       updatedAt: new Date().toISOString(),
     };

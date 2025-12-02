@@ -10,4 +10,7 @@ export { CategoryTabs } from './CategoryTabs';
 export { Button, IconButton } from './Button';
 export { Input, Select } from './Input';
 export { EmptyState } from './EmptyState';
+export { ImagePicker } from './ImagePicker';
+export { ImageResizer } from './ImageResizer';
+export { ImageShareModal } from './ImageShareModal';
 

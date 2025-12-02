@@ -9,6 +9,7 @@ import type { VaultData, VaultItem, VaultMeta, AppSettings } from '../utils/type
 import { isVaultData, isAppSettings } from '../utils/types';
 import { STORAGE_KEYS, CHUNK_SIZE, DEFAULT_SETTINGS } from '../utils/constants';
 import { logger } from '../utils/logger';
+import { deleteImages } from './imageStorage';
 
 // SecureStore options
 const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
@@ -263,6 +264,7 @@ export async function updateItem(
 /**
  * Delete an item from the vault
  * Returns true even if persistence fails (item removed from memory)
+ * Also cleans up associated images
  */
 export async function deleteItem(id: string): Promise<boolean> {
   try {
@@ -272,6 +274,15 @@ export async function deleteItem(id: string): Promise<boolean> {
     if (index === -1) {
       logger.debug('Item not found for deletion');
       return false;
+    }
+
+    // Get the item to delete its images
+    const itemToDelete = vault.items[index];
+    
+    // Delete associated images if any
+    if (itemToDelete.images && itemToDelete.images.length > 0) {
+      await deleteImages(itemToDelete.images);
+      logger.debug(`Deleted ${itemToDelete.images.length} images for item`);
     }
     
     vault.items.splice(index, 1);

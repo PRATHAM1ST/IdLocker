@@ -2,13 +2,15 @@
  * Item detail screen - displays all fields with copy/show functionality
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,12 +18,13 @@ import { SafeThemedView } from '../../../src/components/ThemedView';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { SecureField } from '../../../src/components/SecureField';
 import { Button, IconButton } from '../../../src/components/Button';
+import { ImageShareModal } from '../../../src/components/ImageShareModal';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { spacing, borderRadius, getCategoryColor } from '../../../src/styles/theme';
 import { ITEM_TYPE_CONFIGS, SENSITIVE_FIELDS } from '../../../src/utils/constants';
 import { formatCardExpiry } from '../../../src/utils/validation';
-import type { VaultItem } from '../../../src/utils/types';
+import type { VaultItem, ImageAttachment } from '../../../src/utils/types';
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,8 +33,22 @@ export default function ItemDetailScreen() {
   const { getItem, deleteItem, isLoading } = useVault();
 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImageAttachment | null>(null);
 
   const item = useMemo(() => getItem(id), [getItem, id]);
+  
+  // Debug: Log item to see if images are present
+  useEffect(() => {
+    if (item) {
+      console.log('[ItemDetail] Item loaded:', {
+        id: item.id,
+        label: item.label,
+        hasImages: !!item.images,
+        imageCount: item.images?.length || 0,
+        images: item.images,
+      });
+    }
+  }, [item]);
   
   const config = item ? ITEM_TYPE_CONFIGS[item.type] : null;
   const categoryColor = item ? getCategoryColor(item.type, isDark) : null;
@@ -185,6 +202,39 @@ export default function ItemDetailScreen() {
           ))}
         </View>
 
+        {/* Images */}
+        {item.images && item.images.length > 0 && (
+          <View style={[styles.imagesCard, { backgroundColor: colors.card }]}>
+            <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
+              Images ({item.images.length})
+            </ThemedText>
+            <ThemedText variant="caption" color="tertiary" style={styles.imageHint}>
+              Tap an image to resize and share
+            </ThemedText>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.imagesContainer}
+            >
+              {item.images.map((image) => (
+                <TouchableOpacity
+                  key={image.id}
+                  style={[styles.imageThumb, { borderColor: colors.border }]}
+                  onPress={() => setSelectedImage(image)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: image.uri }} style={styles.imageThumbInner} />
+                  <View style={[styles.imageDimensions, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                    <ThemedText variant="caption" style={styles.imageDimensionsText}>
+                      {image.width}×{image.height}
+                    </ThemedText>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Metadata */}
         <View style={[styles.metaCard, { backgroundColor: colors.backgroundTertiary }]}>
           <View style={styles.metaRow}>
@@ -222,6 +272,13 @@ export default function ItemDetailScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* Image Share Modal */}
+      <ImageShareModal
+        visible={selectedImage !== null}
+        image={selectedImage}
+        onClose={() => setSelectedImage(null)}
+      />
     </SafeThemedView>
   );
 }
@@ -279,6 +336,43 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  imagesCard: {
+    padding: spacing.base,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.md,
+  },
+  imageHint: {
+    marginBottom: spacing.md,
+  },
+  imagesContainer: {
+    paddingVertical: spacing.xs,
+  },
+  imageThumb: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imageThumbInner: {
+    width: '100%',
+    height: '100%',
+  },
+  imageDimensions: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  imageDimensionsText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    textAlign: 'center',
   },
   metaCard: {
     padding: spacing.md,

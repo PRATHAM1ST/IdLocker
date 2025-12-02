@@ -18,12 +18,13 @@ import { SafeThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { Input, Select } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
+import { ImagePicker } from '../../src/components/ImagePicker';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
 import { spacing, borderRadius, getCategoryColor } from '../../src/styles/theme';
 import { ITEM_TYPE_CONFIGS, VAULT_ITEM_TYPES } from '../../src/utils/constants';
 import { validateVaultItem, sanitizeInput } from '../../src/utils/validation';
-import type { VaultItemType, FieldDefinition } from '../../src/utils/types';
+import type { VaultItemType, FieldDefinition, ImageAttachment } from '../../src/utils/types';
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function AddItemScreen() {
   );
   const [label, setLabel] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [images, setImages] = useState<ImageAttachment[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -46,6 +48,7 @@ export default function AddItemScreen() {
     setSelectedType(type);
     setLabel('');
     setFields({});
+    setImages([]);
     setErrors({});
   }, []);
 
@@ -77,11 +80,25 @@ export default function AddItemScreen() {
     }
 
     setIsSaving(true);
+    
+    // Debug: Log what we're saving
+    console.log('[AddItem] Saving item with images:', {
+      type: selectedType,
+      label: label.trim(),
+      imageCount: images.length,
+      images: images,
+    });
+    
     const newItem = await addItem({
       type: selectedType,
       label: label.trim(),
       fields,
+      images: images.length > 0 ? images : undefined,
     });
+    
+    // Debug: Log the saved item
+    console.log('[AddItem] Saved item:', newItem);
+    
     setIsSaving(false);
 
     if (newItem) {
@@ -199,6 +216,12 @@ export default function AddItemScreen() {
 
         {/* Dynamic fields */}
         {config.fields.map(renderField)}
+
+        {/* Image attachments */}
+        <ImagePicker
+          images={images}
+          onImagesChange={setImages}
+        />
 
         {/* Save button */}
         <View style={styles.saveContainer}>

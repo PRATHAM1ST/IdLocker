@@ -19,12 +19,13 @@ import { SafeThemedView } from '../../../src/components/ThemedView';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { Input, Select } from '../../../src/components/Input';
 import { Button } from '../../../src/components/Button';
+import { ImagePicker } from '../../../src/components/ImagePicker';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { spacing, borderRadius, getCategoryColor } from '../../../src/styles/theme';
 import { ITEM_TYPE_CONFIGS } from '../../../src/utils/constants';
 import { validateVaultItem, sanitizeInput } from '../../../src/utils/validation';
-import type { FieldDefinition } from '../../../src/utils/types';
+import type { FieldDefinition, ImageAttachment } from '../../../src/utils/types';
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,6 +39,7 @@ export default function EditItemScreen() {
 
   const [label, setLabel] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [images, setImages] = useState<ImageAttachment[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -47,6 +49,7 @@ export default function EditItemScreen() {
     if (item) {
       setLabel(item.label);
       setFields({ ...item.fields });
+      setImages(item.images || []);
     }
   }, [item]);
 
@@ -76,6 +79,11 @@ export default function EditItemScreen() {
     }
   }, [errors]);
 
+  const handleImagesChange = useCallback((newImages: ImageAttachment[]) => {
+    setImages(newImages);
+    setHasChanges(true);
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!item) return;
 
@@ -94,6 +102,7 @@ export default function EditItemScreen() {
     const updatedItem = await updateItem(item.id, {
       label: label.trim(),
       fields,
+      images: images.length > 0 ? images : undefined,
     });
     setIsSaving(false);
 
@@ -220,6 +229,12 @@ export default function EditItemScreen() {
 
           {/* Dynamic fields */}
           {config.fields.map(renderField)}
+
+          {/* Image attachments */}
+          <ImagePicker
+            images={images}
+            onImagesChange={handleImagesChange}
+          />
 
           {/* Save button */}
           <View style={styles.saveContainer}>

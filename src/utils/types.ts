@@ -27,12 +27,23 @@ export type CardBrand =
 // Bank account types
 export type BankAccountType = 'savings' | 'current' | 'salary' | 'fixed' | 'other';
 
+// Image attachment for vault items
+export interface ImageAttachment {
+  id: string;
+  uri: string;
+  filename: string;
+  width: number;
+  height: number;
+  createdAt: string;
+}
+
 // Core vault item interface
 export interface VaultItem {
   id: string;
   type: VaultItemType;
   label: string;
   fields: Record<string, string>;
+  images?: ImageAttachment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -167,6 +178,18 @@ export function isAppSettings(obj: unknown): obj is AppSettings {
     'hasCompletedOnboarding' in obj &&
     'autoLockTimeout' in obj &&
     'theme' in obj
+  );
+}
+
+export function isImageAttachment(obj: unknown): obj is ImageAttachment {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'uri' in obj &&
+    'filename' in obj &&
+    'width' in obj &&
+    'height' in obj
   );
 }
 
