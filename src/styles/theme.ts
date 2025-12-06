@@ -137,6 +137,7 @@ export const spacing = {
 // Border radius scale - consistent squircle design
 export const borderRadius = {
   none: 0,
+  xs: 4,
   sm: 8,
   md: 12,
   lg: 16,

@@ -385,7 +385,7 @@ export function AssetPicker({
 
   return (
     <View style={styles.container}>
-      <ThemedText variant="label" style={styles.label}>
+      <ThemedText variant="label" color="secondary" style={styles.label}>
         Attachments {maxAssets ? `(${assetRefs.length}/${maxAssets})` : `(${assetRefs.length})`}
       </ThemedText>
 

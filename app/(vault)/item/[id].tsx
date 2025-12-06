@@ -342,7 +342,7 @@ export default function ItemDetailScreen() {
           )}
 
           {/* Metadata */}
-          <View style={[styles.metaCard, { backgroundColor: colors.backgroundTertiary }]}>
+          <View style={[styles.metaCard]}>
             <View style={styles.metaRow}>
               <ThemedText variant="caption" color="tertiary">Created</ThemedText>
               <ThemedText variant="caption" color="secondary">
@@ -359,14 +359,14 @@ export default function ItemDetailScreen() {
 
           {/* Actions */}
           <View style={styles.actions}>
-            <Button
+            {/* <Button
               title="Edit Item"
               onPress={handleEdit}
               variant="outline"
               icon="create-outline"
               fullWidth
               style={styles.actionButton}
-            />
+            /> */}
             <Button
               title={isDeleting ? 'Deleting...' : 'Delete Item'}
               onPress={handleDelete}
@@ -587,16 +587,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     textAlign: 'center',
-  },
-  typeBadge: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   docThumbInner: {
     width: '100%',

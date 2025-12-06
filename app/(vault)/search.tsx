@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		backgroundColor: "rgba(255, 255, 255, 0.15)",
 		paddingHorizontal: spacing.md,
-		paddingVertical: spacing.md,
+		paddingVertical: spacing.xs,
 		borderRadius: borderRadius.md,
 	},
 	searchInput: {

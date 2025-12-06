@@ -113,13 +113,14 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
         >
           <View style={styles.fieldContent}>
             <View style={styles.fieldLabelRow}>
-              <Input
-                label=""
-                value={field.label}
-                onChangeText={(text) => handleUpdateField(field.id, { label: text })}
-                placeholder="Field name"
-                style={styles.labelInput}
-              />
+              <View style={styles.labelInput}>
+                <Input
+                  label=""
+                  value={field.label}
+                  onChangeText={(text) => handleUpdateField(field.id, { label: text })}
+                  placeholder="Field name"
+                />
+              </View>
               <TouchableOpacity
                 style={[styles.deleteButton, { backgroundColor: colors.error + '15' }]}
                 onPress={() => handleDeleteField(field.id)}

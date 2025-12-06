@@ -312,37 +312,111 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
 
 // Available icons for custom categories
 export const CATEGORY_ICONS = [
+  // Finance & Business
   'business-outline',
   'card-outline',
+  'wallet-outline',
+  'cash-outline',
+  'receipt-outline',
+  'pricetag-outline',
+  'cart-outline',
+  'briefcase-outline',
+  'calculator-outline',
+  'stats-chart-outline',
+
+  // Security & Identity
   'id-card-outline',
   'key-outline',
-  'document-text-outline',
-  'ellipsis-horizontal-circle-outline',
-  'wallet-outline',
-  'home-outline',
-  'car-outline',
-  'medkit-outline',
-  'school-outline',
-  'briefcase-outline',
-  'globe-outline',
-  'wifi-outline',
   'lock-closed-outline',
   'shield-checkmark-outline',
+  'finger-print-outline',
   'person-outline',
   'people-outline',
-  'heart-outline',
-  'star-outline',
-  'bookmark-outline',
+  'eye-outline',
+
+  // Documents & Notes
+  'document-text-outline',
   'folder-outline',
-  'gift-outline',
-  'airplane-outline',
-  'fitness-outline',
-  'restaurant-outline',
-  'musical-notes-outline',
+  'book-outline',
+  'library-outline',
+  'newspaper-outline',
+  'clipboard-outline',
+  'bookmark-outline',
+  'attach-outline',
+
+  // Tech & Digital
+  'desktop-outline',
+  'laptop-outline',
+  'phone-portrait-outline',
+  'wifi-outline',
+  'server-outline',
+  'hardware-chip-outline',
   'game-controller-outline',
   'camera-outline',
-  'desktop-outline',
-];
+  'videocam-outline',
+  'print-outline',
+  'code-slash-outline',
+
+  // Communication
+  'mail-outline',
+  'at-outline',
+  'chatbox-outline',
+  'call-outline',
+  'share-social-outline',
+  'notifications-outline',
+
+  // Travel & Location
+  'airplane-outline',
+  'car-outline',
+  'bus-outline',
+  'train-outline',
+  'boat-outline',
+  'bicycle-outline',
+  'map-outline',
+  'globe-outline',
+  'compass-outline',
+  'navigate-outline',
+
+  // Lifestyle & Health
+  'home-outline',
+  'medkit-outline',
+  'fitness-outline',
+  'heart-outline',
+  'restaurant-outline',
+  'cafe-outline',
+  'nutrition-outline',
+  'leaf-outline',
+  'water-outline',
+
+  // Education & Tools
+  'school-outline',
+  'construct-outline',
+  'hammer-outline',
+  'flask-outline',
+  'build-outline',
+
+  // Entertainment
+  'musical-notes-outline',
+  'film-outline',
+  'ticket-outline',
+  'headphones-outline',
+  'images-outline',
+
+  // Misc
+  'settings-outline',
+  'help-outline',
+  'information-circle-outline',
+  'star-outline',
+  'gift-outline',
+  'calendar-outline',
+  'time-outline',
+  'bulb-outline',
+  'trophy-outline',
+  'ellipsis-horizontal-circle-outline',
+  'cloud-outline',
+  'moon-outline',
+  'sunny-outline',
+] as const;
 
 // Available colors for custom categories
 export const CATEGORY_COLORS = [
@@ -354,8 +428,16 @@ export const CATEGORY_COLORS = [
   { name: 'Pink', gradientStart: '#EC4899', gradientEnd: '#F472B6', bg: '#FCE7F3', icon: '#EC4899', text: '#9D174D' },
   { name: 'Cyan', gradientStart: '#06B6D4', gradientEnd: '#22D3EE', bg: '#CFFAFE', icon: '#06B6D4', text: '#0E7490' },
   { name: 'Orange', gradientStart: '#F97316', gradientEnd: '#FB923C', bg: '#FFEDD5', icon: '#F97316', text: '#9A3412' },
-  { name: 'Violet', gradientStart: '#A855F7', gradientEnd: '#C084FC', bg: '#F3E8FF', icon: '#A855F7', text: '#6B21A8' },
+  { name: 'Violet', gradientStart: '#8B5CF6', gradientEnd: '#A78BFA', bg: '#EDE9FE', icon: '#8B5CF6', text: '#5B21B6' },
   { name: 'Teal', gradientStart: '#14B8A6', gradientEnd: '#2DD4BF', bg: '#CCFBF1', icon: '#14B8A6', text: '#0F766E' },
+  { name: 'Indigo', gradientStart: '#4F46E5', gradientEnd: '#6366F1', bg: '#E0E7FF', icon: '#4F46E5', text: '#312E81' },
+  { name: 'Rose', gradientStart: '#E11D48', gradientEnd: '#F43F5E', bg: '#FFE4E6', icon: '#E11D48', text: '#881337' },
+  { name: 'Amber', gradientStart: '#D97706', gradientEnd: '#F59E0B', bg: '#FEF3C7', icon: '#D97706', text: '#78350F' },
+  { name: 'Emerald', gradientStart: '#059669', gradientEnd: '#10B981', bg: '#D1FAE5', icon: '#059669', text: '#064E3B' },
+  { name: 'Sky', gradientStart: '#0EA5E9', gradientEnd: '#38BDF8', bg: '#E0F2FE', icon: '#0EA5E9', text: '#0C4A6E' },
+  { name: 'Lime', gradientStart: '#84CC16', gradientEnd: '#A3E635', bg: '#ECFCCB', icon: '#84CC16', text: '#365314' },
+  { name: 'Fuchsia', gradientStart: '#D946EF', gradientEnd: '#E879F9', bg: '#FAE8FF', icon: '#D946EF', text: '#701A75' },
+  { name: 'Slate', gradientStart: '#64748B', gradientEnd: '#94A3B8', bg: '#F1F5F9', icon: '#64748B', text: '#334155' },
 ];
 
 // Sensitive field keys that should be masked by default

@@ -113,12 +113,6 @@ export default function VaultLayout() {
           }}
         />
         <Stack.Screen
-          name="categories"
-          options={{
-            href: null,
-          }}
-        />
-        <Stack.Screen
           name="assets"
           options={{
             headerShown: false,

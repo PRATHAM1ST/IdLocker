@@ -150,7 +150,7 @@ export default function EditItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
     }
-  }, [item, category, label, fields, customFields, images, updateItem, router]);
+  }, [item, category, label, fields, customFields, updateItem, router]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {

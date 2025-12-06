@@ -226,9 +226,20 @@ export default function AssetsScreen() {
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-          <ThemedText variant="body">
-            {imageCount} 📷 {pdfCount} 📄 {docCount} 📃
-          </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <ThemedText variant="body">{imageCount}</ThemedText>
+                <Ionicons name="image-outline" size={16} color={colors.textSecondary} />
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <ThemedText variant="body">{pdfCount}</ThemedText>
+                <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <ThemedText variant="body">{docCount}</ThemedText>
+                <Ionicons name="document-outline" size={16} color={colors.textSecondary} />
+              </View>
+            </View>
           <ThemedText variant="caption" color="secondary">By Type</ThemedText>
         </View>
       </View>
@@ -448,7 +459,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: 50,
+    borderRadius: borderRadius.xs,
     gap: spacing.xs,
   },
   filterTabText: {

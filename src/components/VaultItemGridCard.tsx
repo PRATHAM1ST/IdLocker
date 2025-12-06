@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
 import { useCategories } from '../context/CategoryProvider';
 import { ThemedText } from './ThemedText';
-import { spacing, borderRadius, shadows } from '../styles/theme';
+import { spacing, borderRadius, shadows, typography } from '../styles/theme';
 import type { VaultItem } from '../utils/types';
 import { getItemPreview, formatCardExpiry } from '../utils/validation';
 
@@ -163,25 +163,27 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
         >
           {item.label}
         </ThemedText>
-        
-        <ThemedText 
-          variant="caption" 
-          color="secondary" 
-          numberOfLines={1}
-          style={styles.secondaryInfo}
-        >
-          {secondaryInfo}
-        </ThemedText>
-        
-        <View style={styles.previewRow}>
+
+        <View style={{ flexGrow: 1 }}>
           <ThemedText 
-            variant="bodySmall" 
-            color="tertiary" 
+            variant="caption" 
+            color="secondary" 
             numberOfLines={1}
-            style={styles.preview}
+            style={styles.secondaryInfo}
           >
-            {preview}
+            {secondaryInfo}
           </ThemedText>
+          
+          <View style={styles.previewRow}>
+            <ThemedText 
+              variant="bodySmall" 
+              color="tertiary" 
+              numberOfLines={1}
+              style={styles.preview}
+            >
+              {preview}
+            </ThemedText>
+          </View>
         </View>
         
         {/* Footer with time and image indicator */}
@@ -234,14 +236,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.xs,
   },
   typeBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 8,
+    lineHeight: 8,
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.1,
   },
   // Image header styles
   imageHeader: {
@@ -285,14 +288,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 3,
-    borderRadius: borderRadius.sm,
-    gap: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.xs,
+    gap: 8,
   },
   imageCountText: {
     color: '#FFFFFF',
     fontSize: 10,
+    lineHeight: 10,
     fontWeight: '600',
   },
   typeBadgeOnImage: {
@@ -306,8 +310,10 @@ const styles = StyleSheet.create({
   },
   // Content section
   content: {
+    flexGrow: 1,
     padding: spacing.md,
     paddingTop: spacing.sm,
+    justifyContent: "space-between"
   },
   label: {
     fontWeight: '600',
@@ -315,7 +321,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   secondaryInfo: {
-    marginBottom: spacing.xs,
+    marginBottom: 0,
   },
   previewRow: {
     flexDirection: 'row',
@@ -324,7 +330,7 @@ const styles = StyleSheet.create({
   },
   preview: {
     fontFamily: 'monospace',
-    letterSpacing: 1,
+    fontSize: typography.sizes.xs,
   },
   footer: {
     flexDirection: 'row',

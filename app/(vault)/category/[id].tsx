@@ -245,7 +245,6 @@ export default function CategoryEditScreen() {
 
     if (isNew) {
       const newCategory = await addCategory({
-        id: generateCategoryId(),
         label: label.trim(),
         icon,
         color,
@@ -817,6 +816,8 @@ const styles = StyleSheet.create({
   },
   iconGrid: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     flexWrap: 'wrap',
     padding: spacing.base,
     gap: spacing.md,
