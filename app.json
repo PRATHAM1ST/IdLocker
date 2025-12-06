@@ -10,11 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.idlocker.app",
       "infoPlist": {
         "NSFaceIDUsageDescription": "IdLocker uses Face ID to securely unlock your vault and protect your sensitive information."
       }
     },
     "android": {
+      "package": "com.idlocker.app",
       "adaptiveIcon": {
         "backgroundColor": "#0A1628",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
