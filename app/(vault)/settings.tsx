@@ -277,7 +277,7 @@ export default function SettingsScreen() {
               {renderSettingRow(
                 'information-circle-outline',
                 'Version',
-                '1.0.0',
+                '0.0.1',
               )}
               
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
