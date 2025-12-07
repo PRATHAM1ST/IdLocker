@@ -7,20 +7,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ExpoImagePicker from 'expo-image-picker';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActionSheetIOS,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActionSheetIOS,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAssets } from '../context/AssetProvider';
 import { useTheme } from '../context/ThemeProvider';
@@ -44,12 +44,13 @@ interface AssetPickerProps {
 export function AssetPicker({
   assetRefs,
   onAssetRefsChange,
-  maxAssets,
+  maxAssets=10,
   disabled = false,
   allowedTypes = ['image', 'pdf', 'document'],
 }: AssetPickerProps) {
   const { colors } = useTheme();
-  const { assets, getAssetsByIds, saveImageAsset, saveDocumentAsset } = useAssets();
+  const { assets, getAssetsByIds, saveImageAsset, saveDocumentAsset, ensureAssetsLoaded } =
+    useAssets();
 
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +60,77 @@ export function AssetPicker({
   // Get currently linked assets - memoized to prevent re-renders
   const linkedAssetIds = useMemo(() => new Set(assetRefs.map((ref) => ref.assetId)), [assetRefs]);
   const linkedAssets = getAssetsByIds(Array.from(linkedAssetIds));
+
+  useEffect(() => {
+    if (assetRefs.length === 0) {
+      return;
+    }
+    const ids = assetRefs.map((ref) => ref.assetId).filter(Boolean);
+    if (ids.length === 0) {
+      return;
+    }
+    ensureAssetsLoaded(ids);
+  }, [assetRefs, ensureAssetsLoaded]);
+
+  const applyNewAssetRefs = useCallback(
+    (assetIds: string[]): { added: number } => {
+      if (assetIds.length === 0) {
+        return { added: 0 };
+      }
+
+      const maxCount = typeof maxAssets === 'number' ? maxAssets : null;
+      let slotsRemaining =
+        maxCount !== null ? Math.max(maxCount - assetRefs.length, 0) : Number.POSITIVE_INFINITY;
+      const newRefs: AssetReference[] = [];
+      let duplicateCount = 0;
+      let limitHit = false;
+      let skippedDueToLimit = 0;
+
+      for (let i = 0; i < assetIds.length; i += 1) {
+        const assetId = assetIds[i];
+        if (linkedAssetIds.has(assetId) || newRefs.some((ref) => ref.assetId === assetId)) {
+          duplicateCount += 1;
+          continue;
+        }
+
+        if (slotsRemaining <= 0) {
+          limitHit = true;
+          skippedDueToLimit = assetIds.length - i;
+          break;
+        }
+
+        newRefs.push({
+          assetId,
+          addedAt: new Date().toISOString(),
+        });
+
+        if (maxCount !== null) {
+          slotsRemaining -= 1;
+        }
+      }
+
+      if (newRefs.length) {
+        onAssetRefsChange([...assetRefs, ...newRefs]);
+      }
+
+      if (duplicateCount > 0) {
+        Alert.alert(
+          'Already Added',
+          `${duplicateCount} attachment${duplicateCount === 1 ? '' : 's'} skipped because they were already linked.`,
+        );
+      }
+
+      if (limitHit && maxCount !== null && skippedDueToLimit > 0) {
+        Alert.alert(
+          'Limit Reached',
+          `Only ${maxCount} attachment${maxCount === 1 ? '' : 's'} can be linked to an item. ${skippedDueToLimit} file${skippedDueToLimit === 1 ? '' : 's'} were not attached.`,
+        );
+      }
+
+      return { added: newRefs.length };
+    },
+    [assetRefs, linkedAssetIds, maxAssets, onAssetRefsChange],
+  );
 
   const imageToolsAttachment = useMemo(
     () => assetToImageAttachment(imageToolsAsset),
@@ -102,6 +174,11 @@ export function AssetPicker({
     async (source: 'camera' | 'library') => {
       if (disabled) return;
 
+      if (maxAssets && assetRefs.length >= maxAssets) {
+        Alert.alert('Limit Reached', `You can only add up to ${maxAssets} attachments.`);
+        return;
+      }
+
       const hasPermission = await requestPermissions(source);
       if (!hasPermission) return;
 
@@ -110,7 +187,8 @@ export function AssetPicker({
       try {
         const options: ExpoImagePicker.ImagePickerOptions = {
           mediaTypes: ['images'],
-          allowsEditing: true,
+          allowsEditing: source === 'camera',
+          allowsMultipleSelection: source === 'library',
           quality: 0.8,
         };
 
@@ -119,33 +197,25 @@ export function AssetPicker({
             ? await ExpoImagePicker.launchCameraAsync(options)
             : await ExpoImagePicker.launchImageLibraryAsync(options);
 
-        if (!result.canceled && result.assets[0]) {
-          const imageAsset = result.assets[0];
-          const originalFilename = imageAsset.fileName || `image_${Date.now()}.jpg`;
+        if (!result.canceled && result.assets?.length) {
+          const savedIds: string[] = [];
 
-          const savedAsset = await saveImageAsset(
-            imageAsset.uri,
-            originalFilename,
-            imageAsset.width,
-            imageAsset.height,
-          );
+          for (const imageAsset of result.assets) {
+            const originalFilename = imageAsset.fileName || `image_${Date.now()}.jpg`;
 
-          if (savedAsset) {
-            // Add reference (deduplication handled by storage)
-            const newRef: AssetReference = {
-              assetId: savedAsset.id,
-              addedAt: new Date().toISOString(),
-            };
+            const savedAsset = await saveImageAsset(
+              imageAsset.uri,
+              originalFilename,
+              imageAsset.width,
+              imageAsset.height,
+            );
 
-            // Check if already linked
-            if (!linkedAssetIds.has(savedAsset.id)) {
-              onAssetRefsChange([...assetRefs, newRef]);
-            } else {
-              Alert.alert('Already Added', 'This image is already attached to this item.');
+            if (savedAsset) {
+              savedIds.push(savedAsset.id);
             }
-          } else {
-            Alert.alert('Error', 'Failed to save image. Please try again.');
           }
+
+          applyNewAssetRefs(savedIds);
         }
       } catch {
         Alert.alert('Error', 'Failed to pick image. Please try again.');
@@ -153,11 +223,23 @@ export function AssetPicker({
         setIsLoading(false);
       }
     },
-    [disabled, assetRefs, onAssetRefsChange, saveImageAsset, linkedAssetIds],
+    [
+      disabled,
+      maxAssets,
+      assetRefs.length,
+      requestPermissions,
+      saveImageAsset,
+      applyNewAssetRefs,
+    ],
   );
 
   const handlePickDocument = useCallback(async () => {
     if (disabled) return;
+
+    if (maxAssets && assetRefs.length >= maxAssets) {
+      Alert.alert('Limit Reached', `You can only add up to ${maxAssets} attachments.`);
+      return;
+    }
 
     setIsLoading(true);
 
@@ -172,38 +254,32 @@ export function AssetPicker({
           'text/plain',
         ],
         copyToCacheDirectory: true,
+        multiple: true,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        const docAsset = result.assets[0];
+      if (!result.canceled && result.assets?.length) {
+        const savedIds: string[] = [];
 
-        const savedAsset = await saveDocumentAsset(
-          docAsset.uri,
-          docAsset.name,
-          docAsset.mimeType || 'application/octet-stream',
-        );
+        for (const docAsset of result.assets) {
+          const savedAsset = await saveDocumentAsset(
+            docAsset.uri,
+            docAsset.name,
+            docAsset.mimeType || 'application/octet-stream',
+          );
 
-        if (savedAsset) {
-          const newRef: AssetReference = {
-            assetId: savedAsset.id,
-            addedAt: new Date().toISOString(),
-          };
-
-          if (!linkedAssetIds.has(savedAsset.id)) {
-            onAssetRefsChange([...assetRefs, newRef]);
-          } else {
-            Alert.alert('Already Added', 'This document is already attached to this item.');
+          if (savedAsset) {
+            savedIds.push(savedAsset.id);
           }
-        } else {
-          Alert.alert('Error', 'Failed to save document. Please try again.');
         }
+
+        applyNewAssetRefs(savedIds);
       }
     } catch {
       Alert.alert('Error', 'Failed to pick document. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [disabled, assetRefs, onAssetRefsChange, saveDocumentAsset, linkedAssetIds]);
+  }, [disabled, maxAssets, assetRefs.length, saveDocumentAsset, applyNewAssetRefs]);
 
   const showAddOptions = useCallback(() => {
     if (disabled) return;
@@ -277,25 +353,12 @@ export function AssetPicker({
 
   const handleLinkExistingAsset = useCallback(
     (asset: Asset) => {
-      if (linkedAssetIds.has(asset.id)) {
-        Alert.alert('Already Added', 'This file is already attached to this item.');
-        return;
+      const result = applyNewAssetRefs([asset.id]);
+      if (result.added > 0) {
+        setShowAssetBrowser(false);
       }
-
-      if (maxAssets && assetRefs.length >= maxAssets) {
-        Alert.alert('Limit Reached', `You can only add up to ${maxAssets} attachments.`);
-        return;
-      }
-
-      const newRef: AssetReference = {
-        assetId: asset.id,
-        addedAt: new Date().toISOString(),
-      };
-
-      onAssetRefsChange([...assetRefs, newRef]);
-      setShowAssetBrowser(false);
     },
-    [linkedAssetIds, maxAssets, assetRefs, onAssetRefsChange],
+    [applyNewAssetRefs],
   );
 
   const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {

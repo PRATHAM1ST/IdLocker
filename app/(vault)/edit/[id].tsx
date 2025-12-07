@@ -64,23 +64,23 @@ export default function EditItemScreen() {
         setLabel(item.label);
         setFields({ ...item.fields });
         setCustomFields(item.customFields || []);
+        setAssetRefs(item.assetRefs || []);
 
         // Use existing assetRefs or migrate from legacy images
         if (item.assetRefs && item.assetRefs.length > 0) {
-          setAssetRefs(item.assetRefs);
-          await ensureAssetsLoaded(item.assetRefs.map((ref) => ref.assetId));
+          // await ensureAssetsLoaded(item.assetRefs.map((ref) => ref.assetId));
         } else if (item.images && item.images.length > 0) {
           // Migrate legacy images to assets
           const migratedRefs = await migrateItemAssets(item);
           setAssetRefs(migratedRefs);
           if (migratedRefs.length > 0) {
-            await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
+            // await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
           }
         }
       }
     };
     initForm();
-  }, [item, migrateItemAssets, ensureAssetsLoaded]);
+  }, [item, migrateItemAssets]);
 
   const handleFieldChange = useCallback(
     (key: string, value: string) => {
@@ -164,7 +164,7 @@ export default function EditItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
     }
-  }, [item, category, label, fields, customFields, updateItem, router]);
+  }, [item, category, label, fields, customFields, assetRefs, updateItem, router]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
