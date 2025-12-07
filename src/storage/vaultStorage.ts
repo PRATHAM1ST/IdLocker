@@ -5,7 +5,14 @@
 
 import * as SecureStore from 'expo-secure-store';
 import { v4 as uuidv4 } from 'uuid';
-import type { VaultData, VaultItem, VaultMeta, AppSettings, CategoriesData, CustomCategory } from '../utils/types';
+import type {
+  VaultData,
+  VaultItem,
+  VaultMeta,
+  AppSettings,
+  CategoriesData,
+  CustomCategory,
+} from '../utils/types';
 import { isVaultData, isAppSettings, isCategoriesData } from '../utils/types';
 import { STORAGE_KEYS, CHUNK_SIZE, DEFAULT_SETTINGS, DEFAULT_CATEGORIES } from '../utils/constants';
 import { logger } from '../utils/logger';
@@ -46,16 +53,13 @@ async function loadVaultMeta(): Promise<VaultMeta | null> {
       return null;
     }
 
-    const metaStr = await SecureStore.getItemAsync(
-      STORAGE_KEYS.VAULT_META,
-      SECURE_STORE_OPTIONS
-    );
-    
+    const metaStr = await SecureStore.getItemAsync(STORAGE_KEYS.VAULT_META, SECURE_STORE_OPTIONS);
+
     if (!metaStr) {
       logger.debug('loadVaultMeta: No metadata found');
       return null;
     }
-    
+
     const meta = JSON.parse(metaStr) as VaultMeta;
     logger.debug('loadVaultMeta: Success', meta);
     return meta;
@@ -74,7 +78,7 @@ async function saveVaultMeta(meta: VaultMeta): Promise<void> {
     await SecureStore.setItemAsync(
       STORAGE_KEYS.VAULT_META,
       JSON.stringify(meta),
-      SECURE_STORE_OPTIONS
+      SECURE_STORE_OPTIONS,
     );
     logger.debug('saveVaultMeta: Success');
   } catch (error) {
@@ -90,16 +94,13 @@ async function deleteAllChunks(chunkCount: number): Promise<void> {
   logger.debug(`deleteAllChunks: Starting deletion of ${chunkCount} chunks`);
   try {
     const deletePromises: Promise<void>[] = [];
-    
+
     for (let i = 0; i < chunkCount; i++) {
       deletePromises.push(
-        SecureStore.deleteItemAsync(
-          `${STORAGE_KEYS.VAULT_CHUNK_PREFIX}${i}`,
-          SECURE_STORE_OPTIONS
-        )
+        SecureStore.deleteItemAsync(`${STORAGE_KEYS.VAULT_CHUNK_PREFIX}${i}`, SECURE_STORE_OPTIONS),
       );
     }
-    
+
     await Promise.all(deletePromises);
     logger.debug('deleteAllChunks: Success');
   } catch (error) {
@@ -116,42 +117,39 @@ export async function loadVault(): Promise<VaultData> {
   logger.debug('loadVault: Starting');
   try {
     const meta = await loadVaultMeta();
-    
+
     if (!meta) {
       logger.vaultOperation('load', 0);
       logger.debug('loadVault: No meta, returning empty vault');
       return { version: 1, items: [] };
     }
-    
+
     logger.debug(`loadVault: Loading ${meta.chunkCount} chunks`);
     // Load all chunks
     const chunkPromises: Promise<string | null>[] = [];
     for (let i = 0; i < meta.chunkCount; i++) {
       chunkPromises.push(
-        SecureStore.getItemAsync(
-          `${STORAGE_KEYS.VAULT_CHUNK_PREFIX}${i}`,
-          SECURE_STORE_OPTIONS
-        )
+        SecureStore.getItemAsync(`${STORAGE_KEYS.VAULT_CHUNK_PREFIX}${i}`, SECURE_STORE_OPTIONS),
       );
     }
-    
+
     const chunks = await Promise.all(chunkPromises);
-    
+
     // Check for missing chunks
-    if (chunks.some(chunk => chunk === null)) {
+    if (chunks.some((chunk) => chunk === null)) {
       logger.warn('loadVault: Missing vault chunks, starting fresh');
       return { version: 1, items: [] };
     }
-    
+
     // Reassemble JSON
     const jsonStr = chunks.join('');
     const data = JSON.parse(jsonStr);
-    
+
     if (!isVaultData(data)) {
       logger.warn('loadVault: Invalid vault data format, starting fresh');
       return { version: 1, items: [] };
     }
-    
+
     logger.vaultOperation('load', data.items.length);
     return data;
   } catch (error) {
@@ -178,20 +176,22 @@ export async function saveVault(data: VaultData): Promise<boolean> {
     const jsonStr = JSON.stringify(data);
     const chunks = chunkString(jsonStr, CHUNK_SIZE);
     logger.debug(`saveVault: Data split into ${chunks.length} chunks`);
-    
+
     // Get existing meta to clean up old chunks
     const existingMeta = await loadVaultMeta();
     if (existingMeta && existingMeta.chunkCount > chunks.length) {
-      logger.debug(`saveVault: Cleaning up ${existingMeta.chunkCount - chunks.length} extra chunks`);
+      logger.debug(
+        `saveVault: Cleaning up ${existingMeta.chunkCount - chunks.length} extra chunks`,
+      );
       // Delete extra chunks from previous save
       for (let i = chunks.length; i < existingMeta.chunkCount; i++) {
         await SecureStore.deleteItemAsync(
           `${STORAGE_KEYS.VAULT_CHUNK_PREFIX}${i}`,
-          SECURE_STORE_OPTIONS
+          SECURE_STORE_OPTIONS,
         );
       }
     }
-    
+
     // Save all chunks
     const savePromises: Promise<void>[] = [];
     for (let i = 0; i < chunks.length; i++) {
@@ -199,13 +199,13 @@ export async function saveVault(data: VaultData): Promise<boolean> {
         SecureStore.setItemAsync(
           `${STORAGE_KEYS.VAULT_CHUNK_PREFIX}${i}`,
           chunks[i],
-          SECURE_STORE_OPTIONS
-        )
+          SECURE_STORE_OPTIONS,
+        ),
       );
     }
-    
+
     await Promise.all(savePromises);
-    
+
     // Save metadata
     const meta: VaultMeta = {
       version: data.version,
@@ -213,7 +213,7 @@ export async function saveVault(data: VaultData): Promise<boolean> {
       lastUpdated: new Date().toISOString(),
     };
     await saveVaultMeta(meta);
-    
+
     logger.vaultOperation('save', data.items.length);
     return true;
   } catch (error) {
@@ -227,12 +227,12 @@ export async function saveVault(data: VaultData): Promise<boolean> {
  * Returns the new item even if persistence fails (for in-memory use in Expo Go)
  */
 export async function addItem(
-  item: Omit<VaultItem, 'id' | 'createdAt' | 'updatedAt'>
+  item: Omit<VaultItem, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<VaultItem | null> {
   logger.debug('addItem: Starting');
   try {
     const vault = await loadVault();
-    
+
     const now = new Date().toISOString();
     const newItem: VaultItem = {
       ...item,
@@ -240,12 +240,12 @@ export async function addItem(
       createdAt: now,
       updatedAt: now,
     };
-    
+
     vault.items.push(newItem);
-    
+
     // Try to save, but return item even if save fails
     await saveVault(vault);
-    
+
     logger.vaultOperation('add item');
     return newItem;
   } catch (error) {
@@ -260,29 +260,29 @@ export async function addItem(
  */
 export async function updateItem(
   id: string,
-  updates: Partial<Omit<VaultItem, 'id' | 'createdAt' | 'updatedAt'>>
+  updates: Partial<Omit<VaultItem, 'id' | 'createdAt' | 'updatedAt'>>,
 ): Promise<VaultItem | null> {
   logger.debug(`updateItem: Starting update for ${id}`);
   try {
     const vault = await loadVault();
-    
-    const index = vault.items.findIndex(item => item.id === id);
+
+    const index = vault.items.findIndex((item) => item.id === id);
     if (index === -1) {
       logger.warn(`updateItem: Item ${id} not found`);
       return null;
     }
-    
+
     const updatedItem: VaultItem = {
       ...vault.items[index],
       ...updates,
       updatedAt: new Date().toISOString(),
     };
-    
+
     vault.items[index] = updatedItem;
-    
+
     // Try to save, but return item even if save fails
     await saveVault(vault);
-    
+
     logger.vaultOperation('update item');
     return updatedItem;
   } catch (error) {
@@ -300,8 +300,8 @@ export async function deleteItem(id: string): Promise<boolean> {
   logger.debug(`deleteItem: Starting deletion for ${id}`);
   try {
     const vault = await loadVault();
-    
-    const index = vault.items.findIndex(item => item.id === id);
+
+    const index = vault.items.findIndex((item) => item.id === id);
     if (index === -1) {
       logger.warn(`deleteItem: Item ${id} not found`);
       return false;
@@ -309,7 +309,7 @@ export async function deleteItem(id: string): Promise<boolean> {
 
     // Get the item to delete its images
     const itemToDelete = vault.items[index];
-    
+
     // Delete associated images if any
     if (itemToDelete.images && itemToDelete.images.length > 0) {
       try {
@@ -320,9 +320,9 @@ export async function deleteItem(id: string): Promise<boolean> {
         // Continue with item deletion even if image deletion fails
       }
     }
-    
+
     vault.items.splice(index, 1);
-    
+
     // Try to save
     await saveVault(vault);
     logger.vaultOperation('delete item');
@@ -340,7 +340,7 @@ export async function getItem(id: string): Promise<VaultItem | null> {
   logger.debug(`getItem: Fetching item ${id}`);
   try {
     const vault = await loadVault();
-    const item = vault.items.find(item => item.id === id) || null;
+    const item = vault.items.find((item) => item.id === id) || null;
     if (!item) logger.debug(`getItem: Item ${id} not found`);
     return item;
   } catch (error) {
@@ -356,12 +356,12 @@ export async function clearVault(): Promise<boolean> {
   logger.debug('clearVault: Starting vault clear');
   try {
     const meta = await loadVaultMeta();
-    
+
     if (meta) {
       await deleteAllChunks(meta.chunkCount);
       await SecureStore.deleteItemAsync(STORAGE_KEYS.VAULT_META, SECURE_STORE_OPTIONS);
     }
-    
+
     logger.vaultOperation('clear');
     return true;
   } catch (error) {
@@ -389,22 +389,22 @@ export async function loadSettings(): Promise<AppSettings> {
 
     const settingsStr = await SecureStore.getItemAsync(
       STORAGE_KEYS.APP_SETTINGS,
-      SECURE_STORE_OPTIONS
+      SECURE_STORE_OPTIONS,
     );
-    
+
     if (!settingsStr) {
       // First run - no settings stored yet, this is normal
       logger.debug('loadSettings: No settings found, using defaults');
       return DEFAULT_SETTINGS;
     }
-    
+
     const settings = JSON.parse(settingsStr);
-    
+
     if (!isAppSettings(settings)) {
       logger.warn('loadSettings: Invalid settings format, using defaults');
       return DEFAULT_SETTINGS;
     }
-    
+
     logger.debug('loadSettings: Success');
     return settings;
   } catch (error) {
@@ -431,9 +431,9 @@ export async function saveSettings(settings: AppSettings): Promise<boolean> {
     await SecureStore.setItemAsync(
       STORAGE_KEYS.APP_SETTINGS,
       JSON.stringify(settings),
-      SECURE_STORE_OPTIONS
+      SECURE_STORE_OPTIONS,
     );
-    
+
     logger.debug('saveSettings: Success');
     return true;
   } catch (error) {
@@ -446,14 +446,12 @@ export async function saveSettings(settings: AppSettings): Promise<boolean> {
  * Update specific settings
  * Returns the updated settings even if persistence fails (for in-memory use)
  */
-export async function updateSettings(
-  updates: Partial<AppSettings>
-): Promise<AppSettings | null> {
+export async function updateSettings(updates: Partial<AppSettings>): Promise<AppSettings | null> {
   logger.debug('updateSettings: Starting update', updates);
   try {
     const current = await loadSettings();
     const updated = { ...current, ...updates };
-    
+
     // Try to save, but return updated settings even if save fails
     // This allows the app to work with in-memory settings in Expo Go
     await saveSettings(updated);
@@ -514,21 +512,21 @@ export async function loadCategories(): Promise<CategoriesData> {
 
     const categoriesStr = await SecureStore.getItemAsync(
       STORAGE_KEYS.CATEGORIES,
-      SECURE_STORE_OPTIONS
+      SECURE_STORE_OPTIONS,
     );
-    
+
     if (!categoriesStr) {
       logger.debug('loadCategories: No categories found, using defaults');
       return { version: 1, categories: DEFAULT_CATEGORIES };
     }
-    
+
     const data = JSON.parse(categoriesStr);
-    
+
     if (!isCategoriesData(data)) {
       logger.warn('loadCategories: Invalid categories data format, using defaults');
       return { version: 1, categories: DEFAULT_CATEGORIES };
     }
-    
+
     logger.debug('loadCategories: Success', data.categories.length);
     return data;
   } catch (error) {
@@ -552,9 +550,9 @@ export async function saveCategories(data: CategoriesData): Promise<boolean> {
     await SecureStore.setItemAsync(
       STORAGE_KEYS.CATEGORIES,
       JSON.stringify(data),
-      SECURE_STORE_OPTIONS
+      SECURE_STORE_OPTIONS,
     );
-    
+
     logger.debug('saveCategories: Success', data.categories.length);
     return true;
   } catch (error) {
@@ -567,22 +565,22 @@ export async function saveCategories(data: CategoriesData): Promise<boolean> {
  * Add a new category
  */
 export async function addCategory(
-  category: Omit<CustomCategory, 'createdAt' | 'updatedAt'>
+  category: Omit<CustomCategory, 'createdAt' | 'updatedAt'>,
 ): Promise<CustomCategory | null> {
   logger.debug('addCategory: Starting');
   try {
     const data = await loadCategories();
-    
+
     const now = new Date().toISOString();
     const newCategory: CustomCategory = {
       ...category,
       createdAt: now,
       updatedAt: now,
     };
-    
+
     data.categories.push(newCategory);
     await saveCategories(data);
-    
+
     logger.debug('addCategory: Success', newCategory.id);
     return newCategory;
   } catch (error) {
@@ -596,27 +594,27 @@ export async function addCategory(
  */
 export async function updateCategory(
   id: string,
-  updates: Partial<Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>>
+  updates: Partial<Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>>,
 ): Promise<CustomCategory | null> {
   logger.debug(`updateCategory: Starting update for ${id}`);
   try {
     const data = await loadCategories();
-    
-    const index = data.categories.findIndex(cat => cat.id === id);
+
+    const index = data.categories.findIndex((cat) => cat.id === id);
     if (index === -1) {
       logger.warn(`updateCategory: Category ${id} not found`);
       return null;
     }
-    
+
     const updatedCategory: CustomCategory = {
       ...data.categories[index],
       ...updates,
       updatedAt: new Date().toISOString(),
     };
-    
+
     data.categories[index] = updatedCategory;
     await saveCategories(data);
-    
+
     logger.debug('updateCategory: Success', id);
     return updatedCategory;
   } catch (error) {
@@ -632,16 +630,16 @@ export async function deleteCategory(id: string): Promise<boolean> {
   logger.debug(`deleteCategory: Starting deletion for ${id}`);
   try {
     const data = await loadCategories();
-    
-    const index = data.categories.findIndex(cat => cat.id === id);
+
+    const index = data.categories.findIndex((cat) => cat.id === id);
     if (index === -1) {
       logger.warn(`deleteCategory: Category ${id} not found`);
       return false;
     }
-    
+
     data.categories.splice(index, 1);
     await saveCategories(data);
-    
+
     logger.debug('deleteCategory: Success', id);
     return true;
   } catch (error) {
@@ -657,7 +655,7 @@ export async function getCategory(id: string): Promise<CustomCategory | null> {
   logger.debug(`getCategory: Fetching category ${id}`);
   try {
     const data = await loadCategories();
-    const cat = data.categories.find(cat => cat.id === id) || null;
+    const cat = data.categories.find((cat) => cat.id === id) || null;
     if (!cat) logger.debug(`getCategory: Category ${id} not found`);
     return cat;
   } catch (error) {

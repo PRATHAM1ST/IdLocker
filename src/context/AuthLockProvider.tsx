@@ -15,7 +15,18 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { AppState, AppStateStatus, Modal, PanResponder, Platform, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import {
+  AppState,
+  AppStateStatus,
+  Modal,
+  PanResponder,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { loadSettings, updateSettings } from '../storage/vaultStorage';
 import { borderRadius, darkColors, lightColors, spacing } from '../styles/theme';
 import { DEFAULT_SETTINGS } from '../utils/constants';
@@ -29,17 +40,17 @@ interface AuthLockContextValue {
   isLocked: boolean;
   isAuthenticating: boolean;
   error: string | null;
-  
+
   // Biometric info
   biometricType: LocalAuthentication.AuthenticationType | null;
   hasBiometrics: boolean;
-  
+
   // Actions
   unlock: () => Promise<boolean>;
   lock: () => void;
   clearError: () => void;
   resetActivity: () => void;
-  
+
   // Settings
   autoLockTimeout: number;
   setAutoLockTimeout: (timeout: number) => Promise<void>;
@@ -61,19 +72,21 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
   const [isLocked, setIsLocked] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Biometric capabilities
-  const [biometricType, setBiometricType] = useState<LocalAuthentication.AuthenticationType | null>(null);
+  const [biometricType, setBiometricType] = useState<LocalAuthentication.AuthenticationType | null>(
+    null,
+  );
   const [hasBiometrics, setHasBiometrics] = useState(false);
-  
+
   // Settings
   const [autoLockTimeout, setAutoLockTimeout] = useState(DEFAULT_SETTINGS.autoLockTimeout);
-  
+
   // Logout warning state
   const [showLogoutWarning, setShowLogoutWarning] = useState(false);
   const [countdown, setCountdown] = useState(LOGOUT_WARNING_SECONDS);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
+
   // Background tracking
   const backgroundTimeRef = useRef<number | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
@@ -86,9 +99,9 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
         const isEnrolled = await LocalAuthentication.isEnrolledAsync();
         const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-        
+
         setHasBiometrics(hasHardware && isEnrolled);
-        
+
         if (supportedTypes.length > 0) {
           // Prefer Face ID over fingerprint
           if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
@@ -99,19 +112,19 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
             setBiometricType(supportedTypes[0]);
           }
         }
-        
+
         logger.info('Biometric check:', { hasHardware, isEnrolled, types: supportedTypes.length });
       } catch (err) {
         logger.error('Failed to check biometrics:', err);
       }
     };
-    
+
     checkBiometrics();
   }, []);
 
   // Load settings on mount
   useEffect(() => {
-    loadSettings().then(settings => {
+    loadSettings().then((settings) => {
       setAutoLockTimeout(settings.autoLockTimeout);
     });
   }, []);
@@ -123,7 +136,7 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
         // App going to background - record time
         backgroundTimeRef.current = Date.now();
         logger.info('App backgrounded');
-        
+
         // Hide warning if app goes to background
         if (showLogoutWarning) {
           setShowLogoutWarning(false);
@@ -138,24 +151,24 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
         if (backgroundTimeRef.current && !isLocked) {
           const backgroundDuration = Date.now() - backgroundTimeRef.current;
           const timeoutMs = autoLockTimeout * 1000;
-          
+
           if (backgroundDuration >= timeoutMs) {
             logger.info('Background timeout reached - showing warning');
             // Show warning dialog instead of directly locking
             setCountdown(LOGOUT_WARNING_SECONDS);
             setShowLogoutWarning(true);
           }
-          
+
           backgroundTimeRef.current = null;
         }
-        
+
         // Reset activity timer
         lastActivityRef.current = Date.now();
       }
     };
-    
+
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+
     return () => {
       subscription.remove();
     };
@@ -164,7 +177,7 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
   // Show logout warning with countdown
   const showLogoutWarningDialog = useCallback(() => {
     if (showLogoutWarning || isLocked) return;
-    
+
     logger.info('Showing logout warning dialog');
     setCountdown(LOGOUT_WARNING_SECONDS);
     setShowLogoutWarning(true);
@@ -176,7 +189,7 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
     setShowLogoutWarning(false);
     setCountdown(LOGOUT_WARNING_SECONDS);
     lastActivityRef.current = Date.now();
-    
+
     // Clear countdown timer
     if (countdownTimerRef.current) {
       clearInterval(countdownTimerRef.current);
@@ -191,13 +204,13 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
     setCountdown(LOGOUT_WARNING_SECONDS);
     setIsLocked(true);
     setError(null);
-    
+
     // Clear countdown timer
     if (countdownTimerRef.current) {
       clearInterval(countdownTimerRef.current);
       countdownTimerRef.current = null;
     }
-    
+
     logger.authEvent('lock', true);
   }, []);
 
@@ -241,18 +254,18 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
       }
       return;
     }
-    
+
     // Check for idle timeout every 10 seconds
     idleTimerRef.current = setInterval(() => {
       const idleTime = Date.now() - lastActivityRef.current;
       const timeoutMs = autoLockTimeout * 1000;
-      
+
       if (idleTime >= timeoutMs) {
         logger.info('Idle timeout reached - showing warning');
         showLogoutWarningDialog();
       }
     }, 10000);
-    
+
     return () => {
       if (idleTimerRef.current) {
         clearInterval(idleTimerRef.current);
@@ -268,10 +281,10 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
   // Unlock function
   const unlock = useCallback(async (): Promise<boolean> => {
     if (isAuthenticating) return false;
-    
+
     setIsAuthenticating(true);
     setError(null);
-    
+
     try {
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Unlock IdLocker',
@@ -279,18 +292,19 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
         cancelLabel: 'Cancel',
         disableDeviceFallback: false, // Allow PIN/pattern/password fallback
       });
-      
+
       if (result.success) {
         setIsLocked(false);
         lastActivityRef.current = Date.now();
         logger.authEvent('unlock', true);
         return true;
       } else {
-        const errorMessage = result.error === 'user_cancel' 
-          ? 'Authentication cancelled'
-          : result.error === 'lockout'
-            ? 'Too many attempts. Try again later.'
-            : 'Authentication failed';
+        const errorMessage =
+          result.error === 'user_cancel'
+            ? 'Authentication cancelled'
+            : result.error === 'lockout'
+              ? 'Too many attempts. Try again later.'
+              : 'Authentication failed';
         setError(errorMessage);
         logger.authEvent('unlock', false);
         return false;
@@ -352,7 +366,7 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
       resetActivity,
       autoLockTimeout,
       updateAutoLockTimeout,
-    ]
+    ],
   );
 
   // Create a PanResponder to detect any touch interaction
@@ -368,14 +382,14 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
         },
         onMoveShouldSetPanResponderCapture: () => false,
       }),
-    [isLocked, resetActivity]
+    [isLocked, resetActivity],
   );
 
   return (
     <AuthLockContext.Provider value={value}>
       <View style={{ flex: 1 }} {...panResponder.panHandlers}>
         {children}
-        
+
         {/* Logout Warning Modal */}
         <Modal
           visible={showLogoutWarning}
@@ -389,36 +403,60 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
             intensity={isDark ? 40 : 60}
             tint={isDark ? 'dark' : 'light'}
           >
-            <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>              
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
               {/* Countdown Circle */}
-              <View style={[styles.timerCircle, { backgroundColor: colors.error + '15', borderColor: colors.error }]}>
+              <View
+                style={[
+                  styles.timerCircle,
+                  { backgroundColor: colors.error + '15', borderColor: colors.error },
+                ]}
+              >
                 <Text style={[styles.timerText, { color: colors.error }]}>{countdown}</Text>
                 <Text style={[styles.timerLabel, { color: colors.error }]}>seconds</Text>
               </View>
-              
+
               <Text style={[styles.modalTitle, { color: colors.text }]}>Session Timeout</Text>
               <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
                 You will be logged out due to inactivity.{'\n'}
                 Would you like to stay logged in?
               </Text>
-              
+
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[styles.button, styles.logoutButton, { 
-                    backgroundColor: colors.error + '15',
-                    borderColor: colors.error + '30',
-                  }]}
+                  style={[
+                    styles.button,
+                    styles.logoutButton,
+                    {
+                      backgroundColor: colors.error + '15',
+                      borderColor: colors.error + '30',
+                    },
+                  ]}
                   onPress={handleLogout}
                 >
-                  <Ionicons name="log-out-outline" size={18} color={colors.error} style={styles.buttonIcon} />
+                  <Ionicons
+                    name="log-out-outline"
+                    size={18}
+                    color={colors.error}
+                    style={styles.buttonIcon}
+                  />
                   <Text style={[styles.logoutButtonText, { color: colors.error }]}>Log Out</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[styles.button, styles.stayButton, { backgroundColor: colors.primary }]}
                   onPress={handleStayLoggedIn}
                 >
-                  <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF" style={styles.buttonIcon} />
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={18}
+                    color="#FFFFFF"
+                    style={styles.buttonIcon}
+                  />
                   <Text style={styles.stayButtonText}>Stay Logged In</Text>
                 </TouchableOpacity>
               </View>
@@ -535,7 +573,7 @@ export function useAuthLock(): AuthLockContextValue {
  */
 export function getBiometricTypeName(type: LocalAuthentication.AuthenticationType | null): string {
   if (!type) return 'Device Lock';
-  
+
   switch (type) {
     case LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION:
       return Platform.OS === 'ios' ? 'Face ID' : 'Face Recognition';
@@ -547,4 +585,3 @@ export function getBiometricTypeName(type: LocalAuthentication.AuthenticationTyp
       return 'Biometrics';
   }
 }
-

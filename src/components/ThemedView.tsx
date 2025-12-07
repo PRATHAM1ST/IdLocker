@@ -14,13 +14,9 @@ interface ThemedViewProps {
   style?: ViewStyle;
 }
 
-export function ThemedView({
-  children,
-  variant = 'primary',
-  style,
-}: ThemedViewProps) {
+export function ThemedView({ children, variant = 'primary', style }: ThemedViewProps) {
   const { colors, shadows } = useTheme();
-  
+
   const backgroundColor = {
     primary: colors.background,
     secondary: colors.backgroundSecondary,
@@ -28,14 +24,10 @@ export function ThemedView({
     card: colors.card,
     elevated: colors.cardElevated,
   }[variant];
-  
+
   const shadowStyle = variant === 'elevated' ? shadows.md : undefined;
-  
-  return (
-    <View style={[{ backgroundColor }, shadowStyle, style]}>
-      {children}
-    </View>
-  );
+
+  return <View style={[{ backgroundColor }, shadowStyle, style]}>{children}</View>;
 }
 
 /**
@@ -54,7 +46,7 @@ export function SafeThemedView({
   edges = ['top', 'bottom'],
 }: SafeThemedViewProps) {
   const { colors } = useTheme();
-  
+
   const backgroundColor = {
     primary: colors.background,
     secondary: colors.backgroundSecondary,
@@ -62,11 +54,10 @@ export function SafeThemedView({
     card: colors.card,
     elevated: colors.cardElevated,
   }[variant];
-  
+
   return (
     <SafeAreaView style={[{ flex: 1, backgroundColor }, style]} edges={edges}>
       {children}
     </SafeAreaView>
   );
 }
-

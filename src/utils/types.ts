@@ -6,27 +6,21 @@
 export type VaultItemType = string;
 
 // Preset category IDs for type checking
-export const PRESET_CATEGORY_IDS = ['bankAccount', 'card', 'govId', 'login', 'note', 'other'] as const;
-export type PresetCategoryId = typeof PRESET_CATEGORY_IDS[number];
+export const PRESET_CATEGORY_IDS = [
+  'bankAccount',
+  'card',
+  'govId',
+  'login',
+  'note',
+  'other',
+] as const;
+export type PresetCategoryId = (typeof PRESET_CATEGORY_IDS)[number];
 
 // Government ID subtypes
-export type GovIdSubtype = 
-  | 'aadhaar' 
-  | 'pan' 
-  | 'passport' 
-  | 'drivingLicense' 
-  | 'voterId' 
-  | 'other';
+export type GovIdSubtype = 'aadhaar' | 'pan' | 'passport' | 'drivingLicense' | 'voterId' | 'other';
 
 // Card brands
-export type CardBrand = 
-  | 'visa' 
-  | 'mastercard' 
-  | 'amex' 
-  | 'rupay' 
-  | 'discover' 
-  | 'diners' 
-  | 'other';
+export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'rupay' | 'discover' | 'diners' | 'other';
 
 // Bank account types
 export type BankAccountType = 'savings' | 'current' | 'salary' | 'fixed' | 'other';
@@ -52,14 +46,14 @@ export type AssetType = 'image' | 'pdf' | 'document';
 export interface Asset {
   id: string;
   type: AssetType;
-  filename: string;           // Storage filename (e.g., "abc123.jpg")
-  originalFilename: string;   // Original name from user (e.g., "passport.jpg")
-  uri: string;               // Full file path
-  mimeType: string;          // MIME type (e.g., "image/jpeg", "application/pdf")
-  size: number;              // File size in bytes
-  hash: string;              // Content hash for deduplication
-  width?: number;            // For images only
-  height?: number;           // For images only
+  filename: string; // Storage filename (e.g., "abc123.jpg")
+  originalFilename: string; // Original name from user (e.g., "passport.jpg")
+  uri: string; // Full file path
+  mimeType: string; // MIME type (e.g., "image/jpeg", "application/pdf")
+  size: number; // File size in bytes
+  hash: string; // Content hash for deduplication
+  width?: number; // For images only
+  height?: number; // For images only
   createdAt: string;
   updatedAt: string;
 }
@@ -74,7 +68,7 @@ export interface AssetReference {
 export interface AssetsData {
   version: number;
   assets: Asset[];
-  migrated?: boolean;        // Flag to track if legacy images have been migrated
+  migrated?: boolean; // Flag to track if legacy images have been migrated
 }
 
 // Custom field for item-level custom fields
@@ -91,7 +85,7 @@ export interface VaultItem {
   label: string;
   fields: Record<string, string>;
   customFields?: CustomField[]; // Item-level custom fields
-  images?: ImageAttachment[];   // Legacy image attachments (for backward compatibility)
+  images?: ImageAttachment[]; // Legacy image attachments (for backward compatibility)
   assetRefs?: AssetReference[]; // References to centralized assets
   createdAt: string;
   updatedAt: string;
@@ -185,38 +179,38 @@ export interface ThemeColors {
   background: string;
   backgroundSecondary: string;
   backgroundTertiary: string;
-  
+
   // Text
   text: string;
   textSecondary: string;
   textTertiary: string;
-  
+
   // Primary
   primary: string;
   primaryDark: string;
   primaryLight: string;
-  
+
   // Accent (coral/orange)
   accent: string;
   accentLight: string;
-  
+
   // Status
   success: string;
   warning: string;
   error: string;
-  
+
   // UI elements
   border: string;
   borderLight: string;
   card: string;
   cardElevated: string;
-  
+
   // Input
   inputBackground: string;
   inputBorder: string;
   inputText: string;
   placeholder: string;
-  
+
   // Header gradient
   headerGradientStart: string;
   headerGradientEnd: string;
@@ -330,11 +324,5 @@ export function isAssetsData(obj: unknown): obj is AssetsData {
 }
 
 export function isAssetReference(obj: unknown): obj is AssetReference {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'assetId' in obj &&
-    'addedAt' in obj
-  );
+  return typeof obj === 'object' && obj !== null && 'assetId' in obj && 'addedAt' in obj;
 }
-

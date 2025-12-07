@@ -22,7 +22,8 @@ export default function VaultLayout() {
   usePreventScreenCapture();
 
   // Check if we're on screens that shouldn't show the add button
-  const hideAddButton = pathname.includes('/add') || pathname.includes('/edit') || pathname.includes('/item/');
+  const hideAddButton =
+    pathname.includes('/add') || pathname.includes('/edit') || pathname.includes('/item/');
 
   // Determine context-aware add button params based on current route
   const addButtonConfig = useMemo(() => {
@@ -34,7 +35,7 @@ export default function VaultLayout() {
         icon: 'cloud-upload-outline' as const,
       };
     }
-    
+
     // On category detail screen - pre-select that category
     const categoryMatch = pathname.match(/\/category\/([^\/]+)/);
     if (categoryMatch && categoryMatch[1] && categoryMatch[1] !== 'new') {
@@ -45,7 +46,7 @@ export default function VaultLayout() {
         icon: 'add' as const,
       };
     }
-    
+
     // Default - show category selector
     return {
       pathname: '/(vault)/add' as const,
@@ -147,7 +148,7 @@ export default function VaultLayout() {
           <Ionicons name={addButtonConfig.icon} size={32} color="#FFFFFF" />
         </TouchableOpacity>
       )}
-      
+
       {/* Lock overlay appears on top of all vault screens when locked */}
       <LockOverlay />
     </View>

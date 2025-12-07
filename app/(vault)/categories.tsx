@@ -4,13 +4,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,48 +26,57 @@ export default function CategoriesScreen() {
   const { items } = useVault();
 
   // Get count of items per category
-  const getCategoryItemCount = useCallback((categoryId: string) => {
-    return items.filter(item => item.type === categoryId).length;
-  }, [items]);
+  const getCategoryItemCount = useCallback(
+    (categoryId: string) => {
+      return items.filter((item) => item.type === categoryId).length;
+    },
+    [items],
+  );
 
   const handleAddCategory = useCallback(() => {
     router.push('/(vault)/category/new' as any);
   }, [router]);
 
-  const handleEditCategory = useCallback((category: CustomCategory) => {
-    router.push(`/(vault)/category/${category.id}` as any);
-  }, [router]);
+  const handleEditCategory = useCallback(
+    (category: CustomCategory) => {
+      router.push(`/(vault)/category/${category.id}` as any);
+    },
+    [router],
+  );
 
-  const handleDeleteCategory = useCallback((category: CustomCategory) => {
-    const itemCount = getCategoryItemCount(category.id);
-    
-    if (itemCount > 0) {
+  const handleDeleteCategory = useCallback(
+    (category: CustomCategory) => {
+      const itemCount = getCategoryItemCount(category.id);
+
+      if (itemCount > 0) {
+        Alert.alert(
+          'Cannot Delete',
+          `This category has ${itemCount} item${itemCount === 1 ? '' : 's'}. Please delete or move the items first.`,
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+
       Alert.alert(
-        'Cannot Delete',
-        `This category has ${itemCount} item${itemCount === 1 ? '' : 's'}. Please delete or move the items first.`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    Alert.alert(
-      'Delete Category',
-      `Are you sure you want to delete "${category.label}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await deleteCategory(category.id);
-            if (!success) {
-              Alert.alert('Error', 'Failed to delete category.');
-            }
+        'Delete Category',
+        `Are you sure you want to delete "${category.label}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              const success = await deleteCategory(category.id);
+              if (!success) {
+                Alert.alert('Error', 'Failed to delete category.');
+              }
+            },
           },
-        },
-      ]
-    );
-  }, [deleteCategory, getCategoryItemCount]);
+        ],
+      );
+    },
+    [deleteCategory, getCategoryItemCount],
+  );
 
   const handleResetToDefaults = useCallback(() => {
     Alert.alert(
@@ -93,13 +96,13 @@ export default function CategoriesScreen() {
             }
           },
         },
-      ]
+      ],
     );
   }, [resetToDefaults]);
 
   const renderCategoryItem = (category: CustomCategory) => {
     const itemCount = getCategoryItemCount(category.id);
-    
+
     return (
       <TouchableOpacity
         key={category.id}
@@ -115,7 +118,7 @@ export default function CategoriesScreen() {
         >
           <Ionicons name={category.icon as any} size={24} color="#FFFFFF" />
         </LinearGradient>
-        
+
         <View style={styles.categoryInfo}>
           <View style={styles.categoryHeader}>
             <ThemedText variant="body" style={styles.categoryName}>
@@ -123,10 +126,11 @@ export default function CategoriesScreen() {
             </ThemedText>
           </View>
           <ThemedText variant="caption" color="secondary">
-            {category.fields.length} field{category.fields.length !== 1 ? 's' : ''} • {itemCount} item{itemCount !== 1 ? 's' : ''}
+            {category.fields.length} field{category.fields.length !== 1 ? 's' : ''} • {itemCount}{' '}
+            item{itemCount !== 1 ? 's' : ''}
           </ThemedText>
         </View>
-        
+
         <View style={styles.categoryActions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.backgroundTertiary }]}
@@ -135,7 +139,7 @@ export default function CategoriesScreen() {
           >
             <Ionicons name="pencil" size={16} color={colors.primary} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.error + '15' }]}
             onPress={() => handleDeleteCategory(category)}
@@ -190,7 +194,7 @@ export default function CategoriesScreen() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: layout.tabBarHeight + spacing.xl }
+            { paddingBottom: layout.tabBarHeight + spacing.xl },
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -203,9 +207,7 @@ export default function CategoriesScreen() {
           </View>
 
           {/* Categories list */}
-          <View style={styles.categoryList}>
-            {categories.map(renderCategoryItem)}
-          </View>
+          <View style={styles.categoryList}>{categories.map(renderCategoryItem)}</View>
 
           {/* Add category button */}
           <TouchableOpacity
@@ -364,4 +366,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

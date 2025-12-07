@@ -4,13 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Image,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
@@ -32,21 +26,30 @@ interface VaultItemGridCardProps {
 export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
   const { colors, isDark } = useTheme();
   const { getCategoryById } = useCategories();
-  
+
   const category = useMemo(() => getCategoryById(item.type), [item.type, getCategoryById]);
-  const categoryColor = category?.color || { gradientStart: '#6B7280', gradientEnd: '#9CA3AF', icon: '#6B7280', bg: '#F3F4F6', text: '#374151' };
+  const categoryColor = category?.color || {
+    gradientStart: '#6B7280',
+    gradientEnd: '#9CA3AF',
+    icon: '#6B7280',
+    bg: '#F3F4F6',
+    text: '#374151',
+  };
   const preview = useMemo(() => getItemPreview(item, category), [item, category]);
   const hasImages = item.images && item.images.length > 0;
   const imageCount = item.images?.length || 0;
   const primaryImage = hasImages ? item.images![0] : null;
-  
+
   // Get secondary info based on item type or category
   const secondaryInfo = useMemo(() => {
     switch (item.type) {
       case 'bankAccount':
         return item.fields.bankName || 'Bank Account';
       case 'card':
-        const expiry = formatCardExpiry(item.fields.expiryMonth || '', item.fields.expiryYear || '');
+        const expiry = formatCardExpiry(
+          item.fields.expiryMonth || '',
+          item.fields.expiryYear || '',
+        );
         return expiry ? `Exp: ${expiry}` : item.fields.brand || 'Card';
       case 'govId':
         return item.fields.idType || 'Government ID';
@@ -65,7 +68,7 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       if (diffHours === 0) {
@@ -86,27 +89,16 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        { backgroundColor: colors.card },
-        shadows.md,
-      ]}
+      style={[styles.container, { backgroundColor: colors.card }, shadows.md]}
       onPress={() => onPress(item)}
       activeOpacity={0.7}
     >
       {/* Header section - Image or Gradient */}
       {hasImages && primaryImage ? (
         <View style={styles.imageHeader}>
-          <Image 
-            source={{ uri: primaryImage.uri }} 
-            style={styles.headerImage}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: primaryImage.uri }} style={styles.headerImage} resizeMode="cover" />
           {/* Overlay gradient for readability */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.7)']}
-            style={styles.imageOverlay}
-          />
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.imageOverlay} />
           {/* Category badge on image */}
           <View style={styles.imageHeaderBadges}>
             <View style={[styles.categoryBadge, { backgroundColor: categoryColor.gradientStart }]}>
@@ -119,17 +111,13 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
             {imageCount > 1 && (
               <View style={styles.imageCountBadge}>
                 <Ionicons name="images" size={10} color="#FFFFFF" />
-                <ThemedText style={styles.imageCountText}>
-                  {imageCount}
-                </ThemedText>
+                <ThemedText style={styles.imageCountText}>{imageCount}</ThemedText>
               </View>
             )}
           </View>
           {/* Type badge at bottom */}
           <View style={styles.typeBadgeOnImage}>
-            <ThemedText style={styles.typeBadgeText}>
-              {category?.label || 'Item'}
-            </ThemedText>
+            <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
           </View>
         </View>
       ) : (
@@ -147,37 +135,31 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
             />
           </View>
           <View style={styles.typeBadge}>
-            <ThemedText style={styles.typeBadgeText}>
-              {category?.label || 'Item'}
-            </ThemedText>
+            <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
           </View>
         </LinearGradient>
       )}
-      
+
       {/* Content section */}
       <View style={styles.content}>
-        <ThemedText 
-          variant="label" 
-          numberOfLines={2} 
-          style={styles.label}
-        >
+        <ThemedText variant="label" numberOfLines={2} style={styles.label}>
           {item.label}
         </ThemedText>
 
         <View style={{ flexGrow: 1 }}>
-          <ThemedText 
-            variant="caption" 
-            color="secondary" 
+          <ThemedText
+            variant="caption"
+            color="secondary"
             numberOfLines={1}
             style={styles.secondaryInfo}
           >
             {secondaryInfo}
           </ThemedText>
-          
+
           <View style={styles.previewRow}>
-            <ThemedText 
-              variant="bodySmall" 
-              color="tertiary" 
+            <ThemedText
+              variant="bodySmall"
+              color="tertiary"
               numberOfLines={1}
               style={styles.preview}
             >
@@ -185,7 +167,7 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
             </ThemedText>
           </View>
         </View>
-        
+
         {/* Footer with time and image indicator */}
         <View style={styles.footer}>
           <View style={styles.footerLeft}>
@@ -196,11 +178,7 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
           </View>
           {hasImages && (
             <View style={styles.attachmentIndicator}>
-              <Ionicons 
-                name="attach" 
-                size={12} 
-                color={colors.textTertiary} 
-              />
+              <Ionicons name="attach" size={12} color={colors.textTertiary} />
             </View>
           )}
         </View>
@@ -313,7 +291,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: spacing.md,
     paddingTop: spacing.sm,
-    justifyContent: "space-between"
+    justifyContent: 'space-between',
   },
   label: {
     fontWeight: '600',
@@ -357,4 +335,3 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
-

@@ -155,7 +155,7 @@ export default function CategoryEditScreen() {
         [
           { text: 'Keep Editing', style: 'cancel' },
           { text: 'Discard', style: 'destructive', onPress: () => router.back() },
-        ]
+        ],
       );
     } else {
       router.back();
@@ -220,18 +220,18 @@ export default function CategoryEditScreen() {
     }
 
     const maxValueNumber = maxValueInput ? Number(maxValueInput) : undefined;
-    
+
     if (maxValueNumber !== undefined && Number.isNaN(maxValueNumber)) {
       Alert.alert('Error', 'Max value must be a valid number');
       return;
     }
 
-    if(
+    if (
       fieldForm.keyboardType === 'numeric' &&
       minValueNumber !== undefined &&
       maxValueNumber !== undefined &&
       minValueNumber > maxValueNumber
-    ){
+    ) {
       Alert.alert('Error', 'Min value cannot be greater than max value');
       return;
     }
@@ -239,7 +239,10 @@ export default function CategoryEditScreen() {
     const prefixValue = fieldForm.prefix.trim();
     const key =
       editingFieldKey ||
-      trimmedLabel.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      trimmedLabel
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
 
     const payload: FieldDefinition = {
       key,
@@ -256,36 +259,37 @@ export default function CategoryEditScreen() {
       prefix: fieldForm.keyboardType === 'phone-pad' && prefixValue ? prefixValue : undefined,
     };
 
-    setFields(prev =>
-      editingFieldKey ? prev.map(f => (f.key === editingFieldKey ? payload : f)) : [...prev, payload]
+    setFields((prev) =>
+      editingFieldKey
+        ? prev.map((f) => (f.key === editingFieldKey ? payload : f))
+        : [...prev, payload],
     );
     resetFieldForm();
     setHasChanges(true);
   }, [editingFieldKey, fieldForm, resetFieldForm]);
 
-  const handleDeleteField = useCallback((field: FieldDefinition) => {
-    Alert.alert(
-      'Delete Field',
-      `Are you sure you want to delete "${field.label}"?`,
-      [
+  const handleDeleteField = useCallback(
+    (field: FieldDefinition) => {
+      Alert.alert('Delete Field', `Are you sure you want to delete "${field.label}"?`, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setFields(prev => prev.filter(f => f.key !== field.key));
+            setFields((prev) => prev.filter((f) => f.key !== field.key));
             if (editingFieldKey === field.key) {
               resetFieldForm();
             }
             setHasChanges(true);
           },
         },
-      ]
-    );
-  }, [editingFieldKey, resetFieldForm]);
+      ]);
+    },
+    [editingFieldKey, resetFieldForm],
+  );
 
   const handleMoveField = useCallback((index: number, direction: 'up' | 'down') => {
-    setFields(prev => {
+    setFields((prev) => {
       const newFields = [...prev];
       const newIndex = direction === 'up' ? index - 1 : index + 1;
       if (newIndex < 0 || newIndex >= newFields.length) return prev;
@@ -312,57 +316,55 @@ export default function CategoryEditScreen() {
           shadows.sm,
         ]}
       >
-      <View style={styles.fieldInfo}>
-        <View style={styles.fieldHeader}>
-          <ThemedText variant="body" style={styles.fieldLabel}>
-            {field.label}
-          </ThemedText>
-          {field.required && (
-            <View style={[styles.fieldBadge, { backgroundColor: colors.primary + '20' }]}>
-              <ThemedText variant="caption" style={{ color: colors.primary }}>Required</ThemedText>
-            </View>
-          )}
-          {field.sensitive && (
-            <View style={[styles.fieldBadge, { backgroundColor: colors.warning + '20' }]}>
-              <ThemedText variant="caption" style={{ color: colors.warning }}>Sensitive</ThemedText>
-            </View>
+        <View style={styles.fieldInfo}>
+          <View style={styles.fieldHeader}>
+            <ThemedText variant="body" style={styles.fieldLabel}>
+              {field.label}
+            </ThemedText>
+            {field.required && (
+              <View style={[styles.fieldBadge, { backgroundColor: colors.primary + '20' }]}>
+                <ThemedText variant="caption" style={{ color: colors.primary }}>
+                  Required
+                </ThemedText>
+              </View>
+            )}
+            {field.sensitive && (
+              <View style={[styles.fieldBadge, { backgroundColor: colors.warning + '20' }]}>
+                <ThemedText variant="caption" style={{ color: colors.warning }}>
+                  Sensitive
+                </ThemedText>
+              </View>
+            )}
+          </View>
+          {field.placeholder && (
+            <ThemedText variant="caption" color="tertiary">
+              {field.placeholder}
+            </ThemedText>
           )}
         </View>
-        {field.placeholder && (
-          <ThemedText variant="caption" color="tertiary">
-            {field.placeholder}
-          </ThemedText>
-        )}
-      </View>
 
-      <View style={styles.fieldActions}>
-        <TouchableOpacity
-          style={[styles.fieldActionBtn, { opacity: index === 0 ? 0.3 : 1 }]}
-          onPress={() => handleMoveField(index, 'up')}
-          disabled={index === 0}
-        >
-          <Ionicons name="chevron-up" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.fieldActionBtn, { opacity: index === fields.length - 1 ? 0.3 : 1 }]}
-          onPress={() => handleMoveField(index, 'down')}
-          disabled={index === fields.length - 1}
-        >
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.fieldActionBtn}
-          onPress={() => handleEditField(field)}
-        >
-          <Ionicons name="pencil" size={16} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.fieldActionBtn}
-          onPress={() => handleDeleteField(field)}
-        >
-          <Ionicons name="trash-outline" size={16} color={colors.error} />
-        </TouchableOpacity>
-      </View>
+        <View style={styles.fieldActions}>
+          <TouchableOpacity
+            style={[styles.fieldActionBtn, { opacity: index === 0 ? 0.3 : 1 }]}
+            onPress={() => handleMoveField(index, 'up')}
+            disabled={index === 0}
+          >
+            <Ionicons name="chevron-up" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.fieldActionBtn, { opacity: index === fields.length - 1 ? 0.3 : 1 }]}
+            onPress={() => handleMoveField(index, 'down')}
+            disabled={index === fields.length - 1}
+          >
+            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleEditField(field)}>
+            <Ionicons name="pencil" size={16} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleDeleteField(field)}>
+            <Ionicons name="trash-outline" size={16} color={colors.error} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -379,11 +381,7 @@ export default function CategoryEditScreen() {
         style={[styles.header, { paddingTop: insets.top + spacing.md }]}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleCancel}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.closeButton} onPress={handleCancel} activeOpacity={0.7}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <ThemedText variant="subtitle" style={styles.headerTitle}>
@@ -425,7 +423,10 @@ export default function CategoryEditScreen() {
             <Input
               label="Category Name *"
               value={label}
-              onChangeText={(val) => { setLabel(val); setHasChanges(true); }}
+              onChangeText={(val) => {
+                setLabel(val);
+                setHasChanges(true);
+              }}
               placeholder="e.g., Medical Records"
             />
 
@@ -482,9 +483,7 @@ export default function CategoryEditScreen() {
                   </ThemedText>
                 </View>
               ) : (
-                <View style={styles.fieldsList}>
-                  {fields.map(renderFieldItem)}
-                </View>
+                <View style={styles.fieldsList}>{fields.map(renderFieldItem)}</View>
               )}
 
               <View style={[styles.fieldEditorCard, { backgroundColor: colors.card }, shadows.sm]}>
@@ -495,14 +494,14 @@ export default function CategoryEditScreen() {
                 <Input
                   label="Field Label *"
                   value={fieldForm.label}
-                  onChangeText={(text) => setFieldForm(prev => ({ ...prev, label: text }))}
+                  onChangeText={(text) => setFieldForm((prev) => ({ ...prev, label: text }))}
                   placeholder="e.g., Account Number"
                 />
 
                 <Input
                   label="Placeholder"
                   value={fieldForm.placeholder}
-                  onChangeText={(text) => setFieldForm(prev => ({ ...prev, placeholder: text }))}
+                  onChangeText={(text) => setFieldForm((prev) => ({ ...prev, placeholder: text }))}
                   placeholder="Hint text shown when empty"
                 />
 
@@ -519,7 +518,7 @@ export default function CategoryEditScreen() {
                         fieldForm.keyboardType === value && { backgroundColor: colors.primary },
                       ]}
                       onPress={() =>
-                        setFieldForm(prev => {
+                        setFieldForm((prev) => {
                           const updates: Partial<FieldFormState> = { keyboardType: value };
                           if (value !== 'numeric') {
                             updates.minValue = '';
@@ -534,7 +533,9 @@ export default function CategoryEditScreen() {
                     >
                       <ThemedText
                         variant="caption"
-                        style={{ color: fieldForm.keyboardType === value ? '#FFFFFF' : colors.text }}
+                        style={{
+                          color: fieldForm.keyboardType === value ? '#FFFFFF' : colors.text,
+                        }}
                       >
                         {typeLabel}
                       </ThemedText>
@@ -546,7 +547,7 @@ export default function CategoryEditScreen() {
                   <Input
                     label="Phone Prefix"
                     value={fieldForm.prefix}
-                    onChangeText={(text) => setFieldForm(prev => ({ ...prev, prefix: text }))}
+                    onChangeText={(text) => setFieldForm((prev) => ({ ...prev, prefix: text }))}
                     placeholder="e.g., +91"
                   />
                 )}
@@ -558,7 +559,7 @@ export default function CategoryEditScreen() {
                   <Input
                     label="Min Length"
                     value={fieldForm.minLength}
-                    onChangeText={(text) => setFieldForm(prev => ({ ...prev, minLength: text }))}
+                    onChangeText={(text) => setFieldForm((prev) => ({ ...prev, minLength: text }))}
                     keyboardType="numeric"
                     placeholder="e.g., 6"
                     containerStyle={styles.constraintInput}
@@ -566,7 +567,7 @@ export default function CategoryEditScreen() {
                   <Input
                     label="Max Length"
                     value={fieldForm.maxLength}
-                    onChangeText={(text) => setFieldForm(prev => ({ ...prev, maxLength: text }))}
+                    onChangeText={(text) => setFieldForm((prev) => ({ ...prev, maxLength: text }))}
                     keyboardType="numeric"
                     placeholder="e.g., 12"
                     containerStyle={styles.constraintInput}
@@ -582,7 +583,9 @@ export default function CategoryEditScreen() {
                       <Input
                         label="Min Value"
                         value={fieldForm.minValue}
-                        onChangeText={(text) => setFieldForm(prev => ({ ...prev, minValue: text }))}
+                        onChangeText={(text) =>
+                          setFieldForm((prev) => ({ ...prev, minValue: text }))
+                        }
                         keyboardType="numeric"
                         placeholder="e.g., 0"
                         containerStyle={styles.constraintInput}
@@ -590,7 +593,9 @@ export default function CategoryEditScreen() {
                       <Input
                         label="Max Value"
                         value={fieldForm.maxValue}
-                        onChangeText={(text) => setFieldForm(prev => ({ ...prev, maxValue: text }))}
+                        onChangeText={(text) =>
+                          setFieldForm((prev) => ({ ...prev, maxValue: text }))
+                        }
                         keyboardType="numeric"
                         placeholder="e.g., 9999"
                         containerStyle={styles.constraintInput}
@@ -607,9 +612,12 @@ export default function CategoryEditScreen() {
                     style={[
                       styles.optionToggle,
                       { backgroundColor: colors.card },
-                      fieldForm.required && { backgroundColor: colors.primary + '20', borderColor: colors.primary },
+                      fieldForm.required && {
+                        backgroundColor: colors.primary + '20',
+                        borderColor: colors.primary,
+                      },
                     ]}
-                    onPress={() => setFieldForm(prev => ({ ...prev, required: !prev.required }))}
+                    onPress={() => setFieldForm((prev) => ({ ...prev, required: !prev.required }))}
                   >
                     <Ionicons
                       name={fieldForm.required ? 'checkbox' : 'square-outline'}
@@ -623,9 +631,14 @@ export default function CategoryEditScreen() {
                     style={[
                       styles.optionToggle,
                       { backgroundColor: colors.card },
-                      fieldForm.sensitive && { backgroundColor: colors.warning + '20', borderColor: colors.warning },
+                      fieldForm.sensitive && {
+                        backgroundColor: colors.warning + '20',
+                        borderColor: colors.warning,
+                      },
                     ]}
-                    onPress={() => setFieldForm(prev => ({ ...prev, sensitive: !prev.sensitive }))}
+                    onPress={() =>
+                      setFieldForm((prev) => ({ ...prev, sensitive: !prev.sensitive }))
+                    }
                   >
                     <Ionicons
                       name={fieldForm.sensitive ? 'eye-off' : 'eye-outline'}
@@ -639,9 +652,14 @@ export default function CategoryEditScreen() {
                     style={[
                       styles.optionToggle,
                       { backgroundColor: colors.card },
-                      fieldForm.multiline && { backgroundColor: colors.accent + '20', borderColor: colors.accent },
+                      fieldForm.multiline && {
+                        backgroundColor: colors.accent + '20',
+                        borderColor: colors.accent,
+                      },
                     ]}
-                    onPress={() => setFieldForm(prev => ({ ...prev, multiline: !prev.multiline }))}
+                    onPress={() =>
+                      setFieldForm((prev) => ({ ...prev, multiline: !prev.multiline }))
+                    }
                   >
                     <Ionicons
                       name={fieldForm.multiline ? 'document-text' : 'document-text-outline'}
@@ -657,7 +675,11 @@ export default function CategoryEditScreen() {
                     <TouchableOpacity
                       style={[
                         styles.fieldEditorActionButton,
-                        { borderColor: colors.border, borderWidth: 1, backgroundColor: colors.background },
+                        {
+                          borderColor: colors.border,
+                          borderWidth: 1,
+                          backgroundColor: colors.background,
+                        },
                       ]}
                       onPress={resetFieldForm}
                     >
@@ -685,7 +707,7 @@ export default function CategoryEditScreen() {
             {/* Save button */}
             <View style={styles.saveContainer}>
               <Button
-                title={isSaving ? 'Saving...' : (isNew ? 'Create Category' : 'Save Changes')}
+                title={isSaving ? 'Saving...' : isNew ? 'Create Category' : 'Save Changes'}
                 onPress={handleSave}
                 icon="checkmark"
                 fullWidth
@@ -699,11 +721,18 @@ export default function CategoryEditScreen() {
       </KeyboardAvoidingView>
 
       {/* Icon Picker Modal */}
-      <Modal visible={showIconPicker} animationType="slide" presentationStyle="pageSheet" statusBarTranslucent={false}>
+      <Modal
+        visible={showIconPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        statusBarTranslucent={false}
+      >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={() => setShowIconPicker(false)}>
-              <ThemedText variant="body" style={{ color: colors.primary }}>Done</ThemedText>
+              <ThemedText variant="body" style={{ color: colors.primary }}>
+                Done
+              </ThemedText>
             </TouchableOpacity>
             <ThemedText variant="subtitle">Choose Icon</ThemedText>
             <View style={{ width: 40 }} />
@@ -715,7 +744,11 @@ export default function CategoryEditScreen() {
                 style={[
                   styles.iconOption,
                   { backgroundColor: colors.card },
-                  icon === iconName && { backgroundColor: color.bg, borderColor: color.icon, borderWidth: 2 },
+                  icon === iconName && {
+                    backgroundColor: color.bg,
+                    borderColor: color.icon,
+                    borderWidth: 2,
+                  },
                 ]}
                 onPress={() => {
                   setIcon(iconName);
@@ -735,11 +768,18 @@ export default function CategoryEditScreen() {
       </Modal>
 
       {/* Color Picker Modal */}
-      <Modal visible={showColorPicker} animationType="slide" presentationStyle="pageSheet" statusBarTranslucent={false}>
+      <Modal
+        visible={showColorPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        statusBarTranslucent={false}
+      >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={() => setShowColorPicker(false)}>
-              <ThemedText variant="body" style={{ color: colors.primary }}>Done</ThemedText>
+              <ThemedText variant="body" style={{ color: colors.primary }}>
+                Done
+              </ThemedText>
             </TouchableOpacity>
             <ThemedText variant="subtitle">Choose Color</ThemedText>
             <View style={{ width: 40 }} />
@@ -774,7 +814,6 @@ export default function CategoryEditScreen() {
           </ScrollView>
         </View>
       </Modal>
-
     </ThemedView>
   );
 }
@@ -1042,4 +1081,3 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
 });
-

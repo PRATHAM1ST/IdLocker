@@ -4,12 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { Input } from './Input';
@@ -53,31 +48,31 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
     setIsAddingField(false);
   }, [newFieldLabel, newFieldValue, customFields, onCustomFieldsChange]);
 
-  const handleUpdateField = useCallback((id: string, updates: Partial<CustomField>) => {
-    onCustomFieldsChange(
-      customFields.map(field =>
-        field.id === id ? { ...field, ...updates } : field
-      )
-    );
-  }, [customFields, onCustomFieldsChange]);
+  const handleUpdateField = useCallback(
+    (id: string, updates: Partial<CustomField>) => {
+      onCustomFieldsChange(
+        customFields.map((field) => (field.id === id ? { ...field, ...updates } : field)),
+      );
+    },
+    [customFields, onCustomFieldsChange],
+  );
 
-  const handleDeleteField = useCallback((id: string) => {
-    const field = customFields.find(f => f.id === id);
-    Alert.alert(
-      'Delete Field',
-      `Are you sure you want to delete "${field?.label}"?`,
-      [
+  const handleDeleteField = useCallback(
+    (id: string) => {
+      const field = customFields.find((f) => f.id === id);
+      Alert.alert('Delete Field', `Are you sure you want to delete "${field?.label}"?`, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            onCustomFieldsChange(customFields.filter(f => f.id !== id));
+            onCustomFieldsChange(customFields.filter((f) => f.id !== id));
           },
         },
-      ]
-    );
-  }, [customFields, onCustomFieldsChange]);
+      ]);
+    },
+    [customFields, onCustomFieldsChange],
+  );
 
   const handleCancelAdd = useCallback(() => {
     setNewFieldLabel('');
@@ -161,13 +156,17 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
               style={[styles.cancelButton, { borderColor: colors.border }]}
               onPress={handleCancelAdd}
             >
-              <ThemedText variant="bodySmall" color="secondary">Cancel</ThemedText>
+              <ThemedText variant="bodySmall" color="secondary">
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.saveButton, { backgroundColor: colors.primary }]}
               onPress={handleAddField}
             >
-              <ThemedText variant="bodySmall" style={{ color: '#FFFFFF' }}>Add Field</ThemedText>
+              <ThemedText variant="bodySmall" style={{ color: '#FFFFFF' }}>
+                Add Field
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -259,4 +258,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

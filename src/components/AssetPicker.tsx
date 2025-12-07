@@ -9,18 +9,18 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ExpoImagePicker from 'expo-image-picker';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-    ActionSheetIOS,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActionSheetIOS,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAssets } from '../context/AssetProvider';
 import { useTheme } from '../context/ThemeProvider';
@@ -47,19 +47,14 @@ export function AssetPicker({
   allowedTypes = ['image', 'pdf', 'document'],
 }: AssetPickerProps) {
   const { colors } = useTheme();
-  const { 
-    assets, 
-    getAssetsByIds, 
-    saveImageAsset, 
-    saveDocumentAsset,
-  } = useAssets();
-  
+  const { assets, getAssetsByIds, saveImageAsset, saveDocumentAsset } = useAssets();
+
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showAssetBrowser, setShowAssetBrowser] = useState(false);
 
   // Get currently linked assets - memoized to prevent re-renders
-  const linkedAssetIds = useMemo(() => new Set(assetRefs.map(ref => ref.assetId)), [assetRefs]);
+  const linkedAssetIds = useMemo(() => new Set(assetRefs.map((ref) => ref.assetId)), [assetRefs]);
   const linkedAssets = getAssetsByIds(Array.from(linkedAssetIds));
 
   const requestPermissions = async (type: 'camera' | 'library'): Promise<boolean> => {
@@ -68,7 +63,7 @@ export function AssetPicker({
       if (status !== 'granted') {
         Alert.alert(
           'Camera Permission Required',
-          'Please grant camera access in your device settings to capture photos.'
+          'Please grant camera access in your device settings to capture photos.',
         );
         return false;
       }
@@ -77,7 +72,7 @@ export function AssetPicker({
       if (status !== 'granted') {
         Alert.alert(
           'Photo Library Permission Required',
-          'Please grant photo library access in your device settings to select images.'
+          'Please grant photo library access in your device settings to select images.',
         );
         return false;
       }
@@ -85,59 +80,63 @@ export function AssetPicker({
     return true;
   };
 
-  const handlePickImage = useCallback(async (source: 'camera' | 'library') => {
-    if (disabled) return;
-    
-    const hasPermission = await requestPermissions(source);
-    if (!hasPermission) return;
+  const handlePickImage = useCallback(
+    async (source: 'camera' | 'library') => {
+      if (disabled) return;
 
-    setIsLoading(true);
+      const hasPermission = await requestPermissions(source);
+      if (!hasPermission) return;
 
-    try {
-      const options: ExpoImagePicker.ImagePickerOptions = {
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.8,
-      };
+      setIsLoading(true);
 
-      const result = source === 'camera'
-        ? await ExpoImagePicker.launchCameraAsync(options)
-        : await ExpoImagePicker.launchImageLibraryAsync(options);
+      try {
+        const options: ExpoImagePicker.ImagePickerOptions = {
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 0.8,
+        };
 
-      if (!result.canceled && result.assets[0]) {
-        const imageAsset = result.assets[0];
-        const originalFilename = imageAsset.fileName || `image_${Date.now()}.jpg`;
-        
-        const savedAsset = await saveImageAsset(
-          imageAsset.uri,
-          originalFilename,
-          imageAsset.width,
-          imageAsset.height
-        );
+        const result =
+          source === 'camera'
+            ? await ExpoImagePicker.launchCameraAsync(options)
+            : await ExpoImagePicker.launchImageLibraryAsync(options);
 
-        if (savedAsset) {
-          // Add reference (deduplication handled by storage)
-          const newRef: AssetReference = {
-            assetId: savedAsset.id,
-            addedAt: new Date().toISOString(),
-          };
-          
-          // Check if already linked
-          if (!linkedAssetIds.has(savedAsset.id)) {
-            onAssetRefsChange([...assetRefs, newRef]);
+        if (!result.canceled && result.assets[0]) {
+          const imageAsset = result.assets[0];
+          const originalFilename = imageAsset.fileName || `image_${Date.now()}.jpg`;
+
+          const savedAsset = await saveImageAsset(
+            imageAsset.uri,
+            originalFilename,
+            imageAsset.width,
+            imageAsset.height,
+          );
+
+          if (savedAsset) {
+            // Add reference (deduplication handled by storage)
+            const newRef: AssetReference = {
+              assetId: savedAsset.id,
+              addedAt: new Date().toISOString(),
+            };
+
+            // Check if already linked
+            if (!linkedAssetIds.has(savedAsset.id)) {
+              onAssetRefsChange([...assetRefs, newRef]);
+            } else {
+              Alert.alert('Already Added', 'This image is already attached to this item.');
+            }
           } else {
-            Alert.alert('Already Added', 'This image is already attached to this item.');
+            Alert.alert('Error', 'Failed to save image. Please try again.');
           }
-        } else {
-          Alert.alert('Error', 'Failed to save image. Please try again.');
         }
+      } catch {
+        Alert.alert('Error', 'Failed to pick image. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [disabled, assetRefs, onAssetRefsChange, saveImageAsset, linkedAssetIds]);
+    },
+    [disabled, assetRefs, onAssetRefsChange, saveImageAsset, linkedAssetIds],
+  );
 
   const handlePickDocument = useCallback(async () => {
     if (disabled) return;
@@ -159,11 +158,11 @@ export function AssetPicker({
 
       if (!result.canceled && result.assets[0]) {
         const docAsset = result.assets[0];
-        
+
         const savedAsset = await saveDocumentAsset(
           docAsset.uri,
           docAsset.name,
-          docAsset.mimeType || 'application/octet-stream'
+          docAsset.mimeType || 'application/octet-stream',
         );
 
         if (savedAsset) {
@@ -171,7 +170,7 @@ export function AssetPicker({
             assetId: savedAsset.id,
             addedAt: new Date().toISOString(),
           };
-          
+
           if (!linkedAssetIds.has(savedAsset.id)) {
             onAssetRefsChange([...assetRefs, newRef]);
           } else {
@@ -202,7 +201,7 @@ export function AssetPicker({
       options.push('Take Photo', 'Choose from Library');
       actions.push(
         () => handlePickImage('camera'),
-        () => handlePickImage('library')
+        () => handlePickImage('library'),
       );
     }
 
@@ -224,60 +223,62 @@ export function AssetPicker({
           if (buttonIndex > 0 && buttonIndex <= actions.length) {
             actions[buttonIndex - 1]();
           }
-        }
+        },
       );
     } else {
-      Alert.alert(
-        'Add Attachment',
-        'Choose an option',
-        [
-          ...actions.map((action, index) => ({
-            text: options[index + 1],
-            onPress: action,
-          })),
-          { text: 'Cancel', style: 'cancel' as const },
-        ]
-      );
+      Alert.alert('Add Attachment', 'Choose an option', [
+        ...actions.map((action, index) => ({
+          text: options[index + 1],
+          onPress: action,
+        })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ]);
     }
   }, [disabled, maxAssets, assetRefs.length, allowedTypes, handlePickImage, handlePickDocument]);
 
-  const handleRemoveAsset = useCallback((asset: Asset) => {
-    Alert.alert(
-      'Remove Attachment',
-      'Remove this attachment from the item? The file will remain in your assets.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            onAssetRefsChange(assetRefs.filter(ref => ref.assetId !== asset.id));
-            setPreviewAsset(null);
+  const handleRemoveAsset = useCallback(
+    (asset: Asset) => {
+      Alert.alert(
+        'Remove Attachment',
+        'Remove this attachment from the item? The file will remain in your assets.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => {
+              onAssetRefsChange(assetRefs.filter((ref) => ref.assetId !== asset.id));
+              setPreviewAsset(null);
+            },
           },
-        },
-      ]
-    );
-  }, [assetRefs, onAssetRefsChange]);
+        ],
+      );
+    },
+    [assetRefs, onAssetRefsChange],
+  );
 
-  const handleLinkExistingAsset = useCallback((asset: Asset) => {
-    if (linkedAssetIds.has(asset.id)) {
-      Alert.alert('Already Added', 'This file is already attached to this item.');
-      return;
-    }
+  const handleLinkExistingAsset = useCallback(
+    (asset: Asset) => {
+      if (linkedAssetIds.has(asset.id)) {
+        Alert.alert('Already Added', 'This file is already attached to this item.');
+        return;
+      }
 
-    if (maxAssets && assetRefs.length >= maxAssets) {
-      Alert.alert('Limit Reached', `You can only add up to ${maxAssets} attachments.`);
-      return;
-    }
+      if (maxAssets && assetRefs.length >= maxAssets) {
+        Alert.alert('Limit Reached', `You can only add up to ${maxAssets} attachments.`);
+        return;
+      }
 
-    const newRef: AssetReference = {
-      assetId: asset.id,
-      addedAt: new Date().toISOString(),
-    };
-    
-    onAssetRefsChange([...assetRefs, newRef]);
-    setShowAssetBrowser(false);
-  }, [linkedAssetIds, maxAssets, assetRefs, onAssetRefsChange]);
+      const newRef: AssetReference = {
+        assetId: asset.id,
+        addedAt: new Date().toISOString(),
+      };
+
+      onAssetRefsChange([...assetRefs, newRef]);
+      setShowAssetBrowser(false);
+    },
+    [linkedAssetIds, maxAssets, assetRefs, onAssetRefsChange],
+  );
 
   const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {
     switch (type) {
@@ -355,7 +356,7 @@ export function AssetPicker({
 
   // Filter available assets for browser
   const availableAssets = assets.filter(
-    a => allowedTypes.includes(a.type) && !linkedAssetIds.has(a.id)
+    (a) => allowedTypes.includes(a.type) && !linkedAssetIds.has(a.id),
   );
 
   const renderBrowserItem = ({ item }: { item: Asset }) => (
@@ -432,10 +433,9 @@ export function AssetPicker({
                 )}
                 <View style={styles.previewInfo}>
                   <ThemedText variant="caption" style={styles.previewInfoText}>
-                    {previewAsset.type === 'image' 
+                    {previewAsset.type === 'image'
                       ? `${previewAsset.width} × ${previewAsset.height}`
-                      : formatFileSize(previewAsset.size)
-                    }
+                      : formatFileSize(previewAsset.size)}
                   </ThemedText>
                 </View>
               </>
@@ -466,13 +466,18 @@ export function AssetPicker({
         statusBarTranslucent={false}
       >
         <View style={[styles.browserContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.browserHeader, { backgroundColor: colors.backgroundSecondary, borderBottomColor: colors.border }]}>
+          <View
+            style={[
+              styles.browserHeader,
+              { backgroundColor: colors.backgroundSecondary, borderBottomColor: colors.border },
+            ]}
+          >
             <ThemedText variant="subtitle">Browse Assets</ThemedText>
             <TouchableOpacity onPress={() => setShowAssetBrowser(false)}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-          
+
           {availableAssets.length === 0 ? (
             <View style={styles.emptyBrowser}>
               <Ionicons name="folder-open-outline" size={48} color={colors.textTertiary} />

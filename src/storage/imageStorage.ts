@@ -43,7 +43,7 @@ async function ensureImagesDir(): Promise<void> {
 export async function saveImage(
   sourceUri: string,
   width: number,
-  height: number
+  height: number,
 ): Promise<ImageAttachment | null> {
   try {
     await ensureImagesDir();
@@ -60,7 +60,7 @@ export async function saveImage(
       {
         compress: 0.9,
         format: ImageManipulator.SaveFormat.JPEG,
-      }
+      },
     );
 
     // Now copy the manipulated result (which is a file:// URI) to our directory
@@ -82,11 +82,12 @@ export async function saveImage(
     return attachment;
   } catch (error: unknown) {
     // Better error logging
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : typeof error === 'string' 
-        ? error 
-        : JSON.stringify(error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : JSON.stringify(error);
     logger.error('Failed to save image:', errorMessage);
     return null;
   }
@@ -156,7 +157,7 @@ export async function resizeImage(
   sourceUri: string,
   width: number,
   height: number,
-  quality: number = 0.8
+  quality: number = 0.8,
 ): Promise<{ uri: string; width: number; height: number } | null> {
   try {
     const result = await ImageManipulator.manipulateAsync(
@@ -165,7 +166,7 @@ export async function resizeImage(
       {
         compress: quality,
         format: ImageManipulator.SaveFormat.JPEG,
-      }
+      },
     );
 
     logger.debug('Image resized:', { width: result.width, height: result.height });
@@ -193,7 +194,7 @@ export async function resizeImageWithAspectRatio(
   originalHeight: number,
   maxWidth: number,
   maxHeight: number,
-  quality: number = 0.8
+  quality: number = 0.8,
 ): Promise<{ uri: string; width: number; height: number } | null> {
   try {
     // Calculate aspect ratio
@@ -252,7 +253,7 @@ export async function shareResizedImage(
   sourceUri: string,
   width: number,
   height: number,
-  quality: number = 0.8
+  quality: number = 0.8,
 ): Promise<boolean> {
   try {
     const resized = await resizeImage(sourceUri, width, height, quality);
@@ -278,7 +279,7 @@ export async function exportResizedImage(
   sourceUri: string,
   width: number,
   height: number,
-  quality: number = 0.8
+  quality: number = 0.8,
 ): Promise<string | null> {
   try {
     const resized = await resizeImage(sourceUri, width, height, quality);
@@ -316,12 +317,10 @@ export async function getImageInfo(uri: string): Promise<{
  * Should be called periodically or when vault is loaded
  * @param referencedFilenames - Set of filenames that are still in use
  */
-export async function cleanupOrphanedImages(
-  referencedFilenames: Set<string>
-): Promise<number> {
+export async function cleanupOrphanedImages(referencedFilenames: Set<string>): Promise<number> {
   try {
     await ensureImagesDir();
-    
+
     const dirContent = await FileSystem.readDirectoryAsync(IMAGES_DIR);
     let deletedCount = 0;
 
@@ -350,7 +349,7 @@ export async function cleanupOrphanedImages(
 export async function getImageStorageSize(): Promise<number> {
   try {
     await ensureImagesDir();
-    
+
     const dirContent = await FileSystem.readDirectoryAsync(IMAGES_DIR);
     let totalSize = 0;
 

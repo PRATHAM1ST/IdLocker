@@ -4,11 +4,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Defs, RadialGradient, Stop, G } from 'react-native-svg';
@@ -40,7 +36,7 @@ function VaultIllustration() {
           <Stop offset="100%" stopColor="#1B4332" stopOpacity="1" />
         </RadialGradient>
       </Defs>
-      
+
       {/* Background leaves/decorative elements */}
       <G opacity="0.3">
         <Path
@@ -58,19 +54,19 @@ function VaultIllustration() {
         />
         <Circle cx="165" cy="65" r="6" fill="#74C69D" />
       </G>
-      
+
       {/* Main shield */}
       <Path
         d="M100 25 L155 45 L155 95 Q155 140, 100 165 Q45 140, 45 95 L45 45 Z"
         fill="url(#shieldGrad)"
       />
-      
+
       {/* Inner shield */}
       <Path
         d="M100 40 L140 55 L140 90 Q140 125, 100 145 Q60 125, 60 90 L60 55 Z"
         fill="url(#innerGrad)"
       />
-      
+
       {/* Lock icon in center */}
       <G transform="translate(80, 70)">
         <Path
@@ -80,19 +76,11 @@ function VaultIllustration() {
           fill="none"
           strokeLinecap="round"
         />
-        <Path
-          d="M5 18 L35 18 L35 38 Q35 42, 31 42 L9 42 Q5 42, 5 38 Z"
-          fill="#F1F5F9"
-        />
+        <Path d="M5 18 L35 18 L35 38 Q35 42, 31 42 L9 42 Q5 42, 5 38 Z" fill="#F1F5F9" />
         <Circle cx="20" cy="28" r="4" fill="#1B4332" />
-        <Path
-          d="M20 30 L20 36"
-          stroke="#1B4332"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
+        <Path d="M20 30 L20 36" stroke="#1B4332" strokeWidth="3" strokeLinecap="round" />
       </G>
-      
+
       {/* Decorative circles */}
       <Circle cx="25" cy="100" r="5" fill="#74C69D" opacity="0.4" />
       <Circle cx="175" cy="90" r="4" fill="#74C69D" opacity="0.4" />
@@ -102,7 +90,12 @@ function VaultIllustration() {
   );
 }
 
-export function IllustratedHeader({ title, subtitle, onSearchPress, rightAction }: IllustratedHeaderProps) {
+export function IllustratedHeader({
+  title,
+  subtitle,
+  onSearchPress,
+  rightAction,
+}: IllustratedHeaderProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -132,7 +125,7 @@ export function IllustratedHeader({ title, subtitle, onSearchPress, rightAction 
         ) : (
           <View style={styles.iconButton} />
         )}
-        
+
         {rightAction || <View style={styles.iconButton} />}
       </View>
 
@@ -183,7 +176,12 @@ export function SimpleHeader({ title, subtitle, icon, iconColor }: SimpleHeaderP
     >
       <View style={styles.simpleContent}>
         {icon && (
-          <View style={[styles.simpleIconContainer, { backgroundColor: iconColor || 'rgba(255,255,255,0.2)' }]}>
+          <View
+            style={[
+              styles.simpleIconContainer,
+              { backgroundColor: iconColor || 'rgba(255,255,255,0.2)' },
+            ]}
+          >
             <Ionicons name={icon} size={24} color="#FFFFFF" />
           </View>
         )}

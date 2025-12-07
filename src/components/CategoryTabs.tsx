@@ -4,12 +4,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
@@ -44,14 +39,14 @@ export function CategoryTabs({ selected, onSelect, counts }: CategoryTabsProps) 
         const isSelected = selected === type;
         const count = counts?.[type];
         const categoryColor = type !== 'all' ? getCategoryColor(type, isDark) : null;
-        
+
         return (
           <TouchableOpacity
             key={type}
             style={[
               styles.tab,
               {
-                backgroundColor: isSelected 
+                backgroundColor: isSelected
                   ? categoryColor?.gradientStart || colors.accent
                   : colors.backgroundTertiary,
               },
@@ -79,9 +74,7 @@ export function CategoryTabs({ selected, onSelect, counts }: CategoryTabsProps) 
                 style={[
                   styles.badge,
                   {
-                    backgroundColor: isSelected 
-                      ? 'rgba(255,255,255,0.3)' 
-                      : colors.border,
+                    backgroundColor: isSelected ? 'rgba(255,255,255,0.3)' : colors.border,
                   },
                 ]}
               >
@@ -139,11 +132,7 @@ export function CategoryCards({ onCategoryPress, counts }: CategoryCardsProps) {
             >
               {/* Icon */}
               <View style={styles.cardIconContainer}>
-                <Ionicons
-                  name={icon as any}
-                  size={20}
-                  color="rgba(255, 255, 255, 0.9)"
-                />
+                <Ionicons name={icon as any} size={20} color="rgba(255, 255, 255, 0.9)" />
               </View>
 
               {/* Label & Count */}

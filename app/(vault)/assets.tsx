@@ -8,16 +8,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    Pressable,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '../../src/components/ThemedText';
@@ -32,7 +32,8 @@ import type { Asset, AssetType } from '../../src/utils/types';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const GRID_SPACING = spacing.sm;
-const ITEM_SIZE = (screenWidth - spacing.base * 2 - GRID_SPACING * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
+const ITEM_SIZE =
+  (screenWidth - spacing.base * 2 - GRID_SPACING * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 type FilterType = 'all' | AssetType;
 
@@ -57,23 +58,27 @@ export default function AssetsScreen() {
   // Filter assets
   const filteredAssets = useMemo(() => {
     if (filter === 'all') return assets;
-    return assets.filter(a => a.type === filter);
+    return assets.filter((a) => a.type === filter);
   }, [assets, filter]);
 
   // Sort by date (newest first)
   const sortedAssets = useMemo(() => {
-    return [...filteredAssets].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    return [...filteredAssets].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   }, [filteredAssets]);
 
   // Get items that reference an asset
-  const getReferencingItems = useCallback((assetId: string) => {
-    return items.filter(item => 
-      item.assetRefs?.some(ref => ref.assetId === assetId) ||
-      item.images?.some(img => img.id === assetId)
-    );
-  }, [items]);
+  const getReferencingItems = useCallback(
+    (assetId: string) => {
+      return items.filter(
+        (item) =>
+          item.assetRefs?.some((ref) => ref.assetId === assetId) ||
+          item.images?.some((img) => img.id === assetId),
+      );
+    },
+    [items],
+  );
 
   const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {
     switch (type) {
@@ -92,38 +97,41 @@ export default function AssetsScreen() {
     await shareAsset(asset.uri, asset.mimeType);
   }, []);
 
-  const handleDelete = useCallback((asset: Asset) => {
-    const referencingItems = getReferencingItems(asset.id);
-    
-    if (referencingItems.length > 0) {
+  const handleDelete = useCallback(
+    (asset: Asset) => {
+      const referencingItems = getReferencingItems(asset.id);
+
+      if (referencingItems.length > 0) {
+        Alert.alert(
+          'Asset In Use',
+          `This asset is used by ${referencingItems.length} item(s). Remove it from those items first before deleting.`,
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+
       Alert.alert(
-        'Asset In Use',
-        `This asset is used by ${referencingItems.length} item(s). Remove it from those items first before deleting.`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    Alert.alert(
-      'Delete Asset',
-      `Are you sure you want to delete "${asset.originalFilename}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            await deleteAsset(asset.id);
-            setIsDeleting(false);
-            setPreviewAsset(null);
+        'Delete Asset',
+        `Are you sure you want to delete "${asset.originalFilename}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              setIsDeleting(true);
+              await deleteAsset(asset.id);
+              setIsDeleting(false);
+              setPreviewAsset(null);
+            },
           },
-        },
-      ]
-    );
-  }, [getReferencingItems, deleteAsset]);
+        ],
+      );
+    },
+    [getReferencingItems, deleteAsset],
+  );
 
-  const renderFilterTab = (filterConfig: typeof FILTERS[0]) => {
+  const renderFilterTab = (filterConfig: (typeof FILTERS)[0]) => {
     const isActive = filter === filterConfig.key;
     return (
       <TouchableOpacity
@@ -143,10 +151,7 @@ export default function AssetsScreen() {
         />
         <ThemedText
           variant="caption"
-          style={[
-            styles.filterTabText,
-            { color: isActive ? '#FFFFFF' : colors.textSecondary },
-          ]}
+          style={[styles.filterTabText, { color: isActive ? '#FFFFFF' : colors.textSecondary }]}
         >
           {filterConfig.label}
         </ThemedText>
@@ -171,7 +176,7 @@ export default function AssetsScreen() {
             <Ionicons name={getAssetIcon(item.type)} size={28} color={colors.primary} />
           </View>
         )}
-        
+
         {/* Reference count badge */}
         {refCount > 0 && (
           <View style={[styles.refBadge, { backgroundColor: colors.primary }]}>
@@ -205,9 +210,9 @@ export default function AssetsScreen() {
 
   const renderStats = () => {
     const totalSize = assets.reduce((sum, a) => sum + a.size, 0);
-    const imageCount = assets.filter(a => a.type === 'image').length;
-    const pdfCount = assets.filter(a => a.type === 'pdf').length;
-    const docCount = assets.filter(a => a.type === 'document').length;
+    const imageCount = assets.filter((a) => a.type === 'image').length;
+    const pdfCount = assets.filter((a) => a.type === 'pdf').length;
+    const docCount = assets.filter((a) => a.type === 'document').length;
 
     return (
       <View style={[styles.statsContainer, { backgroundColor: colors.backgroundSecondary }]}>
@@ -215,32 +220,38 @@ export default function AssetsScreen() {
           <ThemedText variant="title" style={{ color: colors.primary }}>
             {assets.length}
           </ThemedText>
-          <ThemedText variant="caption" color="secondary">Total</ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Total
+          </ThemedText>
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
           <ThemedText variant="title" style={{ color: colors.accent }}>
             {formatFileSize(totalSize)}
           </ThemedText>
-          <ThemedText variant="caption" color="secondary">Storage</ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Storage
+          </ThemedText>
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                <ThemedText variant="body">{imageCount}</ThemedText>
-                <Ionicons name="image-outline" size={16} color={colors.textSecondary} />
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                <ThemedText variant="body">{pdfCount}</ThemedText>
-                <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                <ThemedText variant="body">{docCount}</ThemedText>
-                <Ionicons name="document-outline" size={16} color={colors.textSecondary} />
-              </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <ThemedText variant="body">{imageCount}</ThemedText>
+              <Ionicons name="image-outline" size={16} color={colors.textSecondary} />
             </View>
-          <ThemedText variant="caption" color="secondary">By Type</ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <ThemedText variant="body">{pdfCount}</ThemedText>
+              <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <ThemedText variant="body">{docCount}</ThemedText>
+              <Ionicons name="document-outline" size={16} color={colors.textSecondary} />
+            </View>
+          </View>
+          <ThemedText variant="caption" color="secondary">
+            By Type
+          </ThemedText>
         </View>
       </View>
     );
@@ -284,9 +295,7 @@ export default function AssetsScreen() {
         {assets.length > 0 && renderStats()}
 
         {/* Filter tabs */}
-        <View style={styles.filterContainer}>
-          {FILTERS.map(renderFilterTab)}
-        </View>
+        <View style={styles.filterContainer}>{FILTERS.map(renderFilterTab)}</View>
 
         {/* Assets grid */}
         {isLoading ? (
@@ -339,15 +348,18 @@ export default function AssetsScreen() {
                 )}
 
                 {/* Info panel */}
-                <View style={[styles.previewInfoPanel, { backgroundColor: colors.backgroundSecondary }]}>
+                <View
+                  style={[styles.previewInfoPanel, { backgroundColor: colors.backgroundSecondary }]}
+                >
                   <ThemedText variant="body" numberOfLines={1}>
                     {previewAsset.originalFilename}
                   </ThemedText>
                   <ThemedText variant="caption" color="secondary">
                     {formatFileSize(previewAsset.size)} • {previewAsset.type.toUpperCase()}
-                    {previewAsset.type === 'image' && ` • ${previewAsset.width}×${previewAsset.height}`}
+                    {previewAsset.type === 'image' &&
+                      ` • ${previewAsset.width}×${previewAsset.height}`}
                   </ThemedText>
-                  
+
                   {/* Used by */}
                   {getReferencingItems(previewAsset.id).length > 0 && (
                     <ThemedText variant="caption" color="tertiary" style={styles.usedByText}>

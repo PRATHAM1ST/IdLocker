@@ -4,12 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeProvider';
@@ -28,9 +23,15 @@ interface VaultItemCardProps {
 export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCardProps) {
   const { colors, isDark } = useTheme();
   const { getCategoryById } = useCategories();
-  
+
   const category = useMemo(() => getCategoryById(item.type), [item.type, getCategoryById]);
-  const categoryColor = category?.color || { gradientStart: '#6B7280', gradientEnd: '#9CA3AF', icon: '#6B7280', bg: '#F3F4F6', text: '#374151' };
+  const categoryColor = category?.color || {
+    gradientStart: '#6B7280',
+    gradientEnd: '#9CA3AF',
+    icon: '#6B7280',
+    bg: '#F3F4F6',
+    text: '#374151',
+  };
   const preview = useMemo(() => getItemPreview(item, category), [item, category]);
   const hasImages = item.images && item.images.length > 0;
   const imageCount = item.images?.length || 0;
@@ -38,11 +39,7 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
 
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        { backgroundColor: colors.card },
-        shadows.md,
-      ]}
+      style={[styles.container, { backgroundColor: colors.card }, shadows.md]}
       onPress={() => onPress(item)}
       activeOpacity={0.7}
     >
@@ -53,20 +50,18 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
         end={{ x: 0, y: 1 }}
         style={styles.accentBar}
       />
-      
+
       {/* Icon or Image thumbnail */}
       {hasImages && primaryImage ? (
         <View style={[styles.imageContainer, { borderColor: categoryColor.bg }]}>
-          <Image 
-            source={{ uri: primaryImage.uri }} 
+          <Image
+            source={{ uri: primaryImage.uri }}
             style={styles.thumbnailImage}
             resizeMode="cover"
           />
           {imageCount > 1 && (
             <View style={styles.miniImageCount}>
-              <ThemedText style={styles.miniImageCountText}>
-                +{imageCount - 1}
-              </ThemedText>
+              <ThemedText style={styles.miniImageCountText}>+{imageCount - 1}</ThemedText>
             </View>
           )}
           {/* Small category indicator */}
@@ -81,16 +76,16 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
           />
         </View>
       )}
-      
+
       <View style={styles.content}>
         <View style={styles.labelRow}>
           <ThemedText variant="label" numberOfLines={1} style={styles.label}>
             {item.label}
           </ThemedText>
           {hasImages && (
-            <Ionicons 
-              name="attach" 
-              size={14} 
+            <Ionicons
+              name="attach"
+              size={14}
               color={colors.textTertiary}
               style={styles.attachIcon}
             />
@@ -103,18 +98,10 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
 
       {showMenu ? (
         <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-          <Ionicons
-            name="ellipsis-vertical"
-            size={18}
-            color={colors.textTertiary}
-          />
+          <Ionicons name="ellipsis-vertical" size={18} color={colors.textTertiary} />
         </TouchableOpacity>
       ) : (
-        <Ionicons
-          name="chevron-forward"
-          size={20}
-          color={colors.textTertiary}
-        />
+        <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
       )}
     </TouchableOpacity>
   );
@@ -126,9 +113,15 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
 export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
   const { colors, isDark } = useTheme();
   const { getCategoryById } = useCategories();
-  
+
   const category = useMemo(() => getCategoryById(item.type), [item.type, getCategoryById]);
-  const categoryColor = category?.color || { gradientStart: '#6B7280', gradientEnd: '#9CA3AF', icon: '#6B7280', bg: '#F3F4F6', text: '#374151' };
+  const categoryColor = category?.color || {
+    gradientStart: '#6B7280',
+    gradientEnd: '#9CA3AF',
+    icon: '#6B7280',
+    bg: '#F3F4F6',
+    text: '#374151',
+  };
   const preview = useMemo(() => getItemPreview(item, category), [item, category]);
   const hasImages = item.images && item.images.length > 0;
   const primaryImage = hasImages ? item.images![0] : null;
@@ -137,7 +130,7 @@ export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
     <TouchableOpacity
       style={[
         styles.compactContainer,
-        { 
+        {
           backgroundColor: colors.backgroundSecondary,
           borderBottomColor: colors.border,
         },
@@ -147,8 +140,8 @@ export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
     >
       {hasImages && primaryImage ? (
         <View style={[styles.compactImageContainer, { borderColor: categoryColor.bg }]}>
-          <Image 
-            source={{ uri: primaryImage.uri }} 
+          <Image
+            source={{ uri: primaryImage.uri }}
             style={styles.compactThumbnail}
             resizeMode="cover"
           />
@@ -163,30 +156,20 @@ export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
           />
         </View>
       )}
-      
+
       <View style={styles.compactContent}>
         <View style={styles.compactLabelRow}>
           <ThemedText variant="bodySmall" numberOfLines={1} style={styles.compactLabel}>
             {item.label}
           </ThemedText>
-          {hasImages && (
-            <Ionicons 
-              name="image-outline" 
-              size={12} 
-              color={colors.textTertiary}
-            />
-          )}
+          {hasImages && <Ionicons name="image-outline" size={12} color={colors.textTertiary} />}
         </View>
         <ThemedText variant="caption" color="tertiary" numberOfLines={1}>
           {preview}
         </ThemedText>
       </View>
-      
-      <Ionicons
-        name="chevron-forward"
-        size={18}
-        color={colors.textTertiary}
-      />
+
+      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
     </TouchableOpacity>
   );
 }

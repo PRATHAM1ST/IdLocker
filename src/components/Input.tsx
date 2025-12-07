@@ -29,118 +29,115 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
   sensitive?: boolean;
 }
 
-export const Input = forwardRef<TextInput, InputProps>(({
-  label,
-  error,
-  hint,
-  leftIcon,
-  rightIcon,
-  onRightIconPress,
-  containerStyle,
-  inputStyle,
-  sensitive = false,
-  secureTextEntry,
-  ...props
-}, ref) => {
-  const { colors } = useTheme();
-  const [isFocused, setIsFocused] = useState(false);
-  const [isSecureVisible, setIsSecureVisible] = useState(false);
+export const Input = forwardRef<TextInput, InputProps>(
+  (
+    {
+      label,
+      error,
+      hint,
+      leftIcon,
+      rightIcon,
+      onRightIconPress,
+      containerStyle,
+      inputStyle,
+      sensitive = false,
+      secureTextEntry,
+      ...props
+    },
+    ref,
+  ) => {
+    const { colors } = useTheme();
+    const [isFocused, setIsFocused] = useState(false);
+    const [isSecureVisible, setIsSecureVisible] = useState(false);
 
-  const isSecure = sensitive || secureTextEntry;
-  const showSecureToggle = isSecure && !rightIcon;
-  const actualSecureEntry = isSecure && !isSecureVisible;
+    const isSecure = sensitive || secureTextEntry;
+    const showSecureToggle = isSecure && !rightIcon;
+    const actualSecureEntry = isSecure && !isSecureVisible;
 
-  const borderColor = error 
-    ? colors.error 
-    : isFocused 
-      ? colors.accent 
-      : colors.inputBorder;
+    const borderColor = error ? colors.error : isFocused ? colors.accent : colors.inputBorder;
 
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {label && (
-        <ThemedText variant="label" color="secondary" style={styles.label}>
-          {label}
-        </ThemedText>
-      )}
-      
-      <View
-        style={[
-          styles.inputContainer,
-          {
-            backgroundColor: colors.inputBackground,
-            borderColor,
-          },
-        ]}
-      >
-        {leftIcon && (
-          <Ionicons
-            name={leftIcon}
-            size={20}
-            color={colors.textTertiary}
-            style={styles.leftIcon}
-          />
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {label && (
+          <ThemedText variant="label" color="secondary" style={styles.label}>
+            {label}
+          </ThemedText>
         )}
-        
-        <TextInput
-          ref={ref}
+
+        <View
           style={[
-            styles.input,
+            styles.inputContainer,
             {
-              color: colors.inputText,
+              backgroundColor: colors.inputBackground,
+              borderColor,
             },
-            props.multiline && styles.multilineInput,
-            inputStyle,
           ]}
-          placeholderTextColor={colors.placeholder}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          secureTextEntry={actualSecureEntry}
-          {...props}
-        />
-        
-        {showSecureToggle && (
-          <TouchableOpacity
-            onPress={() => setIsSecureVisible(!isSecureVisible)}
-            style={styles.rightIcon}
-          >
+        >
+          {leftIcon && (
             <Ionicons
-              name={isSecureVisible ? 'eye-off-outline' : 'eye-outline'}
+              name={leftIcon}
               size={20}
               color={colors.textTertiary}
+              style={styles.leftIcon}
             />
-          </TouchableOpacity>
+          )}
+
+          <TextInput
+            ref={ref}
+            style={[
+              styles.input,
+              {
+                color: colors.inputText,
+              },
+              props.multiline && styles.multilineInput,
+              inputStyle,
+            ]}
+            placeholderTextColor={colors.placeholder}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            secureTextEntry={actualSecureEntry}
+            {...props}
+          />
+
+          {showSecureToggle && (
+            <TouchableOpacity
+              onPress={() => setIsSecureVisible(!isSecureVisible)}
+              style={styles.rightIcon}
+            >
+              <Ionicons
+                name={isSecureVisible ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={colors.textTertiary}
+              />
+            </TouchableOpacity>
+          )}
+
+          {rightIcon && (
+            <TouchableOpacity
+              onPress={onRightIconPress}
+              style={styles.rightIcon}
+              disabled={!onRightIconPress}
+            >
+              <Ionicons name={rightIcon} size={20} color={colors.textTertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {error && (
+          <ThemedText variant="caption" color="error" style={styles.errorText}>
+            {error}
+          </ThemedText>
         )}
-        
-        {rightIcon && (
-          <TouchableOpacity
-            onPress={onRightIconPress}
-            style={styles.rightIcon}
-            disabled={!onRightIconPress}
-          >
-            <Ionicons
-              name={rightIcon}
-              size={20}
-              color={colors.textTertiary}
-            />
-          </TouchableOpacity>
+
+        {hint && !error && (
+          <ThemedText variant="caption" color="tertiary" style={styles.hintText}>
+            {hint}
+          </ThemedText>
         )}
       </View>
-      
-      {error && (
-        <ThemedText variant="caption" color="error" style={styles.errorText}>
-          {error}
-        </ThemedText>
-      )}
-      
-      {hint && !error && (
-        <ThemedText variant="caption" color="tertiary" style={styles.hintText}>
-          {hint}
-        </ThemedText>
-      )}
-    </View>
-  );
-});
+    );
+  },
+);
 
 Input.displayName = 'Input';
 
@@ -174,7 +171,7 @@ export function Select({
   const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find((opt) => opt.value === value);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -183,7 +180,7 @@ export function Select({
           {label}
         </ThemedText>
       )}
-      
+
       <TouchableOpacity
         style={[
           styles.selectButton,
@@ -208,7 +205,7 @@ export function Select({
           color={colors.textTertiary}
         />
       </TouchableOpacity>
-      
+
       {isOpen && (
         <View
           style={[
@@ -219,7 +216,7 @@ export function Select({
             },
           ]}
         >
-          {options.map(option => (
+          {options.map((option) => (
             <TouchableOpacity
               key={option.value}
               style={[
@@ -231,10 +228,7 @@ export function Select({
                 setIsOpen(false);
               }}
             >
-              <ThemedText
-                variant="body"
-                color={option.value === value ? 'accent' : 'primary'}
-              >
+              <ThemedText variant="body" color={option.value === value ? 'accent' : 'primary'}>
                 {option.label}
               </ThemedText>
               {option.value === value && (
@@ -244,7 +238,7 @@ export function Select({
           ))}
         </View>
       )}
-      
+
       {error && (
         <ThemedText variant="caption" color="error" style={styles.errorText}>
           {error}
@@ -325,4 +319,3 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
 });
-

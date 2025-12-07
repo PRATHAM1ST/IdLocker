@@ -49,7 +49,7 @@ export function ImagePicker({
       if (status !== 'granted') {
         Alert.alert(
           'Camera Permission Required',
-          'Please grant camera access in your device settings to capture photos.'
+          'Please grant camera access in your device settings to capture photos.',
         );
         return false;
       }
@@ -58,7 +58,7 @@ export function ImagePicker({
       if (status !== 'granted') {
         Alert.alert(
           'Photo Library Permission Required',
-          'Please grant photo library access in your device settings to select images.'
+          'Please grant photo library access in your device settings to select images.',
         );
         return false;
       }
@@ -66,45 +66,45 @@ export function ImagePicker({
     return true;
   };
 
-  const handlePickImage = useCallback(async (source: 'camera' | 'library') => {
-    if (disabled) return;
-    
-    const hasPermission = await requestPermissions(source);
-    if (!hasPermission) return;
+  const handlePickImage = useCallback(
+    async (source: 'camera' | 'library') => {
+      if (disabled) return;
 
-    setIsLoading(true);
+      const hasPermission = await requestPermissions(source);
+      if (!hasPermission) return;
 
-    try {
-      const options: ExpoImagePicker.ImagePickerOptions = {
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.8,
-      };
+      setIsLoading(true);
 
-      const result = source === 'camera'
-        ? await ExpoImagePicker.launchCameraAsync(options)
-        : await ExpoImagePicker.launchImageLibraryAsync(options);
+      try {
+        const options: ExpoImagePicker.ImagePickerOptions = {
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          quality: 0.8,
+        };
 
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const savedImage = await saveImage(
-          asset.uri,
-          asset.width,
-          asset.height
-        );
+        const result =
+          source === 'camera'
+            ? await ExpoImagePicker.launchCameraAsync(options)
+            : await ExpoImagePicker.launchImageLibraryAsync(options);
 
-        if (savedImage) {
-          onImagesChange([...images, savedImage]);
-        } else {
-          Alert.alert('Error', 'Failed to save image. Please try again.');
+        if (!result.canceled && result.assets[0]) {
+          const asset = result.assets[0];
+          const savedImage = await saveImage(asset.uri, asset.width, asset.height);
+
+          if (savedImage) {
+            onImagesChange([...images, savedImage]);
+          } else {
+            Alert.alert('Error', 'Failed to save image. Please try again.');
+          }
         }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to pick image. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [disabled, images, onImagesChange]);
+    },
+    [disabled, images, onImagesChange],
+  );
 
   const showImageSourcePicker = useCallback(() => {
     if (disabled) return;
@@ -125,26 +125,20 @@ export function ImagePicker({
           } else if (buttonIndex === 2) {
             handlePickImage('library');
           }
-        }
+        },
       );
     } else {
-      Alert.alert(
-        'Add Image',
-        'Choose an option',
-        [
-          { text: 'Take Photo', onPress: () => handlePickImage('camera') },
-          { text: 'Choose from Library', onPress: () => handlePickImage('library') },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
+      Alert.alert('Add Image', 'Choose an option', [
+        { text: 'Take Photo', onPress: () => handlePickImage('camera') },
+        { text: 'Choose from Library', onPress: () => handlePickImage('library') },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
     }
   }, [disabled, maxImages, images.length, handlePickImage]);
 
-  const handleRemoveImage = useCallback((image: ImageAttachment) => {
-    Alert.alert(
-      'Remove Image',
-      'Are you sure you want to remove this image?',
-      [
+  const handleRemoveImage = useCallback(
+    (image: ImageAttachment) => {
+      Alert.alert('Remove Image', 'Are you sure you want to remove this image?', [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
@@ -155,9 +149,10 @@ export function ImagePicker({
             setPreviewImage(null);
           },
         },
-      ]
-    );
-  }, [images, onImagesChange]);
+      ]);
+    },
+    [images, onImagesChange],
+  );
 
   const renderImageThumbnail = (image: ImageAttachment, index: number) => (
     <TouchableOpacity
@@ -370,4 +365,3 @@ const styles = StyleSheet.create({
 });
 
 export default ImagePicker;
-

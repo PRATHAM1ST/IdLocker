@@ -2,14 +2,7 @@
  * Theme context provider for managing light/dark mode
  */
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-} from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useColorScheme as useSystemColorScheme } from 'react-native';
 import type { ThemeColors, AppSettings } from '../utils/types';
 import { getThemeColors, getThemeShadows, lightColors, darkColors } from '../styles/theme';
@@ -37,16 +30,13 @@ interface ThemeProviderProps {
   initialPreference?: ThemePreference;
 }
 
-export function ThemeProvider({ 
-  children, 
-  initialPreference = 'system' 
-}: ThemeProviderProps) {
+export function ThemeProvider({ children, initialPreference = 'system' }: ThemeProviderProps) {
   const systemColorScheme = useSystemColorScheme();
   const [preference, setPreference] = useState<ThemePreference>(initialPreference);
 
   // Load saved preference on mount
   useEffect(() => {
-    loadSettings().then(settings => {
+    loadSettings().then((settings) => {
       setPreference(settings.theme);
     });
   }, []);
@@ -77,14 +67,10 @@ export function ThemeProvider({
       setThemePreference,
       shadows,
     }),
-    [colors, isDark, preference, setThemePreference, shadows]
+    [colors, isDark, preference, setThemePreference, shadows],
   );
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 /**
@@ -101,10 +87,7 @@ export function useTheme(): ThemeContextValue {
 /**
  * Hook for themed styles
  */
-export function useThemedStyles<T>(
-  styleFactory: (colors: ThemeColors, isDark: boolean) => T
-): T {
+export function useThemedStyles<T>(styleFactory: (colors: ThemeColors, isDark: boolean) => T): T {
   const { colors, isDark } = useTheme();
   return useMemo(() => styleFactory(colors, isDark), [colors, isDark, styleFactory]);
 }
-

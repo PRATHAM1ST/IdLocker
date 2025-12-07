@@ -13,21 +13,25 @@ A production-grade React Native app for securely managing personal information o
 ## Security Architecture
 
 ### Data Storage
+
 - All data encrypted using `expo-secure-store` (iOS Keychain / Android Keystore)
 - Chunked storage strategy for large vaults (2KB chunks)
 - No cloud sync, no network calls, no analytics
 
 ### Authentication
+
 - Biometric authentication (Face ID / Touch ID / Fingerprint)
 - Device PIN/pattern/password fallback
 - Auto-lock on background (configurable timeout)
 - Idle timeout lock
 
 ### Screen Protection
+
 - Screen capture prevention on all sensitive screens
 - No secrets in notifications or app previews
 
 ### Data Minimization
+
 - CVV and OTPs never stored
 - Encourages minimal sensitive data storage
 - Clear warnings about data loss scenarios
@@ -35,6 +39,7 @@ A production-grade React Native app for securely managing personal information o
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - pnpm (or npm/yarn)
 - Expo CLI
@@ -97,13 +102,16 @@ npx eas build --platform android
 ## Configuration
 
 ### Auto-Lock Timeout
+
 Configure in Settings > Auto-Lock Timeout:
+
 - 30 seconds
 - 1 minute (default)
 - 2 minutes
 - 5 minutes
 
 ### Theme
+
 - Light mode
 - Dark mode
 - System (follows device setting)
@@ -111,6 +119,7 @@ Configure in Settings > Auto-Lock Timeout:
 ## Security Notes
 
 ### Important Warnings
+
 1. **Data Loss Risk** - Data is stored only on the device. Uninstalling the app will permanently delete all data.
 
 2. **Biometric Changes** - Changing device biometrics (adding/removing fingerprints) may make stored data inaccessible.
@@ -120,11 +129,13 @@ Configure in Settings > Auto-Lock Timeout:
 4. **No Backup** - There is no cloud backup. Keep separate records of critical information.
 
 ### What's NOT Stored
+
 - CVV / CVC numbers
 - OTPs or one-time codes
 - Full card numbers (only last 4 digits)
 
 ### Logging
+
 - No sensitive data is logged
 - Logger utility redacts passwords, account numbers, and ID numbers
 - Console logs are sanitized in production
@@ -132,11 +143,13 @@ Configure in Settings > Auto-Lock Timeout:
 ## Platform-Specific Notes
 
 ### iOS
+
 - Face ID usage description required in Info.plist
 - Keychain-based secure storage
 - Screen capture fully prevented
 
 ### Android
+
 - Fingerprint permission required
 - Android Keystore-based secure storage
 - FLAG_SECURE prevents screenshots (may not work on all ROMs)

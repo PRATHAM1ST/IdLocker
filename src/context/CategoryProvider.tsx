@@ -3,14 +3,7 @@
  * Manages categories state and CRUD operations
  */
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-} from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { CustomCategory, CategoryColor } from '../utils/types';
 import * as vaultStorage from '../storage/vaultStorage';
 import { useAuthLock } from './AuthLockProvider';
@@ -21,11 +14,14 @@ import { DEFAULT_CATEGORIES, CATEGORY_COLORS } from '../utils/constants';
  * Generate a simple UUID v4
  */
 function generateId(): string {
-  return 'cat-' + 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  return (
+    'cat-' +
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    })
+  );
 }
 
 interface CategoryContextValue {
@@ -33,15 +29,20 @@ interface CategoryContextValue {
   categories: CustomCategory[];
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   refreshCategories: () => Promise<void>;
-  addCategory: (category: Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CustomCategory | null>;
-  updateCategory: (id: string, updates: Partial<Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<CustomCategory | null>;
+  addCategory: (
+    category: Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>,
+  ) => Promise<CustomCategory | null>;
+  updateCategory: (
+    id: string,
+    updates: Partial<Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>>,
+  ) => Promise<CustomCategory | null>;
   deleteCategory: (id: string) => Promise<boolean>;
   getCategoryById: (id: string) => CustomCategory | undefined;
   resetToDefaults: () => Promise<boolean>;
-  
+
   // Helpers
   getDefaultColor: () => CategoryColor;
   generateCategoryId: () => string;
@@ -55,7 +56,7 @@ interface CategoryProviderProps {
 
 export function CategoryProvider({ children }: CategoryProviderProps) {
   const { isLocked } = useAuthLock();
-  
+
   const [categories, setCategories] = useState<CustomCategory[]>(DEFAULT_CATEGORIES);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +67,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     if (!isLocked && !hasLoaded) {
       refreshCategories();
     }
-    
+
     // Reset to defaults when locked for security
     if (isLocked) {
       setCategories(DEFAULT_CATEGORIES);
@@ -78,7 +79,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
   const refreshCategories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const data = await vaultStorage.loadCategories();
       setCategories(data.categories);
@@ -94,109 +95,121 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
   }, []);
 
   // Add new category
-  const addCategory = useCallback(async (
-    category: Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>
-  ): Promise<CustomCategory | null> => {
-    const now = new Date().toISOString();
-    const newCategory: CustomCategory = {
-      ...category,
-      id: generateId(),
-      createdAt: now,
-      updatedAt: now,
-    } as CustomCategory;
-    
-    // Update local state immediately
-    setCategories(prev => [...prev, newCategory]);
-    logger.debug('Category added:', newCategory.id);
-    
-    // Persist in background
-    setTimeout(() => {
-      setCategories(currentCategories => {
-        vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
-          logger.debug('Category added to memory but not persisted');
+  const addCategory = useCallback(
+    async (
+      category: Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>,
+    ): Promise<CustomCategory | null> => {
+      const now = new Date().toISOString();
+      const newCategory: CustomCategory = {
+        ...category,
+        id: generateId(),
+        createdAt: now,
+        updatedAt: now,
+      } as CustomCategory;
+
+      // Update local state immediately
+      setCategories((prev) => [...prev, newCategory]);
+      logger.debug('Category added:', newCategory.id);
+
+      // Persist in background
+      setTimeout(() => {
+        setCategories((currentCategories) => {
+          vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
+            logger.debug('Category added to memory but not persisted');
+          });
+          return currentCategories;
         });
-        return currentCategories;
-      });
-    }, 100);
-    
-    return newCategory;
-  }, []);
+      }, 100);
+
+      return newCategory;
+    },
+    [],
+  );
 
   // Update existing category
-  const updateCategory = useCallback(async (
-    id: string,
-    updates: Partial<Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>>
-  ): Promise<CustomCategory | null> => {
-    const existingCategory = categories.find(cat => cat.id === id);
-    if (!existingCategory) {
-      logger.debug('Category not found for update');
-      return null;
-    }
-    
-    const updatedCategory: CustomCategory = {
-      ...existingCategory,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    
-    // Update local state immediately
-    setCategories(prev => prev.map(cat => cat.id === id ? updatedCategory : cat));
-    logger.debug('Category updated:', id);
-    
-    // Persist in background
-    setTimeout(() => {
-      setCategories(currentCategories => {
-        vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
-          logger.debug('Category updated in memory but not persisted');
+  const updateCategory = useCallback(
+    async (
+      id: string,
+      updates: Partial<Omit<CustomCategory, 'id' | 'createdAt' | 'updatedAt'>>,
+    ): Promise<CustomCategory | null> => {
+      const existingCategory = categories.find((cat) => cat.id === id);
+      if (!existingCategory) {
+        logger.debug('Category not found for update');
+        return null;
+      }
+
+      const updatedCategory: CustomCategory = {
+        ...existingCategory,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Update local state immediately
+      setCategories((prev) => prev.map((cat) => (cat.id === id ? updatedCategory : cat)));
+      logger.debug('Category updated:', id);
+
+      // Persist in background
+      setTimeout(() => {
+        setCategories((currentCategories) => {
+          vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
+            logger.debug('Category updated in memory but not persisted');
+          });
+          return currentCategories;
         });
-        return currentCategories;
-      });
-    }, 100);
-    
-    return updatedCategory;
-  }, [categories]);
+      }, 100);
+
+      return updatedCategory;
+    },
+    [categories],
+  );
 
   // Delete category
-  const deleteCategory = useCallback(async (id: string): Promise<boolean> => {
-    const existingCategory = categories.find(cat => cat.id === id);
-    if (!existingCategory) {
-      logger.debug('Category not found for deletion');
-      return false;
-    }
-    
-    // Update local state immediately
-    setCategories(prev => prev.filter(cat => cat.id !== id));
-    logger.debug('Category deleted:', id);
-    
-    // Persist in background
-    setTimeout(() => {
-      setCategories(currentCategories => {
-        vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
-          logger.debug('Category deleted from memory but not persisted');
+  const deleteCategory = useCallback(
+    async (id: string): Promise<boolean> => {
+      const existingCategory = categories.find((cat) => cat.id === id);
+      if (!existingCategory) {
+        logger.debug('Category not found for deletion');
+        return false;
+      }
+
+      // Update local state immediately
+      setCategories((prev) => prev.filter((cat) => cat.id !== id));
+      logger.debug('Category deleted:', id);
+
+      // Persist in background
+      setTimeout(() => {
+        setCategories((currentCategories) => {
+          vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
+            logger.debug('Category deleted from memory but not persisted');
+          });
+          return currentCategories;
         });
-        return currentCategories;
-      });
-    }, 100);
-    
-    return true;
-  }, [categories]);
+      }, 100);
+
+      return true;
+    },
+    [categories],
+  );
 
   // Get single category by ID
-  const getCategoryById = useCallback((id: string): CustomCategory | undefined => {
-    return categories.find(cat => cat.id === id);
-  }, [categories]);
+  const getCategoryById = useCallback(
+    (id: string): CustomCategory | undefined => {
+      return categories.find((cat) => cat.id === id);
+    },
+    [categories],
+  );
 
   // Reset to defaults
   const resetToDefaults = useCallback(async (): Promise<boolean> => {
     setCategories(DEFAULT_CATEGORIES);
-    
+
     // Persist in background
     setTimeout(() => {
       vaultStorage.saveCategories({ version: 1, categories: DEFAULT_CATEGORIES }).catch(() => {
         logger.debug('Categories reset in memory but not persisted');
       });
     }, 100);
-    
+
     return true;
   }, []);
 
@@ -245,14 +258,10 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       resetToDefaults,
       getDefaultColor,
       generateCategoryId,
-    ]
+    ],
   );
 
-  return (
-    <CategoryContext.Provider value={value}>
-      {children}
-    </CategoryContext.Provider>
-  );
+  return <CategoryContext.Provider value={value}>{children}</CategoryContext.Provider>;
 }
 
 /**
@@ -272,11 +281,10 @@ export function useCategories(): CategoryContextValue {
 export function useCategoryColor(categoryId: string, isDark: boolean): CategoryColor | null {
   const { getCategoryById } = useCategories();
   const category = getCategoryById(categoryId);
-  
+
   if (!category) return null;
-  
+
   // For dark mode, we could potentially have different colors
   // For now, return the same color but it could be enhanced
   return category.color;
 }
-

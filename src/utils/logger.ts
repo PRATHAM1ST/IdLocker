@@ -25,9 +25,9 @@ const SENSITIVE_PATTERNS = [
  */
 function redactObject(obj: unknown, depth = 0): unknown {
   if (depth > 5) return '[MAX_DEPTH]';
-  
+
   if (obj === null || obj === undefined) return obj;
-  
+
   if (typeof obj === 'string') {
     let redacted = obj;
     for (const pattern of SENSITIVE_PATTERNS) {
@@ -35,15 +35,15 @@ function redactObject(obj: unknown, depth = 0): unknown {
     }
     return redacted;
   }
-  
+
   if (typeof obj === 'number' || typeof obj === 'boolean') {
     return obj;
   }
-  
+
   if (Array.isArray(obj)) {
-    return obj.map(item => redactObject(item, depth + 1));
+    return obj.map((item) => redactObject(item, depth + 1));
   }
-  
+
   if (typeof obj === 'object') {
     const redacted: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
@@ -56,7 +56,7 @@ function redactObject(obj: unknown, depth = 0): unknown {
     }
     return redacted;
   }
-  
+
   return '[UNKNOWN_TYPE]';
 }
 
@@ -64,7 +64,7 @@ function redactObject(obj: unknown, depth = 0): unknown {
  * Format log arguments safely
  */
 function formatArgs(args: unknown[]): unknown[] {
-  return args.map(arg => {
+  return args.map((arg) => {
     if (typeof arg === 'object') {
       return redactObject(arg);
     }
@@ -84,11 +84,11 @@ function formatArgs(args: unknown[]): unknown[] {
  */
 function log(level: LogLevel, ...args: unknown[]): void {
   if (!isDev && level === 'debug') return;
-  
+
   const timestamp = new Date().toISOString();
   const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
   const safeArgs = formatArgs(args);
-  
+
   switch (level) {
     case 'debug':
       console.debug(prefix, ...safeArgs);
@@ -113,17 +113,21 @@ export const logger = {
   info: (...args: unknown[]) => log('info', ...args),
   warn: (...args: unknown[]) => log('warn', ...args),
   error: (...args: unknown[]) => log('error', ...args),
-  
+
   // Log vault operations without exposing data
   vaultOperation: (operation: string, itemCount?: number) => {
-    log('info', `Vault operation: ${operation}`, itemCount !== undefined ? `(${itemCount} items)` : '');
+    log(
+      'info',
+      `Vault operation: ${operation}`,
+      itemCount !== undefined ? `(${itemCount} items)` : '',
+    );
   },
-  
+
   // Log auth events
   authEvent: (event: string, success: boolean) => {
     log('info', `Auth event: ${event}`, success ? 'SUCCESS' : 'FAILED');
   },
-  
+
   // Log navigation events
   navigation: (screen: string) => {
     log('debug', `Navigate to: ${screen}`);
@@ -131,4 +135,3 @@ export const logger = {
 };
 
 export default logger;
-

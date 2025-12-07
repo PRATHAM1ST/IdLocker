@@ -9,16 +9,8 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
-import {
-    Platform,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import Animated, {
-    FadeIn,
-    FadeOut,
-} from 'react-native-reanimated';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { getBiometricTypeName, useAuthLock } from '../context/AuthLockProvider';
 import { useTheme } from '../context/ThemeProvider';
 import { borderRadius, spacing } from '../styles/theme';
@@ -26,14 +18,7 @@ import { ThemedText } from './ThemedText';
 
 export function LockOverlay() {
   const { colors, isDark } = useTheme();
-  const {
-    isLocked,
-    isAuthenticating,
-    error,
-    unlock,
-    biometricType,
-    hasBiometrics,
-  } = useAuthLock();
+  const { isLocked, isAuthenticating, error, unlock, biometricType, hasBiometrics } = useAuthLock();
 
   // Auto-trigger authentication when locked
   useEffect(() => {
@@ -85,11 +70,7 @@ export function LockOverlay() {
 
       {/* iOS: Use native blur for extra effect */}
       {Platform.OS === 'ios' && (
-        <BlurView
-          intensity={20}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
+        <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
       )}
 
       {/* Decorative circles */}
@@ -100,8 +81,8 @@ export function LockOverlay() {
       </View>
 
       {/* Content */}
-      <TouchableOpacity 
-        style={styles.content} 
+      <TouchableOpacity
+        style={styles.content}
         activeOpacity={0.9}
         onPress={handleRetry}
         disabled={isAuthenticating}
@@ -120,17 +101,13 @@ export function LockOverlay() {
         <View style={styles.authContainer}>
           <View style={[styles.authButton, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
             <View style={styles.authIconContainer}>
-              <Ionicons
-                name={getBiometricIcon()}
-                size={32}
-                color="#FFFFFF"
-              />
+              <Ionicons name={getBiometricIcon()} size={32} color="#FFFFFF" />
             </View>
-            
+
             <ThemedText variant="subtitle" style={styles.authTitle}>
               {isAuthenticating ? 'Verifying...' : error ? 'Tap to Retry' : 'Unlock Vault'}
             </ThemedText>
-            
+
             <ThemedText variant="caption" style={styles.authSubtitle}>
               {hasBiometrics ? `Use ${biometricName}` : 'Use device passcode'}
             </ThemedText>

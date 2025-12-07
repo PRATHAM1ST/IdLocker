@@ -26,4 +26,3 @@ export function useAutoLock() {
 
   return { setAutoLockTimeout };
 }
-

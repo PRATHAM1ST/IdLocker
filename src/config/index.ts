@@ -1,9 +1,9 @@
 /**
  * Configuration loader with safe fallback
- * 
+ *
  * This module attempts to load devConfig.ts if it exists.
  * If not found, it falls back to production-safe defaults.
- * 
+ *
  * Dummy data is only loaded when:
  * 1. __DEV__ is true (development mode)
  * 2. devConfig.ts exists (user has created it)
@@ -39,7 +39,7 @@ function loadDevConfig(): DevConfigType {
     // This will throw if the file doesn't exist
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const devConfig = require('./devConfig');
-    
+
     if (devConfig && devConfig.DEV_CONFIG) {
       console.log('📦 [DevConfig] Loaded development configuration');
       return {
@@ -79,4 +79,3 @@ export function shouldSkipAuth(): boolean {
 export function isVerboseLogging(): boolean {
   return __DEV__ && Config.VERBOSE_LOGGING;
 }
-

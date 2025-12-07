@@ -1,14 +1,14 @@
 /**
  * Dummy data for development/testing purposes
  * This file provides sample vault items for UI testing
- * 
+ *
  * Images are from Lorem Picsum (https://picsum.photos) - free public placeholder images
  */
 
 import type { VaultItem, ImageAttachment } from '../utils/types';
 
 // Generate consistent UUIDs for dummy data
-const generateId = (prefix: string, index: number): string => 
+const generateId = (prefix: string, index: number): string =>
   `${prefix}-${String(index).padStart(4, '0')}-dummy-4xxx-yxxx-xxxxxxxxxxxx`;
 
 const now = new Date().toISOString();
@@ -20,11 +20,11 @@ const twoMonthsAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString
  * Uses seed-based URLs for consistent images across sessions
  */
 const createDummyImage = (
-  seed: string, 
-  width: number, 
-  height: number, 
+  seed: string,
+  width: number,
+  height: number,
   filename: string,
-  createdAt: string = oneMonthAgo
+  createdAt: string = oneMonthAgo,
 ): ImageAttachment => ({
   id: `img-${seed}-${Date.now()}`,
   uri: `https://picsum.photos/seed/${seed}/${width}/${height}`,
@@ -125,9 +125,7 @@ export const DUMMY_VAULT_ITEMS: VaultItem[] = [
       cardholderName: 'JOHN DOE',
       notes: '5% cashback on Amazon',
     },
-    images: [
-      createDummyImage('amazon-card', 800, 500, 'amazon_pay_card.jpg', oneMonthAgo),
-    ],
+    images: [createDummyImage('amazon-card', 800, 500, 'amazon_pay_card.jpg', oneMonthAgo)],
     createdAt: oneMonthAgo,
     updatedAt: oneMonthAgo,
   },
@@ -194,9 +192,7 @@ export const DUMMY_VAULT_ITEMS: VaultItem[] = [
       dateOfBirth: '15/08/1990',
       issuingAuthority: 'Income Tax Department',
     },
-    images: [
-      createDummyImage('pan-card', 800, 500, 'pan_card.jpg', twoMonthsAgo),
-    ],
+    images: [createDummyImage('pan-card', 800, 500, 'pan_card.jpg', twoMonthsAgo)],
     createdAt: twoMonthsAgo,
     updatedAt: twoMonthsAgo,
   },
@@ -254,9 +250,7 @@ export const DUMMY_VAULT_ITEMS: VaultItem[] = [
       issuingAuthority: 'Election Commission of India',
       notes: 'Registered at HSR Layout',
     },
-    images: [
-      createDummyImage('voter-id', 800, 500, 'voter_id.jpg', oneMonthAgo),
-    ],
+    images: [createDummyImage('voter-id', 800, 500, 'voter_id.jpg', oneMonthAgo)],
     createdAt: oneMonthAgo,
     updatedAt: oneMonthAgo,
   },
@@ -418,9 +412,7 @@ Store securely - each code works once`,
       field3: 'Center: Koramangala',
       notes: 'Includes gym + group classes\nRefer code: JOHNFIT100',
     },
-    images: [
-      createDummyImage('gym-card', 800, 500, 'membership_card.jpg', oneMonthAgo),
-    ],
+    images: [createDummyImage('gym-card', 800, 500, 'membership_card.jpg', oneMonthAgo)],
     createdAt: oneMonthAgo,
     updatedAt: oneMonthAgo,
   },
@@ -475,4 +467,3 @@ export function getDummyDataSummary(): Record<string, number> {
   }
   return summary;
 }
-

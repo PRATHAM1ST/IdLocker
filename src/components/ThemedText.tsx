@@ -7,14 +7,7 @@ import { Text, TextStyle, StyleSheet, StyleProp } from 'react-native';
 import { useTheme } from '../context/ThemeProvider';
 import { typography } from '../styles/theme';
 
-type TextVariant = 
-  | 'title' 
-  | 'subtitle' 
-  | 'body' 
-  | 'bodySmall' 
-  | 'caption' 
-  | 'label'
-  | 'button';
+type TextVariant = 'title' | 'subtitle' | 'body' | 'bodySmall' | 'caption' | 'label' | 'button';
 
 interface ThemedTextProps {
   children: React.ReactNode;
@@ -34,7 +27,7 @@ export function ThemedText({
   selectable = false,
 }: ThemedTextProps) {
   const { colors } = useTheme();
-  
+
   const textColor = {
     primary: colors.text,
     secondary: colors.textSecondary,
@@ -43,9 +36,9 @@ export function ThemedText({
     error: colors.error,
     success: colors.success,
   }[color];
-  
+
   const variantStyle = styles[variant];
-  
+
   return (
     <Text
       style={[variantStyle, { color: textColor }, style]}
@@ -94,4 +87,3 @@ const styles = StyleSheet.create({
     lineHeight: typography.sizes.base * typography.lineHeights.tight,
   },
 });
-

@@ -8,15 +8,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../../src/components/Button';
@@ -47,7 +47,7 @@ export default function ItemDetailScreen() {
   const [itemAssets, setItemAssets] = useState<Asset[]>([]);
 
   const item = useMemo(() => getItem(id), [getItem, id]);
-  
+
   // Load assets for item (with migration if needed)
   useEffect(() => {
     const loadAssets = async () => {
@@ -60,23 +60,26 @@ export default function ItemDetailScreen() {
           hasLegacyImages: !!item.images,
           legacyImageCount: item.images?.length || 0,
         });
-        
+
         // Get assets for this item (handles both assetRefs and legacy images)
         let assets = getAssetsForItem(item);
-        
+
         // If item has legacy images but no assets found, try migration
         if (assets.length === 0 && item.images && item.images.length > 0) {
           await migrateItemAssets(item);
           assets = getAssetsForItem(item);
         }
-        
+
         setItemAssets(assets);
       }
     };
     loadAssets();
   }, [item, getAssetsForItem, migrateItemAssets]);
-  
-  const category = useMemo(() => item ? getCategoryById(item.type) : null, [item, getCategoryById]);
+
+  const category = useMemo(
+    () => (item ? getCategoryById(item.type) : null),
+    [item, getCategoryById],
+  );
   const categoryColor = category?.color || null;
 
   const handleEdit = useCallback(() => {
@@ -107,7 +110,7 @@ export default function ItemDetailScreen() {
             }
           },
         },
-      ]
+      ],
     );
   }, [item, deleteItem, router]);
 
@@ -151,7 +154,7 @@ export default function ItemDetailScreen() {
 
   // Build display fields from category template
   const displayFields: { key: string; label: string; value: string; sensitive: boolean }[] = [];
-  
+
   for (const fieldDef of category.fields) {
     const value = item.fields[fieldDef.key];
     if (value) {
@@ -168,7 +171,7 @@ export default function ItemDetailScreen() {
         });
         continue;
       }
-      
+
       displayFields.push({
         key: fieldDef.key,
         label: fieldDef.label,
@@ -200,7 +203,7 @@ export default function ItemDetailScreen() {
         }}
       />
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -225,11 +228,7 @@ export default function ItemDetailScreen() {
             >
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={handleEdit}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.navButton} onPress={handleEdit} activeOpacity={0.7}>
               <Ionicons name="create-outline" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
@@ -237,11 +236,7 @@ export default function ItemDetailScreen() {
           {/* Icon and title */}
           <View style={styles.headerContent}>
             <View style={styles.iconContainer}>
-              <Ionicons
-                name={category.icon as any}
-                size={36}
-                color="rgba(255, 255, 255, 0.95)"
-              />
+              <Ionicons name={category.icon as any} size={36} color="rgba(255, 255, 255, 0.95)" />
             </View>
             <ThemedText variant="title" style={styles.headerTitle}>
               {item.label}
@@ -261,8 +256,8 @@ export default function ItemDetailScreen() {
             <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
               Details
             </ThemedText>
-            
-            {displayFields.map(field => (
+
+            {displayFields.map((field) => (
               <SecureField
                 key={field.key}
                 label={field.label}
@@ -279,8 +274,8 @@ export default function ItemDetailScreen() {
               <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
                 Custom Fields
               </ThemedText>
-              
-              {customFieldsDisplay.map(field => (
+
+              {customFieldsDisplay.map((field) => (
                 <SecureField
                   key={field.id}
                   label={field.label}
@@ -316,8 +311,17 @@ export default function ItemDetailScreen() {
                     {asset.type === 'image' ? (
                       <Image source={{ uri: asset.uri }} style={styles.imageThumbInner} />
                     ) : (
-                      <View style={[styles.docThumbInner, { backgroundColor: colors.backgroundTertiary }]}>
-                        <Ionicons name={getAssetIcon(asset.type)} size={28} color={colors.primary} />
+                      <View
+                        style={[
+                          styles.docThumbInner,
+                          { backgroundColor: colors.backgroundTertiary },
+                        ]}
+                      >
+                        <Ionicons
+                          name={getAssetIcon(asset.type)}
+                          size={28}
+                          color={colors.primary}
+                        />
                         <ThemedText variant="caption" numberOfLines={1} style={styles.docThumbName}>
                           {asset.originalFilename}
                         </ThemedText>
@@ -325,10 +329,9 @@ export default function ItemDetailScreen() {
                     )}
                     <View style={styles.imageDimensions}>
                       <ThemedText variant="caption" style={styles.imageDimensionsText}>
-                        {asset.type === 'image' 
+                        {asset.type === 'image'
                           ? `${asset.width}×${asset.height}`
-                          : formatFileSize(asset.size)
-                        }
+                          : formatFileSize(asset.size)}
                       </ThemedText>
                     </View>
                     {/* Type badge */}
@@ -344,13 +347,17 @@ export default function ItemDetailScreen() {
           {/* Metadata */}
           <View style={[styles.metaCard]}>
             <View style={styles.metaRow}>
-              <ThemedText variant="caption" color="tertiary">Created</ThemedText>
+              <ThemedText variant="caption" color="tertiary">
+                Created
+              </ThemedText>
               <ThemedText variant="caption" color="secondary">
                 {formatDate(item.createdAt)}
               </ThemedText>
             </View>
             <View style={styles.metaRow}>
-              <ThemedText variant="caption" color="tertiary">Last Updated</ThemedText>
+              <ThemedText variant="caption" color="tertiary">
+                Last Updated
+              </ThemedText>
               <ThemedText variant="caption" color="secondary">
                 {formatDate(item.updatedAt)}
               </ThemedText>
@@ -409,17 +416,18 @@ export default function ItemDetailScreen() {
                     </ThemedText>
                   </View>
                 )}
-                
+
                 {/* Info panel */}
-                <View style={[styles.previewInfoPanel, { backgroundColor: colors.backgroundSecondary }]}>
+                <View
+                  style={[styles.previewInfoPanel, { backgroundColor: colors.backgroundSecondary }]}
+                >
                   <ThemedText variant="body" numberOfLines={1}>
                     {selectedAsset.originalFilename}
                   </ThemedText>
                   <ThemedText variant="caption" color="secondary">
-                    {selectedAsset.type === 'image' 
+                    {selectedAsset.type === 'image'
                       ? `${selectedAsset.width}×${selectedAsset.height} • ${formatFileSize(selectedAsset.size)}`
-                      : formatFileSize(selectedAsset.size)
-                    }
+                      : formatFileSize(selectedAsset.size)}
                   </ThemedText>
                 </View>
 

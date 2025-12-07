@@ -91,10 +91,7 @@ async function calculateFileHash(uri: string): Promise<string> {
     const content = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    const hash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      content
-    );
+    const hash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, content);
     return hash;
   } catch (error) {
     logger.error('Failed to calculate file hash:', error);
@@ -118,7 +115,7 @@ export async function loadAssetsData(): Promise<AssetsData> {
   } catch (error) {
     logger.error('Failed to load assets data:', error);
   }
-  
+
   return {
     version: CURRENT_VERSION,
     assets: [],
@@ -146,29 +143,25 @@ export async function saveImageAsset(
   sourceUri: string,
   originalFilename: string,
   width: number,
-  height: number
+  height: number,
 ): Promise<Asset | null> {
   try {
     await ensureAssetsDir();
 
     // Convert image to JPEG for consistency
-    const result = await ImageManipulator.manipulateAsync(
-      sourceUri,
-      [],
-      {
-        compress: 0.9,
-        format: ImageManipulator.SaveFormat.JPEG,
-      }
-    );
+    const result = await ImageManipulator.manipulateAsync(sourceUri, [], {
+      compress: 0.9,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
 
     // Calculate hash for deduplication
     const hash = await calculateFileHash(result.uri);
-    
+
     // Load existing assets
     const assetsData = await loadAssetsData();
-    
+
     // Check for duplicate
-    const existingAsset = assetsData.assets.find(a => a.hash === hash);
+    const existingAsset = assetsData.assets.find((a) => a.hash === hash);
     if (existingAsset) {
       logger.debug('Asset already exists, returning existing:', existingAsset.id);
       // Clean up temp file
@@ -225,19 +218,19 @@ export async function saveImageAsset(
 export async function saveDocumentAsset(
   sourceUri: string,
   originalFilename: string,
-  mimeType: string
+  mimeType: string,
 ): Promise<Asset | null> {
   try {
     await ensureAssetsDir();
 
     // Calculate hash for deduplication
     const hash = await calculateFileHash(sourceUri);
-    
+
     // Load existing assets
     const assetsData = await loadAssetsData();
-    
+
     // Check for duplicate
-    const existingAsset = assetsData.assets.find(a => a.hash === hash);
+    const existingAsset = assetsData.assets.find((a) => a.hash === hash);
     if (existingAsset) {
       logger.debug('Asset already exists, returning existing:', existingAsset.id);
       return existingAsset;
@@ -291,7 +284,7 @@ export async function saveDocumentAsset(
 export async function getAssetById(id: string): Promise<Asset | null> {
   try {
     const assetsData = await loadAssetsData();
-    return assetsData.assets.find(a => a.id === id) || null;
+    return assetsData.assets.find((a) => a.id === id) || null;
   } catch (error) {
     logger.error('Failed to get asset:', error);
     return null;
@@ -305,7 +298,7 @@ export async function getAssetsByIds(ids: string[]): Promise<Asset[]> {
   try {
     const assetsData = await loadAssetsData();
     const idSet = new Set(ids);
-    return assetsData.assets.filter(a => idSet.has(a.id));
+    return assetsData.assets.filter((a) => idSet.has(a.id));
   } catch (error) {
     logger.error('Failed to get assets:', error);
     return [];
@@ -331,7 +324,7 @@ export async function getAllAssets(): Promise<Asset[]> {
 export async function getAssetsByType(type: AssetType): Promise<Asset[]> {
   try {
     const assetsData = await loadAssetsData();
-    return assetsData.assets.filter(a => a.type === type);
+    return assetsData.assets.filter((a) => a.type === type);
   } catch (error) {
     logger.error('Failed to get assets by type:', error);
     return [];
@@ -345,8 +338,8 @@ export async function getAssetsByType(type: AssetType): Promise<Asset[]> {
 export async function deleteAsset(id: string, force: boolean = false): Promise<boolean> {
   try {
     const assetsData = await loadAssetsData();
-    const assetIndex = assetsData.assets.findIndex(a => a.id === id);
-    
+    const assetIndex = assetsData.assets.findIndex((a) => a.id === id);
+
     if (assetIndex === -1) {
       logger.debug('Asset not found:', id);
       return false;
@@ -375,15 +368,13 @@ export async function deleteAsset(id: string, force: boolean = false): Promise<b
 /**
  * Clean up orphaned assets (not referenced by any vault item)
  */
-export async function cleanupOrphanedAssets(
-  referencedAssetIds: Set<string>
-): Promise<number> {
+export async function cleanupOrphanedAssets(referencedAssetIds: Set<string>): Promise<number> {
   try {
     const assetsData = await loadAssetsData();
     let deletedCount = 0;
 
     const assetsToKeep: Asset[] = [];
-    
+
     for (const asset of assetsData.assets) {
       if (referencedAssetIds.has(asset.id)) {
         assetsToKeep.push(asset);
@@ -427,12 +418,12 @@ export async function migrateImageToAsset(image: ImageAttachment): Promise<Asset
 
     // Calculate hash
     const hash = await calculateFileHash(image.uri);
-    
+
     // Load existing assets
     const assetsData = await loadAssetsData();
-    
+
     // Check for duplicate
-    const existingAsset = assetsData.assets.find(a => a.hash === hash);
+    const existingAsset = assetsData.assets.find((a) => a.hash === hash);
     if (existingAsset) {
       logger.debug('Asset already exists during migration:', existingAsset.id);
       return existingAsset;
@@ -440,9 +431,7 @@ export async function migrateImageToAsset(image: ImageAttachment): Promise<Asset
 
     // Create asset from legacy image
     const id = image.id; // Keep the same ID for reference tracking
-    const filename = image.filename.endsWith('.jpg') 
-      ? image.filename 
-      : `${image.id}.jpg`;
+    const filename = image.filename.endsWith('.jpg') ? image.filename : `${image.id}.jpg`;
     const destUri = `${ASSETS_DIR}${filename}`;
 
     // Copy file to new location (keep original for safety during migration)
@@ -504,7 +493,7 @@ export async function resizeImageAsset(
   sourceUri: string,
   width: number,
   height: number,
-  quality: number = 0.8
+  quality: number = 0.8,
 ): Promise<{ uri: string; width: number; height: number } | null> {
   try {
     const result = await ImageManipulator.manipulateAsync(
@@ -513,7 +502,7 @@ export async function resizeImageAsset(
       {
         compress: quality,
         format: ImageManipulator.SaveFormat.JPEG,
-      }
+      },
     );
 
     return {
@@ -530,7 +519,10 @@ export async function resizeImageAsset(
 /**
  * Share an asset using system share dialog
  */
-export async function shareAsset(uri: string, mimeType: string = 'application/octet-stream'): Promise<boolean> {
+export async function shareAsset(
+  uri: string,
+  mimeType: string = 'application/octet-stream',
+): Promise<boolean> {
   try {
     const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
@@ -557,7 +549,7 @@ export async function shareAsset(uri: string, mimeType: string = 'application/oc
 export async function getAssetsStorageSize(): Promise<number> {
   try {
     await ensureAssetsDir();
-    
+
     const dirContent = await FileSystem.readDirectoryAsync(ASSETS_DIR);
     let totalSize = 0;
 

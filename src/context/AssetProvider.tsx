@@ -4,14 +4,7 @@
  * Handles transparent migration from legacy ImageAttachment
  */
 
-import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import * as assetStorage from '../storage/assetStorage';
 import { logger } from '../utils/logger';
 import type { Asset, AssetReference, AssetType, VaultItem } from '../utils/types';
@@ -23,20 +16,29 @@ interface AssetContextValue {
   isLoading: boolean;
   error: string | null;
   isMigrating: boolean;
-  
+
   // Actions
   refreshAssets: () => Promise<void>;
-  saveImageAsset: (uri: string, originalFilename: string, width: number, height: number) => Promise<Asset | null>;
-  saveDocumentAsset: (uri: string, originalFilename: string, mimeType: string) => Promise<Asset | null>;
+  saveImageAsset: (
+    uri: string,
+    originalFilename: string,
+    width: number,
+    height: number,
+  ) => Promise<Asset | null>;
+  saveDocumentAsset: (
+    uri: string,
+    originalFilename: string,
+    mimeType: string,
+  ) => Promise<Asset | null>;
   deleteAsset: (id: string) => Promise<boolean>;
   getAssetById: (id: string) => Asset | undefined;
   getAssetsByIds: (ids: string[]) => Asset[];
   getAssetsForItem: (item: VaultItem) => Asset[];
-  
+
   // Filtered views
   getAssetsByType: (type: AssetType) => Asset[];
   searchAssets: (query: string) => Asset[];
-  
+
   // Migration
   migrateItemAssets: (item: VaultItem) => Promise<AssetReference[]>;
   cleanupOrphanedAssets: (items: VaultItem[]) => Promise<number>;
@@ -50,7 +52,7 @@ interface AssetProviderProps {
 
 export function AssetProvider({ children }: AssetProviderProps) {
   const { isLocked } = useAuthLock();
-  
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -62,20 +64,20 @@ export function AssetProvider({ children }: AssetProviderProps) {
     if (!isLocked && !hasLoaded) {
       refreshAssets();
     }
-    
+
     // Clear assets when locked for security
     if (isLocked) {
       setAssets([]);
       setHasLoaded(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLocked, hasLoaded]);
 
   // Refresh assets from storage
   const refreshAssets = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const allAssets = await assetStorage.getAllAssets();
       setAssets(allAssets);
@@ -91,58 +93,60 @@ export function AssetProvider({ children }: AssetProviderProps) {
   }, []);
 
   // Save image asset
-  const saveImageAsset = useCallback(async (
-    uri: string,
-    originalFilename: string,
-    width: number,
-    height: number
-  ): Promise<Asset | null> => {
-    try {
-      const asset = await assetStorage.saveImageAsset(uri, originalFilename, width, height);
-      if (asset) {
-        // Update local state - avoid duplicates
-        setAssets(prev => {
-          const exists = prev.some(a => a.id === asset.id);
-          if (exists) return prev;
-          return [...prev, asset];
-        });
+  const saveImageAsset = useCallback(
+    async (
+      uri: string,
+      originalFilename: string,
+      width: number,
+      height: number,
+    ): Promise<Asset | null> => {
+      try {
+        const asset = await assetStorage.saveImageAsset(uri, originalFilename, width, height);
+        if (asset) {
+          // Update local state - avoid duplicates
+          setAssets((prev) => {
+            const exists = prev.some((a) => a.id === asset.id);
+            if (exists) return prev;
+            return [...prev, asset];
+          });
+        }
+        return asset;
+      } catch (err) {
+        logger.error('Failed to save image asset:', err);
+        return null;
       }
-      return asset;
-    } catch (err) {
-      logger.error('Failed to save image asset:', err);
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Save document asset
-  const saveDocumentAsset = useCallback(async (
-    uri: string,
-    originalFilename: string,
-    mimeType: string
-  ): Promise<Asset | null> => {
-    try {
-      const asset = await assetStorage.saveDocumentAsset(uri, originalFilename, mimeType);
-      if (asset) {
-        // Update local state - avoid duplicates
-        setAssets(prev => {
-          const exists = prev.some(a => a.id === asset.id);
-          if (exists) return prev;
-          return [...prev, asset];
-        });
+  const saveDocumentAsset = useCallback(
+    async (uri: string, originalFilename: string, mimeType: string): Promise<Asset | null> => {
+      try {
+        const asset = await assetStorage.saveDocumentAsset(uri, originalFilename, mimeType);
+        if (asset) {
+          // Update local state - avoid duplicates
+          setAssets((prev) => {
+            const exists = prev.some((a) => a.id === asset.id);
+            if (exists) return prev;
+            return [...prev, asset];
+          });
+        }
+        return asset;
+      } catch (err) {
+        logger.error('Failed to save document asset:', err);
+        return null;
       }
-      return asset;
-    } catch (err) {
-      logger.error('Failed to save document asset:', err);
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Delete asset
   const deleteAsset = useCallback(async (id: string): Promise<boolean> => {
     try {
       const success = await assetStorage.deleteAsset(id);
       if (success) {
-        setAssets(prev => prev.filter(a => a.id !== id));
+        setAssets((prev) => prev.filter((a) => a.id !== id));
       }
       return success;
     } catch (err) {
@@ -152,48 +156,64 @@ export function AssetProvider({ children }: AssetProviderProps) {
   }, []);
 
   // Get asset by ID
-  const getAssetById = useCallback((id: string): Asset | undefined => {
-    return assets.find(a => a.id === id);
-  }, [assets]);
+  const getAssetById = useCallback(
+    (id: string): Asset | undefined => {
+      return assets.find((a) => a.id === id);
+    },
+    [assets],
+  );
 
   // Get assets by IDs
-  const getAssetsByIds = useCallback((ids: string[]): Asset[] => {
-    const idSet = new Set(ids);
-    return assets.filter(a => idSet.has(a.id));
-  }, [assets]);
+  const getAssetsByIds = useCallback(
+    (ids: string[]): Asset[] => {
+      const idSet = new Set(ids);
+      return assets.filter((a) => idSet.has(a.id));
+    },
+    [assets],
+  );
 
   // Get assets for a vault item (from assetRefs)
-  const getAssetsForItem = useCallback((item: VaultItem): Asset[] => {
-    if (!item.assetRefs || item.assetRefs.length === 0) {
-      // Fallback to legacy images for backward compatibility
-      if (item.images && item.images.length > 0) {
-        // Return assets that match legacy image IDs
-        const legacyIds = new Set(item.images.map(img => img.id));
-        return assets.filter(a => legacyIds.has(a.id));
+  const getAssetsForItem = useCallback(
+    (item: VaultItem): Asset[] => {
+      if (!item.assetRefs || item.assetRefs.length === 0) {
+        // Fallback to legacy images for backward compatibility
+        if (item.images && item.images.length > 0) {
+          // Return assets that match legacy image IDs
+          const legacyIds = new Set(item.images.map((img) => img.id));
+          return assets.filter((a) => legacyIds.has(a.id));
+        }
+        return [];
       }
-      return [];
-    }
-    
-    const refIds = item.assetRefs.map(ref => ref.assetId);
-    return getAssetsByIds(refIds);
-  }, [assets, getAssetsByIds]);
+
+      const refIds = item.assetRefs.map((ref) => ref.assetId);
+      return getAssetsByIds(refIds);
+    },
+    [assets, getAssetsByIds],
+  );
 
   // Get assets by type
-  const getAssetsByType = useCallback((type: AssetType): Asset[] => {
-    return assets.filter(a => a.type === type);
-  }, [assets]);
+  const getAssetsByType = useCallback(
+    (type: AssetType): Asset[] => {
+      return assets.filter((a) => a.type === type);
+    },
+    [assets],
+  );
 
   // Search assets
-  const searchAssets = useCallback((query: string): Asset[] => {
-    const lowerQuery = query.toLowerCase().trim();
-    
-    if (!lowerQuery) return assets;
-    
-    return assets.filter(asset => 
-      asset.originalFilename.toLowerCase().includes(lowerQuery) ||
-      asset.type.toLowerCase().includes(lowerQuery)
-    );
-  }, [assets]);
+  const searchAssets = useCallback(
+    (query: string): Asset[] => {
+      const lowerQuery = query.toLowerCase().trim();
+
+      if (!lowerQuery) return assets;
+
+      return assets.filter(
+        (asset) =>
+          asset.originalFilename.toLowerCase().includes(lowerQuery) ||
+          asset.type.toLowerCase().includes(lowerQuery),
+      );
+    },
+    [assets],
+  );
 
   // Migrate legacy images from a vault item to centralized assets
   const migrateItemAssets = useCallback(async (item: VaultItem): Promise<AssetReference[]> => {
@@ -217,10 +237,10 @@ export function AssetProvider({ children }: AssetProviderProps) {
             assetId: asset.id,
             addedAt: legacyImage.createdAt,
           });
-          
+
           // Update local state - avoid duplicates
-          setAssets(prev => {
-            const exists = prev.some(a => a.id === asset.id);
+          setAssets((prev) => {
+            const exists = prev.some((a) => a.id === asset.id);
             if (exists) return prev;
             return [...prev, asset];
           });
@@ -238,33 +258,36 @@ export function AssetProvider({ children }: AssetProviderProps) {
   }, []);
 
   // Cleanup orphaned assets
-  const cleanupOrphanedAssets = useCallback(async (items: VaultItem[]): Promise<number> => {
-    // Collect all referenced asset IDs
-    const referencedIds = new Set<string>();
-    
-    for (const item of items) {
-      if (item.assetRefs) {
-        for (const ref of item.assetRefs) {
-          referencedIds.add(ref.assetId);
+  const cleanupOrphanedAssets = useCallback(
+    async (items: VaultItem[]): Promise<number> => {
+      // Collect all referenced asset IDs
+      const referencedIds = new Set<string>();
+
+      for (const item of items) {
+        if (item.assetRefs) {
+          for (const ref of item.assetRefs) {
+            referencedIds.add(ref.assetId);
+          }
+        }
+        // Also consider legacy images
+        if (item.images) {
+          for (const img of item.images) {
+            referencedIds.add(img.id);
+          }
         }
       }
-      // Also consider legacy images
-      if (item.images) {
-        for (const img of item.images) {
-          referencedIds.add(img.id);
-        }
+
+      const deletedCount = await assetStorage.cleanupOrphanedAssets(referencedIds);
+
+      if (deletedCount > 0) {
+        // Refresh assets to reflect changes
+        await refreshAssets();
       }
-    }
 
-    const deletedCount = await assetStorage.cleanupOrphanedAssets(referencedIds);
-    
-    if (deletedCount > 0) {
-      // Refresh assets to reflect changes
-      await refreshAssets();
-    }
-
-    return deletedCount;
-  }, [refreshAssets]);
+      return deletedCount;
+    },
+    [refreshAssets],
+  );
 
   const value = useMemo(
     () => ({
@@ -300,14 +323,10 @@ export function AssetProvider({ children }: AssetProviderProps) {
       searchAssets,
       migrateItemAssets,
       cleanupOrphanedAssets,
-    ]
+    ],
   );
 
-  return (
-    <AssetContext.Provider value={value}>
-      {children}
-    </AssetContext.Provider>
-  );
+  return <AssetContext.Provider value={value}>{children}</AssetContext.Provider>;
 }
 
 /**
@@ -326,15 +345,15 @@ export function useAssets(): AssetContextValue {
  */
 export function useGroupedAssets(): Map<AssetType, Asset[]> {
   const { assets } = useAssets();
-  
+
   return useMemo(() => {
     const grouped = new Map<AssetType, Asset[]>();
-    
+
     for (const asset of assets) {
       const existing = grouped.get(asset.type) || [];
       grouped.set(asset.type, [...existing, asset]);
     }
-    
+
     return grouped;
   }, [assets]);
 }

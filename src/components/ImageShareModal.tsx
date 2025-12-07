@@ -29,13 +29,9 @@ interface ImageShareModalProps {
   onClose: () => void;
 }
 
-export function ImageShareModal({
-  visible,
-  image,
-  onClose,
-}: ImageShareModalProps) {
+export function ImageShareModal({ visible, image, onClose }: ImageShareModalProps) {
   const { colors } = useTheme();
-  
+
   const [targetWidth, setTargetWidth] = useState(0);
   const [targetHeight, setTargetHeight] = useState(0);
   const [quality, setQuality] = useState(0.8);
@@ -59,12 +55,7 @@ export function ImageShareModal({
 
     try {
       // Resize the image
-      const resized = await resizeImage(
-        image.uri,
-        targetWidth,
-        targetHeight,
-        quality
-      );
+      const resized = await resizeImage(image.uri, targetWidth, targetHeight, quality);
 
       if (!resized) {
         Alert.alert('Error', 'Failed to resize image. Please try again.');
@@ -73,7 +64,7 @@ export function ImageShareModal({
 
       // Share the resized image
       const shared = await shareImage(resized.uri);
-      
+
       if (!shared) {
         Alert.alert('Error', 'Failed to share image. Sharing may not be available on this device.');
       }
@@ -94,7 +85,7 @@ export function ImageShareModal({
     try {
       // Share the original image (this allows saving to gallery on most devices)
       const shared = await shareImage(image.uri);
-      
+
       if (!shared) {
         Alert.alert('Error', 'Failed to save image. Sharing may not be available on this device.');
       }
@@ -114,7 +105,7 @@ export function ImageShareModal({
 
     try {
       const shared = await shareImage(image.uri);
-      
+
       if (!shared) {
         Alert.alert('Error', 'Failed to share image. Sharing may not be available on this device.');
       }
@@ -167,7 +158,9 @@ export function ImageShareModal({
 
           {/* Processing indicator */}
           {isProcessing && (
-            <View style={[styles.processingOverlay, { backgroundColor: colors.backgroundSecondary }]}>
+            <View
+              style={[styles.processingOverlay, { backgroundColor: colors.backgroundSecondary }]}
+            >
               <ActivityIndicator size="large" color={colors.primary} />
               <ThemedText variant="body" style={styles.processingText}>
                 {processingAction === 'share' ? 'Preparing to share...' : 'Saving...'}
@@ -283,4 +276,3 @@ const styles = StyleSheet.create({
 });
 
 export default ImageShareModal;
-

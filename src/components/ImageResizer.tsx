@@ -3,14 +3,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  TextInput,
-  Switch,
-  Image,
-  Dimensions,
-} from 'react-native';
+import { View, StyleSheet, TextInput, Switch, Image, Dimensions } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useTheme } from '../context/ThemeProvider';
 import { ThemedText } from './ThemedText';
@@ -32,12 +25,12 @@ export function ImageResizer({
   onDimensionsChange,
 }: ImageResizerProps) {
   const { colors } = useTheme();
-  
+
   const [width, setWidth] = useState(originalWidth.toString());
   const [height, setHeight] = useState(originalHeight.toString());
   const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
   const [quality, setQuality] = useState(80);
-  
+
   const aspectRatio = originalWidth / originalHeight;
 
   // Update dimensions when originals change
@@ -53,39 +46,48 @@ export function ImageResizer({
     onDimensionsChange(w, h, quality / 100);
   }, [width, height, quality, onDimensionsChange]);
 
-  const handleWidthChange = useCallback((value: string) => {
-    // Only allow numbers
-    const numericValue = value.replace(/[^0-9]/g, '');
-    setWidth(numericValue);
+  const handleWidthChange = useCallback(
+    (value: string) => {
+      // Only allow numbers
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setWidth(numericValue);
 
-    if (maintainAspectRatio && numericValue) {
-      const newWidth = parseInt(numericValue);
-      const newHeight = Math.round(newWidth / aspectRatio);
-      setHeight(newHeight.toString());
-    }
-  }, [maintainAspectRatio, aspectRatio]);
+      if (maintainAspectRatio && numericValue) {
+        const newWidth = parseInt(numericValue);
+        const newHeight = Math.round(newWidth / aspectRatio);
+        setHeight(newHeight.toString());
+      }
+    },
+    [maintainAspectRatio, aspectRatio],
+  );
 
-  const handleHeightChange = useCallback((value: string) => {
-    // Only allow numbers
-    const numericValue = value.replace(/[^0-9]/g, '');
-    setHeight(numericValue);
+  const handleHeightChange = useCallback(
+    (value: string) => {
+      // Only allow numbers
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setHeight(numericValue);
 
-    if (maintainAspectRatio && numericValue) {
-      const newHeight = parseInt(numericValue);
-      const newWidth = Math.round(newHeight * aspectRatio);
-      setWidth(newWidth.toString());
-    }
-  }, [maintainAspectRatio, aspectRatio]);
+      if (maintainAspectRatio && numericValue) {
+        const newHeight = parseInt(numericValue);
+        const newWidth = Math.round(newHeight * aspectRatio);
+        setWidth(newWidth.toString());
+      }
+    },
+    [maintainAspectRatio, aspectRatio],
+  );
 
-  const handleAspectRatioToggle = useCallback((value: boolean) => {
-    setMaintainAspectRatio(value);
-    if (value && width) {
-      // Recalculate height based on current width
-      const currentWidth = parseInt(width);
-      const newHeight = Math.round(currentWidth / aspectRatio);
-      setHeight(newHeight.toString());
-    }
-  }, [width, aspectRatio]);
+  const handleAspectRatioToggle = useCallback(
+    (value: boolean) => {
+      setMaintainAspectRatio(value);
+      if (value && width) {
+        // Recalculate height based on current width
+        const currentWidth = parseInt(width);
+        const newHeight = Math.round(currentWidth / aspectRatio);
+        setHeight(newHeight.toString());
+      }
+    },
+    [width, aspectRatio],
+  );
 
   const calculateOutputSize = (): string => {
     const w = parseInt(width) || 0;
@@ -93,7 +95,7 @@ export function ImageResizer({
     // Rough estimate: ~3 bytes per pixel for JPEG at given quality
     const bytesPerPixel = 0.5 + (quality / 100) * 2;
     const estimatedBytes = w * h * bytesPerPixel;
-    
+
     if (estimatedBytes < 1024) {
       return `~${Math.round(estimatedBytes)} B`;
     } else if (estimatedBytes < 1024 * 1024) {
@@ -108,7 +110,7 @@ export function ImageResizer({
   const previewMaxHeight = 200;
   let previewWidth = parseInt(width) || originalWidth;
   let previewHeight = parseInt(height) || originalHeight;
-  
+
   if (previewWidth > previewMaxWidth) {
     const scale = previewMaxWidth / previewWidth;
     previewWidth = previewMaxWidth;
@@ -166,7 +168,9 @@ export function ImageResizer({
         </View>
 
         <View style={styles.dimensionSeparator}>
-          <ThemedText variant="body" color="secondary">×</ThemedText>
+          <ThemedText variant="body" color="secondary">
+            ×
+          </ThemedText>
         </View>
 
         <View style={styles.dimensionInput}>
@@ -207,7 +211,9 @@ export function ImageResizer({
       <View style={styles.qualityContainer}>
         <View style={styles.qualityHeader}>
           <ThemedText variant="body">Quality</ThemedText>
-          <ThemedText variant="body" color="accent">{quality}%</ThemedText>
+          <ThemedText variant="body" color="accent">
+            {quality}%
+          </ThemedText>
         </View>
         <Slider
           style={styles.slider}
@@ -221,8 +227,12 @@ export function ImageResizer({
           thumbTintColor={colors.primary}
         />
         <View style={styles.qualityLabels}>
-          <ThemedText variant="caption" color="secondary">Smaller file</ThemedText>
-          <ThemedText variant="caption" color="secondary">Better quality</ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Smaller file
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Better quality
+          </ThemedText>
         </View>
       </View>
 
@@ -315,4 +325,3 @@ const styles = StyleSheet.create({
 });
 
 export default ImageResizer;
-

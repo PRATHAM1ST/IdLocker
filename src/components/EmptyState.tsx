@@ -34,24 +34,19 @@ export function EmptyState({
       <View style={[styles.iconContainer, { backgroundColor: colors.backgroundTertiary }]}>
         <Ionicons name={icon} size={48} color={colors.textTertiary} />
       </View>
-      
+
       <ThemedText variant="subtitle" style={styles.title}>
         {title}
       </ThemedText>
-      
+
       {description && (
         <ThemedText variant="body" color="secondary" style={styles.description}>
           {description}
         </ThemedText>
       )}
-      
+
       {actionLabel && onAction && (
-        <Button
-          title={actionLabel}
-          onPress={onAction}
-          variant="primary"
-          style={styles.button}
-        />
+        <Button title={actionLabel} onPress={onAction} variant="primary" style={styles.button} />
       )}
     </View>
   );
@@ -84,4 +79,3 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 });
-

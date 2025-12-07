@@ -5,12 +5,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import {
-    Platform,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeProvider';
 import { spacing } from '../styles/theme';
@@ -66,12 +61,7 @@ export function BottomTabBar({ currentRoute, onTabPress }: BottomTabBarProps) {
           >
             <View style={styles.tabContent}>
               {isActive && (
-                <View
-                  style={[
-                    styles.activeIndicator,
-                    { backgroundColor: colors.accent },
-                  ]}
-                />
+                <View style={[styles.activeIndicator, { backgroundColor: colors.accent }]} />
               )}
               <Ionicons
                 name={iconName}
@@ -137,4 +127,3 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 });
-

@@ -43,7 +43,10 @@ export default function EditItemScreen() {
   const { migrateItemAssets } = useAssets();
 
   const item = useMemo(() => getItem(id), [getItem, id]);
-  const category = useMemo(() => item ? getCategoryById(item.type) : null, [item, getCategoryById]);
+  const category = useMemo(
+    () => (item ? getCategoryById(item.type) : null),
+    [item, getCategoryById],
+  );
   const categoryColor = category?.color || null;
 
   const [label, setLabel] = useState('');
@@ -61,7 +64,7 @@ export default function EditItemScreen() {
         setLabel(item.label);
         setFields({ ...item.fields });
         setCustomFields(item.customFields || []);
-        
+
         // Use existing assetRefs or migrate from legacy images
         if (item.assetRefs && item.assetRefs.length > 0) {
           setAssetRefs(item.assetRefs);
@@ -75,31 +78,37 @@ export default function EditItemScreen() {
     initForm();
   }, [item, migrateItemAssets]);
 
-  const handleFieldChange = useCallback((key: string, value: string) => {
-    const sanitized = sanitizeInput(value);
-    setFields(prev => ({ ...prev, [key]: sanitized }));
-    setHasChanges(true);
-    // Clear error when user starts typing
-    if (errors[key]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[key];
-        return newErrors;
-      });
-    }
-  }, [errors]);
+  const handleFieldChange = useCallback(
+    (key: string, value: string) => {
+      const sanitized = sanitizeInput(value);
+      setFields((prev) => ({ ...prev, [key]: sanitized }));
+      setHasChanges(true);
+      // Clear error when user starts typing
+      if (errors[key]) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[key];
+          return newErrors;
+        });
+      }
+    },
+    [errors],
+  );
 
-  const handleLabelChange = useCallback((value: string) => {
-    setLabel(sanitizeInput(value));
-    setHasChanges(true);
-    if (errors.label) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.label;
-        return newErrors;
-      });
-    }
-  }, [errors]);
+  const handleLabelChange = useCallback(
+    (value: string) => {
+      setLabel(sanitizeInput(value));
+      setHasChanges(true);
+      if (errors.label) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.label;
+          return newErrors;
+        });
+      }
+    },
+    [errors],
+  );
 
   const handleAssetRefsChange = useCallback((newRefs: AssetReference[]) => {
     setAssetRefs(newRefs);
@@ -116,11 +125,11 @@ export default function EditItemScreen() {
 
     // Basic validation
     const errorMap: Record<string, string> = {};
-    
+
     if (!label.trim()) {
       errorMap.label = 'Label is required';
     }
-    
+
     // Validate fields against category definition
     for (const fieldDef of category.fields) {
       const fieldError = validateField(fields[fieldDef.key], fieldDef);
@@ -128,7 +137,7 @@ export default function EditItemScreen() {
         errorMap[fieldDef.key] = fieldError;
       }
     }
-    
+
     if (Object.keys(errorMap).length > 0) {
       setErrors(errorMap);
       return;
@@ -161,7 +170,7 @@ export default function EditItemScreen() {
         [
           { text: 'Keep Editing', style: 'cancel' },
           { text: 'Discard', style: 'destructive', onPress: () => router.back() },
-        ]
+        ],
       );
     } else {
       router.back();
@@ -264,11 +273,7 @@ export default function EditItemScreen() {
         style={[styles.header, { paddingTop: insets.top + spacing.md }]}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleCancel}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.closeButton} onPress={handleCancel} activeOpacity={0.7}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <ThemedText variant="subtitle" style={styles.headerTitle}>
@@ -278,7 +283,7 @@ export default function EditItemScreen() {
         </View>
       </LinearGradient>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
@@ -321,10 +326,7 @@ export default function EditItemScreen() {
           />
 
           {/* Asset attachments (images, PDFs, documents) */}
-          <AssetPicker
-            assetRefs={assetRefs}
-            onAssetRefsChange={handleAssetRefsChange}
-          />
+          <AssetPicker assetRefs={assetRefs} onAssetRefsChange={handleAssetRefsChange} />
 
           {/* Save button */}
           <View style={styles.saveContainer}>
