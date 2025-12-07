@@ -491,18 +491,18 @@ export default function SettingsScreen() {
                 restore from a previous export.
               </ThemedText>
               <Button
-                title="Export Backup"
-                onPress={handleExportData}
-                icon="download-outline"
-                loading={isExporting}
-                fullWidth
-              />
-              <Button
                 title="Import Backup"
                 onPress={handleImportData}
                 variant="secondary"
                 icon="cloud-upload-outline"
                 loading={isImporting}
+                fullWidth
+              />
+              <Button
+                title="Export Backup"
+                onPress={handleExportData}
+                icon="cloud-download-outline"
+                loading={isExporting}
                 fullWidth
               />
               <ThemedText variant="caption" color="tertiary" style={styles.backupHint}>

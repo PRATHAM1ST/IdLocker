@@ -2,6 +2,7 @@
  * App constants and field configurations
  */
 
+import { Ionicons } from '@expo/vector-icons';
 import type {
   AppSettings,
   BankAccountType,
@@ -461,112 +462,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
 ];
 
 // Available icons for custom categories
-export const CATEGORY_ICONS = [
-  // Finance & Business
-  'business-outline',
-  'card-outline',
-  'wallet-outline',
-  'cash-outline',
-  'receipt-outline',
-  'pricetag-outline',
-  'cart-outline',
-  'briefcase-outline',
-  'calculator-outline',
-  'stats-chart-outline',
-
-  // Security & Identity
-  'id-card-outline',
-  'key-outline',
-  'lock-closed-outline',
-  'shield-checkmark-outline',
-  'finger-print-outline',
-  'person-outline',
-  'people-outline',
-  'eye-outline',
-
-  // Documents & Notes
-  'document-text-outline',
-  'folder-outline',
-  'book-outline',
-  'library-outline',
-  'newspaper-outline',
-  'clipboard-outline',
-  'bookmark-outline',
-  'attach-outline',
-
-  // Tech & Digital
-  'desktop-outline',
-  'laptop-outline',
-  'phone-portrait-outline',
-  'wifi-outline',
-  'server-outline',
-  'hardware-chip-outline',
-  'game-controller-outline',
-  'camera-outline',
-  'videocam-outline',
-  'print-outline',
-  'code-slash-outline',
-
-  // Communication
-  'mail-outline',
-  'at-outline',
-  'chatbox-outline',
-  'call-outline',
-  'share-social-outline',
-  'notifications-outline',
-
-  // Travel & Location
-  'airplane-outline',
-  'car-outline',
-  'bus-outline',
-  'train-outline',
-  'boat-outline',
-  'bicycle-outline',
-  'map-outline',
-  'globe-outline',
-  'compass-outline',
-  'navigate-outline',
-
-  // Lifestyle & Health
-  'home-outline',
-  'medkit-outline',
-  'fitness-outline',
-  'heart-outline',
-  'restaurant-outline',
-  'cafe-outline',
-  'nutrition-outline',
-  'leaf-outline',
-  'water-outline',
-
-  // Education & Tools
-  'school-outline',
-  'construct-outline',
-  'hammer-outline',
-  'flask-outline',
-  'build-outline',
-
-  // Entertainment
-  'musical-notes-outline',
-  'film-outline',
-  'ticket-outline',
-  'headphones-outline',
-  'images-outline',
-
-  // Misc
-  'settings-outline',
-  'help-outline',
-  'information-circle-outline',
-  'star-outline',
-  'gift-outline',
-  'calendar-outline',
-  'time-outline',
-  'bulb-outline',
-  'trophy-outline',
-  'ellipsis-horizontal-circle-outline',
-  'cloud-outline',
-  'moon-outline',
-  'sunny-outline',
-] as const;
+export const CATEGORY_ICONS = [...Object.keys(Ionicons.glyphMap)] as const;
 
 // Available colors for custom categories
 export const CATEGORY_COLORS = [
