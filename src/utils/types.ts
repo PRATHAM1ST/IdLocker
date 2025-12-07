@@ -118,7 +118,11 @@ export interface FieldDefinition {
   required?: boolean;
   sensitive?: boolean;
   keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+  minLength?: number;
   maxLength?: number;
+  minValue?: number;
+  maxValue?: number;
+  prefix?: string;
   multiline?: boolean;
   options?: { value: string; label: string }[]; // For select fields
 }

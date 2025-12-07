@@ -31,10 +31,31 @@ export function validateField(
   
   // Skip further validation if empty and not required
   if (!trimmedValue) return null;
+
+  if (field.minLength && trimmedValue.length < field.minLength) {
+    return `${field.label} must be at least ${field.minLength} characters`;
+  }
   
   // Max length check
   if (field.maxLength && trimmedValue.length > field.maxLength) {
     return `${field.label} must be ${field.maxLength} characters or less`;
+  }
+
+  if (field.prefix && !trimmedValue.startsWith(field.prefix)) {
+    return `${field.label} must start with ${field.prefix}`;
+  }
+
+  if (field.keyboardType === 'numeric') {
+    const numericValue = Number(trimmedValue);
+    if (Number.isNaN(numericValue)) {
+      return `${field.label} must be a valid number`;
+    }
+    if (field.minValue !== undefined && numericValue < field.minValue) {
+      return `${field.label} must be at least ${field.minValue}`;
+    }
+    if (field.maxValue !== undefined && numericValue > field.maxValue) {
+      return `${field.label} must be at most ${field.maxValue}`;
+    }
   }
   
   // Specific validations based on field key

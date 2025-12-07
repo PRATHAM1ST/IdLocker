@@ -9,14 +9,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetPicker } from '../../../src/components/AssetPicker';
@@ -31,7 +31,7 @@ import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
 import type { AssetReference, CustomField, FieldDefinition } from '../../../src/utils/types';
-import { sanitizeInput } from '../../../src/utils/validation';
+import { sanitizeInput, validateField } from '../../../src/utils/validation';
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -121,10 +121,11 @@ export default function EditItemScreen() {
       errorMap.label = 'Label is required';
     }
     
-    // Validate required fields from category
+    // Validate fields against category definition
     for (const fieldDef of category.fields) {
-      if (fieldDef.required && !fields[fieldDef.key]?.trim()) {
-        errorMap[fieldDef.key] = `${fieldDef.label} is required`;
+      const fieldError = validateField(fields[fieldDef.key], fieldDef);
+      if (fieldError) {
+        errorMap[fieldDef.key] = fieldError;
       }
     }
     
@@ -170,6 +171,27 @@ export default function EditItemScreen() {
   const renderField = (fieldDef: FieldDefinition) => {
     const value = fields[fieldDef.key] || '';
     const error = errors[fieldDef.key];
+    const hintParts: string[] = [];
+    if (fieldDef.prefix) {
+      hintParts.push(`Starts with ${fieldDef.prefix}`);
+    }
+    if (typeof fieldDef.minLength === 'number' && typeof fieldDef.maxLength === 'number') {
+      hintParts.push(`Length ${fieldDef.minLength}-${fieldDef.maxLength} chars`);
+    } else if (typeof fieldDef.minLength === 'number') {
+      hintParts.push(`Min length ${fieldDef.minLength}`);
+    } else if (typeof fieldDef.maxLength === 'number') {
+      hintParts.push(`Max length ${fieldDef.maxLength}`);
+    }
+    if (fieldDef.keyboardType === 'numeric') {
+      if (typeof fieldDef.minValue === 'number' && typeof fieldDef.maxValue === 'number') {
+        hintParts.push(`Value ${fieldDef.minValue}-${fieldDef.maxValue}`);
+      } else if (typeof fieldDef.minValue === 'number') {
+        hintParts.push(`Min value ${fieldDef.minValue}`);
+      } else if (typeof fieldDef.maxValue === 'number') {
+        hintParts.push(`Max value ${fieldDef.maxValue}`);
+      }
+    }
+    const hint = hintParts.length ? hintParts.join(' • ') : undefined;
 
     // Render select for fields with options
     if (fieldDef.options) {
@@ -199,6 +221,7 @@ export default function EditItemScreen() {
         numberOfLines={fieldDef.multiline ? 4 : 1}
         sensitive={fieldDef.sensitive}
         error={error}
+        hint={hint}
         autoCapitalize={fieldDef.sensitive ? 'none' : 'sentences'}
       />
     );

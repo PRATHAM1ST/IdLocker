@@ -3,215 +3,74 @@
  * Edit category name, icon, color, and manage fields
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
+  View,
 } from 'react-native';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '../../../src/components/ThemedView';
-import { ThemedText } from '../../../src/components/ThemedText';
-import { Input } from '../../../src/components/Input';
 import { Button } from '../../../src/components/Button';
-import { useTheme } from '../../../src/context/ThemeProvider';
+import { Input } from '../../../src/components/Input';
+import { ThemedText } from '../../../src/components/ThemedText';
+import { ThemedView } from '../../../src/components/ThemedView';
 import { useCategories } from '../../../src/context/CategoryProvider';
-import { spacing, borderRadius, shadows } from '../../../src/styles/theme';
-import { CATEGORY_ICONS, CATEGORY_COLORS } from '../../../src/utils/constants';
-import type { CustomCategory, FieldDefinition, CategoryColor } from '../../../src/utils/types';
+import { useTheme } from '../../../src/context/ThemeProvider';
+import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../src/utils/constants';
+import type { CategoryColor, FieldDefinition } from '../../../src/utils/types';
 
 type KeyboardType = 'default' | 'numeric' | 'email-address' | 'phone-pad';
 
-interface FieldEditorModalProps {
-  visible: boolean;
-  field: FieldDefinition | null;
-  onSave: (field: FieldDefinition) => void;
-  onClose: () => void;
-  colors: any;
+interface FieldFormState {
+  label: string;
+  placeholder: string;
+  required: boolean;
+  sensitive: boolean;
+  multiline: boolean;
+  keyboardType: KeyboardType;
+  minLength: string;
+  maxLength: string;
+  minValue: string;
+  maxValue: string;
+  prefix: string;
 }
 
-function FieldEditorModal({ visible, field, onSave, onClose, colors }: FieldEditorModalProps) {
-  const [label, setLabel] = useState('');
-  const [placeholder, setPlaceholder] = useState('');
-  const [required, setRequired] = useState(false);
-  const [sensitive, setSensitive] = useState(false);
-  const [multiline, setMultiline] = useState(false);
-  const [keyboardType, setKeyboardType] = useState<KeyboardType>('default');
+const KEYBOARD_TYPE_OPTIONS: { value: KeyboardType; label: string }[] = [
+  { value: 'default', label: 'Text' },
+  { value: 'numeric', label: 'Number' },
+  { value: 'email-address', label: 'Email' },
+  { value: 'phone-pad', label: 'Phone' },
+];
 
-  useEffect(() => {
-    if (field) {
-      setLabel(field.label);
-      setPlaceholder(field.placeholder || '');
-      setRequired(field.required || false);
-      setSensitive(field.sensitive || false);
-      setMultiline(field.multiline || false);
-      setKeyboardType(field.keyboardType || 'default');
-    } else {
-      setLabel('');
-      setPlaceholder('');
-      setRequired(false);
-      setSensitive(false);
-      setMultiline(false);
-      setKeyboardType('default');
-    }
-  }, [field, visible]);
-
-  const handleSave = () => {
-    if (!label.trim()) {
-      Alert.alert('Error', 'Please enter a field label');
-      return;
-    }
-
-    const key = field?.key || label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    
-    onSave({
-      key,
-      label: label.trim(),
-      placeholder: placeholder.trim() || undefined,
-      required,
-      sensitive,
-      multiline,
-      keyboardType: keyboardType !== 'default' ? keyboardType : undefined,
-    });
-  };
-
-  const keyboardTypes: { value: KeyboardType; label: string }[] = [
-    { value: 'default', label: 'Text' },
-    { value: 'numeric', label: 'Number' },
-    { value: 'email-address', label: 'Email' },
-    { value: 'phone-pad', label: 'Phone' },
-  ];
-
-  return (
-    <Modal 
-      visible={visible} 
-      animationType="slide" 
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-      statusBarTranslucent={false}
-    >
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose}>
-            <ThemedText variant="body" style={{ color: colors.error }}>Cancel</ThemedText>
-          </TouchableOpacity>
-          <ThemedText variant="subtitle">{field ? 'Edit Field' : 'Add Field'}</ThemedText>
-          <TouchableOpacity onPress={handleSave}>
-            <ThemedText variant="body" style={{ color: colors.primary }}>Save</ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
-          <Input
-            label="Field Label *"
-            value={label}
-            onChangeText={setLabel}
-            placeholder="e.g., Account Number"
-          />
-
-          <Input
-            label="Placeholder"
-            value={placeholder}
-            onChangeText={setPlaceholder}
-            placeholder="Hint text shown when empty"
-          />
-
-          <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
-            Field Type
-          </ThemedText>
-          <View style={styles.keyboardTypeRow}>
-            {keyboardTypes.map(({ value, label: typeLabel }) => (
-              <TouchableOpacity
-                key={value}
-                style={[
-                  styles.keyboardTypeOption,
-                  { backgroundColor: colors.card },
-                  keyboardType === value && { backgroundColor: colors.primary },
-                ]}
-                onPress={() => setKeyboardType(value)}
-              >
-                <ThemedText
-                  variant="caption"
-                  style={{ color: keyboardType === value ? '#FFFFFF' : colors.text }}
-                >
-                  {typeLabel}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
-            Options
-          </ThemedText>
-          <View style={styles.optionsRow}>
-            <TouchableOpacity
-              style={[
-                styles.optionToggle,
-                { backgroundColor: colors.card },
-                required && { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-              ]}
-              onPress={() => setRequired(!required)}
-            >
-              <Ionicons
-                name={required ? 'checkbox' : 'square-outline'}
-                size={20}
-                color={required ? colors.primary : colors.textSecondary}
-              />
-              <ThemedText variant="bodySmall">Required</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.optionToggle,
-                { backgroundColor: colors.card },
-                sensitive && { backgroundColor: colors.warning + '20', borderColor: colors.warning },
-              ]}
-              onPress={() => setSensitive(!sensitive)}
-            >
-              <Ionicons
-                name={sensitive ? 'eye-off' : 'eye-outline'}
-                size={20}
-                color={sensitive ? colors.warning : colors.textSecondary}
-              />
-              <ThemedText variant="bodySmall">Sensitive</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.optionToggle,
-                { backgroundColor: colors.card },
-                multiline && { backgroundColor: colors.accent + '20', borderColor: colors.accent },
-              ]}
-              onPress={() => setMultiline(!multiline)}
-            >
-              <Ionicons
-                name={multiline ? 'document-text' : 'document-text-outline'}
-                size={20}
-                color={multiline ? colors.accent : colors.textSecondary}
-              />
-              <ThemedText variant="bodySmall">Multiline</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-}
+const createEmptyFieldForm = (): FieldFormState => ({
+  label: '',
+  placeholder: '',
+  required: false,
+  sensitive: false,
+  multiline: false,
+  keyboardType: 'default',
+  minLength: '',
+  maxLength: '',
+  minValue: '',
+  maxValue: '',
+  prefix: '',
+});
 
 export default function CategoryEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { categories, addCategory, updateCategory, getCategoryById, getDefaultColor, generateCategoryId } = useCategories();
+  const { addCategory, updateCategory, getCategoryById, getDefaultColor } = useCategories();
 
   const isNew = id === 'new';
   const existingCategory = isNew ? null : getCategoryById(id);
@@ -227,8 +86,13 @@ export default function CategoryEditScreen() {
   // Modal states
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showFieldEditor, setShowFieldEditor] = useState(false);
-  const [editingField, setEditingField] = useState<FieldDefinition | null>(null);
+  const [fieldForm, setFieldForm] = useState<FieldFormState>(() => createEmptyFieldForm());
+  const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
+
+  const resetFieldForm = useCallback(() => {
+    setFieldForm(createEmptyFieldForm());
+    setEditingFieldKey(null);
+  }, []);
 
   // Initialize form with existing category data
   useEffect(() => {
@@ -281,7 +145,7 @@ export default function CategoryEditScreen() {
     }
 
     setIsSaving(false);
-  }, [isNew, id, label, icon, color, fields, previewField, addCategory, updateCategory, generateCategoryId, router]);
+  }, [isNew, id, label, icon, color, fields, previewField, addCategory, updateCategory, router]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -298,27 +162,106 @@ export default function CategoryEditScreen() {
     }
   }, [hasChanges, router]);
 
-  const handleAddField = useCallback(() => {
-    setEditingField(null);
-    setShowFieldEditor(true);
-  }, []);
-
   const handleEditField = useCallback((field: FieldDefinition) => {
-    setEditingField(field);
-    setShowFieldEditor(true);
+    setFieldForm({
+      label: field.label,
+      placeholder: field.placeholder || '',
+      required: field.required || false,
+      sensitive: field.sensitive || false,
+      multiline: field.multiline || false,
+      keyboardType: field.keyboardType || 'default',
+      minLength: typeof field.minLength === 'number' ? String(field.minLength) : '',
+      maxLength: typeof field.maxLength === 'number' ? String(field.maxLength) : '',
+      minValue: typeof field.minValue === 'number' ? String(field.minValue) : '',
+      maxValue: typeof field.maxValue === 'number' ? String(field.maxValue) : '',
+      prefix: field.prefix || '',
+    });
+    setEditingFieldKey(field.key);
   }, []);
 
-  const handleSaveField = useCallback((field: FieldDefinition) => {
-    setFields(prev => {
-      if (editingField) {
-        return prev.map(f => f.key === editingField.key ? field : f);
-      }
-      return [...prev, field];
-    });
-    setShowFieldEditor(false);
-    setEditingField(null);
+  const handleSaveField = useCallback(() => {
+    const trimmedLabel = fieldForm.label.trim();
+    if (!trimmedLabel) {
+      Alert.alert('Error', 'Please enter a field label');
+      return;
+    }
+
+    const placeholderValue = fieldForm.placeholder.trim();
+
+    const minLengthInput = fieldForm.minLength.trim();
+    const maxLengthInput = fieldForm.maxLength.trim();
+    const minValueInput = fieldForm.minValue.trim();
+    const maxValueInput = fieldForm.maxValue.trim();
+
+    const minLengthValue = minLengthInput ? parseInt(minLengthInput, 10) : undefined;
+    if (minLengthValue !== undefined && (Number.isNaN(minLengthValue) || minLengthValue < 0)) {
+      Alert.alert('Error', 'Min length must be a non-negative number');
+      return;
+    }
+
+    const maxLengthValue = maxLengthInput ? parseInt(maxLengthInput, 10) : undefined;
+    if (maxLengthValue !== undefined && (Number.isNaN(maxLengthValue) || maxLengthValue <= 0)) {
+      Alert.alert('Error', 'Max length must be a positive number');
+      return;
+    }
+    if (
+      minLengthValue !== undefined &&
+      maxLengthValue !== undefined &&
+      minLengthValue > maxLengthValue
+    ) {
+      Alert.alert('Error', 'Min length cannot be greater than max length');
+      return;
+    }
+
+    const minValueNumber = minValueInput ? Number(minValueInput) : undefined;
+    if (minValueNumber !== undefined && Number.isNaN(minValueNumber)) {
+      Alert.alert('Error', 'Min value must be a valid number');
+      return;
+    }
+
+    const maxValueNumber = maxValueInput ? Number(maxValueInput) : undefined;
+    
+    if (maxValueNumber !== undefined && Number.isNaN(maxValueNumber)) {
+      Alert.alert('Error', 'Max value must be a valid number');
+      return;
+    }
+
+    if(
+      fieldForm.keyboardType === 'numeric' &&
+      minValueNumber !== undefined &&
+      maxValueNumber !== undefined &&
+      minValueNumber > maxValueNumber
+    ){
+      Alert.alert('Error', 'Min value cannot be greater than max value');
+      return;
+    }
+
+    const prefixValue = fieldForm.prefix.trim();
+    const key =
+      editingFieldKey ||
+      trimmedLabel.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+    const payload: FieldDefinition = {
+      key,
+      label: trimmedLabel,
+      placeholder: placeholderValue ? placeholderValue : undefined,
+      required: fieldForm.required,
+      sensitive: fieldForm.sensitive,
+      multiline: fieldForm.multiline,
+      keyboardType: fieldForm.keyboardType !== 'default' ? fieldForm.keyboardType : undefined,
+      minLength: minLengthValue,
+      maxLength: maxLengthValue,
+      minValue: fieldForm.keyboardType === 'numeric' ? minValueNumber : undefined,
+      maxValue: fieldForm.keyboardType === 'numeric' ? maxValueNumber : undefined,
+      prefix: fieldForm.keyboardType === 'phone-pad' && prefixValue ? prefixValue : undefined,
+    };
+
+    setFields(prev =>
+      editingFieldKey ? prev.map(f => (f.key === editingFieldKey ? payload : f)) : [...prev, payload]
+    );
+    resetFieldForm();
     setHasChanges(true);
-  }, [editingField]);
+  }, [editingFieldKey, fieldForm, resetFieldForm]);
 
   const handleDeleteField = useCallback((field: FieldDefinition) => {
     Alert.alert(
@@ -331,12 +274,15 @@ export default function CategoryEditScreen() {
           style: 'destructive',
           onPress: () => {
             setFields(prev => prev.filter(f => f.key !== field.key));
+            if (editingFieldKey === field.key) {
+              resetFieldForm();
+            }
             setHasChanges(true);
           },
         },
       ]
     );
-  }, []);
+  }, [editingFieldKey, resetFieldForm]);
 
   const handleMoveField = useCallback((index: number, direction: 'up' | 'down') => {
     setFields(prev => {
@@ -349,11 +295,23 @@ export default function CategoryEditScreen() {
     setHasChanges(true);
   }, []);
 
-  const renderFieldItem = (field: FieldDefinition, index: number) => (
-    <View
-      key={field.key}
-      style={[styles.fieldCard, { backgroundColor: colors.card }, shadows.sm]}
-    >
+  const isEditingField = Boolean(editingFieldKey);
+  const canSubmitField = fieldForm.label.trim().length > 0;
+  const supportsValueLimits = fieldForm.keyboardType === 'numeric';
+  const supportsPrefix = fieldForm.keyboardType === 'phone-pad';
+
+  const renderFieldItem = (field: FieldDefinition, index: number) => {
+    const isEditing = editingFieldKey === field.key;
+    return (
+      <View
+        key={field.key}
+        style={[
+          styles.fieldCard,
+          { backgroundColor: colors.card },
+          isEditing && { borderColor: colors.primary },
+          shadows.sm,
+        ]}
+      >
       <View style={styles.fieldInfo}>
         <View style={styles.fieldHeader}>
           <ThemedText variant="body" style={styles.fieldLabel}>
@@ -405,8 +363,9 @@ export default function CategoryEditScreen() {
           <Ionicons name="trash-outline" size={16} color={colors.error} />
         </TouchableOpacity>
       </View>
-    </View>
-  );
+      </View>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -513,13 +472,6 @@ export default function CategoryEditScreen() {
             <View style={styles.fieldsSection}>
               <View style={styles.fieldsSectionHeader}>
                 <ThemedText variant="subtitle">Fields</ThemedText>
-                <TouchableOpacity
-                  style={[styles.addFieldBtn, { backgroundColor: colors.primary }]}
-                  onPress={handleAddField}
-                >
-                  <Ionicons name="add" size={18} color="#FFFFFF" />
-                  <ThemedText variant="caption" style={{ color: '#FFFFFF' }}>Add</ThemedText>
-                </TouchableOpacity>
               </View>
 
               {fields.length === 0 ? (
@@ -534,6 +486,200 @@ export default function CategoryEditScreen() {
                   {fields.map(renderFieldItem)}
                 </View>
               )}
+
+              <View style={[styles.fieldEditorCard, { backgroundColor: colors.card }, shadows.sm]}>
+                <ThemedText variant="label" style={styles.fieldEditorTitle}>
+                  {isEditingField ? 'Edit Field' : 'Add Field'}
+                </ThemedText>
+
+                <Input
+                  label="Field Label *"
+                  value={fieldForm.label}
+                  onChangeText={(text) => setFieldForm(prev => ({ ...prev, label: text }))}
+                  placeholder="e.g., Account Number"
+                />
+
+                <Input
+                  label="Placeholder"
+                  value={fieldForm.placeholder}
+                  onChangeText={(text) => setFieldForm(prev => ({ ...prev, placeholder: text }))}
+                  placeholder="Hint text shown when empty"
+                />
+
+                <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+                  Field Type
+                </ThemedText>
+                <View style={styles.keyboardTypeRow}>
+                  {KEYBOARD_TYPE_OPTIONS.map(({ value, label: typeLabel }) => (
+                    <TouchableOpacity
+                      key={value}
+                      style={[
+                        styles.keyboardTypeOption,
+                        { backgroundColor: colors.card },
+                        fieldForm.keyboardType === value && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() =>
+                        setFieldForm(prev => {
+                          const updates: Partial<FieldFormState> = { keyboardType: value };
+                          if (value !== 'numeric') {
+                            updates.minValue = '';
+                            updates.maxValue = '';
+                          }
+                          if (value !== 'phone-pad') {
+                            updates.prefix = '';
+                          }
+                          return { ...prev, ...updates } as FieldFormState;
+                        })
+                      }
+                    >
+                      <ThemedText
+                        variant="caption"
+                        style={{ color: fieldForm.keyboardType === value ? '#FFFFFF' : colors.text }}
+                      >
+                        {typeLabel}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {supportsPrefix && (
+                  <Input
+                    label="Phone Prefix"
+                    value={fieldForm.prefix}
+                    onChangeText={(text) => setFieldForm(prev => ({ ...prev, prefix: text }))}
+                    placeholder="e.g., +91"
+                  />
+                )}
+
+                <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+                  Length Limits
+                </ThemedText>
+                <View style={styles.constraintRow}>
+                  <Input
+                    label="Min Length"
+                    value={fieldForm.minLength}
+                    onChangeText={(text) => setFieldForm(prev => ({ ...prev, minLength: text }))}
+                    keyboardType="numeric"
+                    placeholder="e.g., 6"
+                    containerStyle={styles.constraintInput}
+                  />
+                  <Input
+                    label="Max Length"
+                    value={fieldForm.maxLength}
+                    onChangeText={(text) => setFieldForm(prev => ({ ...prev, maxLength: text }))}
+                    keyboardType="numeric"
+                    placeholder="e.g., 12"
+                    containerStyle={styles.constraintInput}
+                  />
+                </View>
+
+                {supportsValueLimits && (
+                  <>
+                    <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+                      Value Range
+                    </ThemedText>
+                    <View style={styles.constraintRow}>
+                      <Input
+                        label="Min Value"
+                        value={fieldForm.minValue}
+                        onChangeText={(text) => setFieldForm(prev => ({ ...prev, minValue: text }))}
+                        keyboardType="numeric"
+                        placeholder="e.g., 0"
+                        containerStyle={styles.constraintInput}
+                      />
+                      <Input
+                        label="Max Value"
+                        value={fieldForm.maxValue}
+                        onChangeText={(text) => setFieldForm(prev => ({ ...prev, maxValue: text }))}
+                        keyboardType="numeric"
+                        placeholder="e.g., 9999"
+                        containerStyle={styles.constraintInput}
+                      />
+                    </View>
+                  </>
+                )}
+
+                <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+                  Options
+                </ThemedText>
+                <View style={styles.optionsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionToggle,
+                      { backgroundColor: colors.card },
+                      fieldForm.required && { backgroundColor: colors.primary + '20', borderColor: colors.primary },
+                    ]}
+                    onPress={() => setFieldForm(prev => ({ ...prev, required: !prev.required }))}
+                  >
+                    <Ionicons
+                      name={fieldForm.required ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={fieldForm.required ? colors.primary : colors.textSecondary}
+                    />
+                    <ThemedText variant="bodySmall">Required</ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.optionToggle,
+                      { backgroundColor: colors.card },
+                      fieldForm.sensitive && { backgroundColor: colors.warning + '20', borderColor: colors.warning },
+                    ]}
+                    onPress={() => setFieldForm(prev => ({ ...prev, sensitive: !prev.sensitive }))}
+                  >
+                    <Ionicons
+                      name={fieldForm.sensitive ? 'eye-off' : 'eye-outline'}
+                      size={20}
+                      color={fieldForm.sensitive ? colors.warning : colors.textSecondary}
+                    />
+                    <ThemedText variant="bodySmall">Sensitive</ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.optionToggle,
+                      { backgroundColor: colors.card },
+                      fieldForm.multiline && { backgroundColor: colors.accent + '20', borderColor: colors.accent },
+                    ]}
+                    onPress={() => setFieldForm(prev => ({ ...prev, multiline: !prev.multiline }))}
+                  >
+                    <Ionicons
+                      name={fieldForm.multiline ? 'document-text' : 'document-text-outline'}
+                      size={20}
+                      color={fieldForm.multiline ? colors.accent : colors.textSecondary}
+                    />
+                    <ThemedText variant="bodySmall">Multiline</ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.fieldEditorActions}>
+                  {isEditingField && (
+                    <TouchableOpacity
+                      style={[
+                        styles.fieldEditorActionButton,
+                        { borderColor: colors.border, borderWidth: 1, backgroundColor: colors.background },
+                      ]}
+                      onPress={resetFieldForm}
+                    >
+                      <ThemedText variant="bodySmall" style={{ color: colors.textSecondary }}>
+                        Cancel
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[
+                      styles.fieldEditorActionButton,
+                      { backgroundColor: colors.primary, opacity: canSubmitField ? 1 : 0.5 },
+                    ]}
+                    onPress={handleSaveField}
+                    disabled={!canSubmitField}
+                  >
+                    <ThemedText variant="bodySmall" style={{ color: '#FFFFFF' }}>
+                      {isEditingField ? 'Update Field' : 'Add Field'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
 
             {/* Save button */}
@@ -629,14 +775,6 @@ export default function CategoryEditScreen() {
         </View>
       </Modal>
 
-      {/* Field Editor Modal */}
-      <FieldEditorModal
-        visible={showFieldEditor}
-        field={editingField}
-        onSave={handleSaveField}
-        onClose={() => { setShowFieldEditor(false); setEditingField(null); }}
-        colors={colors}
-      />
     </ThemedView>
   );
 }
@@ -744,16 +882,8 @@ const styles = StyleSheet.create({
   fieldsSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginBottom: spacing.md,
-  },
-  addFieldBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    gap: spacing.xs,
   },
   emptyFields: {
     padding: spacing.xl,
@@ -772,6 +902,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.md,
     borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  fieldEditorCard: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginTop: spacing.lg,
+    gap: spacing.md,
+  },
+  fieldEditorTitle: {
+    fontWeight: '600',
+  },
+  fieldEditorActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  fieldEditorActionButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  constraintRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  constraintInput: {
+    flex: 1,
+    marginBottom: 0,
   },
   fieldInfo: {
     flex: 1,
@@ -813,12 +974,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacing.base,
     borderBottomWidth: 1,
-  },
-  modalContent: {
-    flex: 1,
-  },
-  modalScrollContent: {
-    padding: spacing.base,
   },
   iconGrid: {
     flexDirection: 'row',
