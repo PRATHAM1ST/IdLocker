@@ -121,13 +121,6 @@ export default function CategoriesScreen() {
             <ThemedText variant="body" style={styles.categoryName}>
               {category.label}
             </ThemedText>
-            {category.isPreset && (
-              <View style={[styles.presetBadge, { backgroundColor: colors.primary + '20' }]}>
-                <ThemedText variant="caption" style={{ color: colors.primary }}>
-                  Preset
-                </ThemedText>
-              </View>
-            )}
           </View>
           <ThemedText variant="caption" color="secondary">
             {category.fields.length} field{category.fields.length !== 1 ? 's' : ''} • {itemCount} item{itemCount !== 1 ? 's' : ''}
@@ -333,11 +326,6 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     fontWeight: '600',
-  },
-  presetBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
   },
   categoryActions: {
     flexDirection: 'row',

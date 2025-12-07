@@ -14,10 +14,10 @@ import type {
 
 // Storage keys
 export const STORAGE_KEYS = {
-  VAULT_META: 'vault:meta',
-  VAULT_CHUNK_PREFIX: 'vault:chunk:',
-  APP_SETTINGS: 'app:settings',
-  CATEGORIES: 'categories:data',
+  VAULT_META: 'vault.meta',
+  VAULT_CHUNK_PREFIX: 'vault.chunk',
+  APP_SETTINGS: 'app.settings',
+  CATEGORIES: 'categories.data',
 } as const;
 
 // Chunking configuration
@@ -188,7 +188,6 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'branch', label: 'Branch', placeholder: 'Branch name or location' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
-    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -214,7 +213,6 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'billingAddress', label: 'Billing Address', multiline: true, placeholder: 'Billing address...' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
-    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -240,7 +238,6 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'expiryDate', label: 'Expiry Date', placeholder: 'DD/MM/YYYY' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
-    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -263,7 +260,6 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'website', label: 'Website URL', keyboardType: 'default', placeholder: 'https://...' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Security questions, recovery codes...' },
     ],
-    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -282,7 +278,6 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'title', label: 'Title', required: true, placeholder: 'Note title' },
       { key: 'content', label: 'Content', required: true, multiline: true, sensitive: true, placeholder: 'Your secure note...' },
     ],
-    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -304,7 +299,6 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'field3', label: 'Field 3', placeholder: 'Custom field' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
-    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },

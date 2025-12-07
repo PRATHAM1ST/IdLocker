@@ -251,16 +251,6 @@ export function DynamicCategoryCard({
 							>
 								{category.label}
 							</ThemedText>
-							{category.isPreset && (
-								<View style={styles.enhancedPresetBadge}>
-									<ThemedText
-										variant="caption"
-										style={styles.enhancedPresetText}
-									>
-										Preset
-									</ThemedText>
-								</View>
-							)}
 						</View>
 
 						{/* Stats row */}
@@ -628,17 +618,6 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 		fontWeight: "700",
 		flex: 1,
-	},
-	presetBadge: {
-		backgroundColor: "rgba(255, 255, 255, 0.25)",
-		paddingHorizontal: spacing.xs,
-		paddingVertical: 2,
-		borderRadius: borderRadius.sm,
-	},
-	presetBadgeText: {
-		color: "#FFFFFF",
-		fontSize: 9,
-		fontWeight: "600",
 	},
 	largeSubtitle: {
 		color: "rgba(255, 255, 255, 0.8)",
