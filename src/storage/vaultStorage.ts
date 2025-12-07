@@ -5,17 +5,17 @@
 
 import * as SecureStore from 'expo-secure-store';
 import { v4 as uuidv4 } from 'uuid';
+import { CHUNK_SIZE, DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS } from '../utils/constants';
+import { logger } from '../utils/logger';
 import type {
-  VaultData,
-  VaultItem,
-  VaultMeta,
   AppSettings,
   CategoriesData,
   CustomCategory,
+  VaultData,
+  VaultItem,
+  VaultMeta,
 } from '../utils/types';
-import { isVaultData, isAppSettings, isCategoriesData } from '../utils/types';
-import { STORAGE_KEYS, CHUNK_SIZE, DEFAULT_SETTINGS, DEFAULT_CATEGORIES } from '../utils/constants';
-import { logger } from '../utils/logger';
+import { isAppSettings, isCategoriesData, isVaultData } from '../utils/types';
 import { deleteImages } from './imageStorage';
 
 // SecureStore options
@@ -516,8 +516,14 @@ export async function loadCategories(): Promise<CategoriesData> {
     );
 
     if (!categoriesStr) {
-      logger.debug('loadCategories: No categories found, using defaults');
-      return { version: 1, categories: DEFAULT_CATEGORIES };
+      logger.debug('loadCategories: No categories found, seeding defaults');
+      const defaultData: CategoriesData = { version: 1, categories: DEFAULT_CATEGORIES };
+      try {
+        await saveCategories(defaultData);
+      } catch (seedError) {
+        logger.warn('loadCategories: Failed to persist default categories', seedError);
+      }
+      return defaultData;
     }
 
     const data = JSON.parse(categoriesStr);
