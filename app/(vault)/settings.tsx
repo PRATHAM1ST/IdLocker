@@ -21,7 +21,17 @@ import { getBiometricTypeName, useAuthLock } from '../../src/context/AuthLockPro
 import { useCategories } from '../../src/context/CategoryProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
-import { createBackupFile, importBackupFromJson } from '../../src/storage/backupStorage';
+import type {
+  CountSummary,
+  DuplicateStrategy,
+  ImportConflicts,
+  ImportSummary,
+} from '../../src/storage/backupStorage';
+import {
+  createBackupFile,
+  importBackupFromJson,
+  previewBackupImport,
+} from '../../src/storage/backupStorage';
 import { clearAllData, loadSettings } from '../../src/storage/vaultStorage';
 import { borderRadius, layout, shadows, spacing } from '../../src/styles/theme';
 import { DEFAULT_SETTINGS } from '../../src/utils/constants';
@@ -42,6 +52,47 @@ function formatTimeout(seconds: number): string {
     return minutes === 1 ? '1 minute' : `${minutes} minutes`;
   }
   return `${minutes}m ${remainingSeconds}s`;
+}
+
+function describeConflicts(conflicts: ImportConflicts): string {
+  const parts: string[] = [];
+  if (conflicts.items.length) {
+    parts.push(`${conflicts.items.length} item${conflicts.items.length === 1 ? '' : 's'}`);
+  }
+  if (conflicts.assets.length) {
+    parts.push(`${conflicts.assets.length} attachment${conflicts.assets.length === 1 ? '' : 's'}`);
+  }
+  if (conflicts.categories.length) {
+    parts.push(
+      `${conflicts.categories.length} categor${conflicts.categories.length === 1 ? 'y' : 'ies'}`,
+    );
+  }
+
+  return parts.join(', ');
+}
+
+function formatCountSummary(label: string, counts: CountSummary): string | null {
+  const segments: string[] = [];
+  if (counts.added) segments.push(`${counts.added} added`);
+  if (counts.overwritten) segments.push(`${counts.overwritten} overwritten`);
+  if (counts.skipped) segments.push(`${counts.skipped} skipped`);
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  return `${label}: ${segments.join(', ')}`;
+}
+
+function buildImportSummaryMessage(summary: ImportSummary): string {
+  const lines = [
+    formatCountSummary('Items', summary.items),
+    formatCountSummary('Attachments', summary.assets),
+    formatCountSummary('Categories', summary.categories),
+  ].filter(Boolean) as string[];
+
+  lines.push(`Legacy images restored: ${summary.legacyImagesRestored}`);
+  return lines.join('\n');
 }
 
 export default function SettingsScreen() {
@@ -93,6 +144,37 @@ export default function SettingsScreen() {
     lock();
     // Lock overlay will appear automatically
   }, [lock]);
+
+  const requestDuplicateStrategy = useCallback(
+    (conflicts: ImportConflicts): Promise<DuplicateStrategy | null> => {
+      if (
+        conflicts.items.length === 0 &&
+        conflicts.assets.length === 0 &&
+        conflicts.categories.length === 0
+      ) {
+        return Promise.resolve('skip');
+      }
+
+      const conflictSummary = describeConflicts(conflicts);
+      const message = `This backup already contains ${conflictSummary}. How should duplicates be handled?`;
+
+      return new Promise((resolve) => {
+        Alert.alert('Duplicates Found', message, [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
+          {
+            text: 'Skip duplicates',
+            onPress: () => resolve('skip'),
+          },
+          {
+            text: 'Overwrite duplicates',
+            style: 'destructive',
+            onPress: () => resolve('overwrite'),
+          },
+        ]);
+      });
+    },
+    [],
+  );
 
   const handleClearData = useCallback(() => {
     Alert.alert(
@@ -211,7 +293,16 @@ export default function SettingsScreen() {
         encoding: FileSystem.EncodingType.UTF8,
       });
 
-      const { summary, settings: importedSettings } = await importBackupFromJson(content);
+      const conflicts = await previewBackupImport(content);
+      const duplicateStrategy = await requestDuplicateStrategy(conflicts);
+
+      if (!duplicateStrategy) {
+        return;
+      }
+
+      const { summary, settings: importedSettings } = await importBackupFromJson(content, {
+        duplicateStrategy,
+      });
 
       await Promise.all([refreshVault(), refreshCategories(), refreshAssets()]);
       await setAutoLockTimeout(importedSettings.autoLockTimeout);
@@ -219,10 +310,7 @@ export default function SettingsScreen() {
       setSettings(importedSettings);
       setSliderValue(importedSettings.autoLockTimeout);
 
-      Alert.alert(
-        'Import Complete',
-        `Restored ${summary.items} items with ${summary.assets} attachments.`,
-      );
+      Alert.alert('Import Complete', buildImportSummaryMessage(summary));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to import backup.';
       Alert.alert('Import Failed', message);
@@ -237,6 +325,7 @@ export default function SettingsScreen() {
     setThemePreference,
     setSliderValue,
     setSettings,
+    requestDuplicateStrategy,
   ]);
 
   const biometricName = getBiometricTypeName(biometricType);

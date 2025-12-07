@@ -1,28 +1,29 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { v4 as uuidv4 } from 'uuid';
+import { DEFAULT_SETTINGS } from '../utils/constants';
 import { logger } from '../utils/logger';
 import type {
-    AppSettings,
-    Asset,
-    CategoriesData,
-    ImageAttachment,
-    VaultData,
+  AppSettings,
+  Asset,
+  CategoriesData,
+  ImageAttachment,
+  VaultData,
 } from '../utils/types';
 import { isAppSettings, isCategoriesData, isVaultData } from '../utils/types';
 import {
-    clearAssetsStorage,
-    loadAssetsData,
-    saveAssetsData,
-    writeAssetFileFromBase64,
+  getAssetFileUri,
+  loadAssetsData,
+  saveAssetsData,
+  writeAssetFileFromBase64,
 } from './assetStorage';
-import { clearAllImages, getImageUri, writeImageFromBase64 } from './imageStorage';
+import { getImageUri, writeImageFromBase64 } from './imageStorage';
 import {
-    clearVault,
-    loadCategories,
-    loadSettings,
-    loadVault,
-    saveCategories,
-    saveSettings,
-    saveVault,
+  loadCategories,
+  loadSettings,
+  loadVault,
+  saveCategories,
+  saveSettings,
+  saveVault,
 } from './vaultStorage';
 
 const BACKUP_VERSION = 1;
@@ -61,11 +62,134 @@ export interface BackupSummary {
   legacyImages: number;
 }
 
-export type ImportSummary = BackupSummary;
+export type DuplicateStrategy = 'skip' | 'overwrite';
+
+export interface CountSummary {
+  added: number;
+  overwritten: number;
+  skipped: number;
+}
+
+export interface ImportSummary {
+  items: CountSummary;
+  assets: CountSummary;
+  categories: CountSummary;
+  legacyImagesRestored: number;
+}
 
 export interface ImportResult {
   summary: ImportSummary;
   settings: AppSettings;
+}
+
+export interface ImportOptions {
+  duplicateStrategy?: DuplicateStrategy;
+}
+
+export interface ImportConflicts {
+  items: string[];
+  categories: string[];
+  assets: string[];
+}
+
+async function fileExists(uri: string): Promise<boolean> {
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    return info.exists;
+  } catch {
+    return false;
+  }
+}
+
+function getFilenameParts(filename: string | undefined, fallbackExt: string): {
+  base: string;
+  ext: string;
+} {
+  const trimmed = filename?.trim();
+  if (!trimmed) {
+    return { base: uuidv4(), ext: fallbackExt };
+  }
+
+  const lastDot = trimmed.lastIndexOf('.');
+  if (lastDot === -1) {
+    return { base: trimmed, ext: fallbackExt };
+  }
+
+  const base = trimmed.slice(0, lastDot);
+  const ext = trimmed.slice(lastDot) || fallbackExt;
+  return { base, ext };
+}
+
+async function ensureUniqueFilename(
+  desired: string | undefined,
+  usedNames: Set<string>,
+  uriBuilder: (filename: string) => string,
+  fallbackExt: string,
+): Promise<string> {
+  const { base, ext } = getFilenameParts(desired, fallbackExt);
+  let candidate = `${base}${ext}`;
+  let counter = 1;
+
+  while (true) {
+    if (!usedNames.has(candidate)) {
+      const uri = uriBuilder(candidate);
+      if (!(await fileExists(uri))) {
+        usedNames.add(candidate);
+        return candidate;
+      }
+    }
+
+    candidate = `${base}-${counter}${ext}`;
+    counter += 1;
+  }
+}
+
+function createCountSummary(): CountSummary {
+  return { added: 0, overwritten: 0, skipped: 0 };
+}
+
+function parseBackupJson(json: string): VaultBackupFileV1 {
+  let parsed: VaultBackupFileV1;
+  try {
+    parsed = JSON.parse(json) as VaultBackupFileV1;
+  } catch {
+    throw new Error('The selected file is not a valid IdLocker backup.');
+  }
+
+  assertBackupPayload(parsed);
+  return parsed;
+}
+
+function detectImportConflicts(
+  payload: VaultBackupFileV1,
+  currentVault: VaultData,
+  currentCategories: CategoriesData,
+  currentAssets: Asset[],
+): ImportConflicts {
+  const existingItemIds = new Set(currentVault.items.map((item) => item.id));
+  const existingCategoryIds = new Set(currentCategories.categories.map((cat) => cat.id));
+  const existingAssetIds = new Set(currentAssets.map((asset) => asset.id));
+
+  return {
+    items: payload.vault.items.filter((item) => existingItemIds.has(item.id)).map((item) => item.id),
+    categories: payload.categories.categories
+      .filter((cat) => existingCategoryIds.has(cat.id))
+      .map((cat) => cat.id),
+    assets: payload.assets.entries
+      .filter((entry) => existingAssetIds.has(entry.asset.id))
+      .map((entry) => entry.asset.id),
+  };
+}
+
+export async function previewBackupImport(json: string): Promise<ImportConflicts> {
+  const parsed = parseBackupJson(json);
+  const [currentVault, currentCategories, assetsData] = await Promise.all([
+    loadVault(),
+    loadCategories(),
+    loadAssetsData(),
+  ]);
+
+  return detectImportConflicts(parsed, currentVault, currentCategories, assetsData.assets);
 }
 
 async function ensureBackupDirectory(): Promise<string> {
@@ -214,43 +338,132 @@ function assertBackupPayload(payload: VaultBackupFileV1): void {
   }
 }
 
-async function restoreLegacyImages(entries: BackupLegacyImageEntry[]): Promise<number> {
-  await clearAllImages();
+async function restoreLegacyImages(
+  entries: BackupLegacyImageEntry[],
+  existingVault: VaultData,
+): Promise<{ imageMap: Map<string, ImageAttachment>; restoredCount: number }> {
+  const imageMap = new Map<string, ImageAttachment>();
+  const existingImagesById = new Map<string, ImageAttachment>();
+  const usedFilenames = new Set<string>();
+
+  for (const item of existingVault.items) {
+    if (!item.images) continue;
+    for (const image of item.images) {
+      existingImagesById.set(image.id, image);
+      usedFilenames.add(image.filename);
+      imageMap.set(image.id, image);
+    }
+  }
+
   let restored = 0;
 
   for (const entry of entries) {
-    const filename = entry.image.filename || `${entry.image.id}.jpg`;
-    await writeImageFromBase64(filename, entry.base64);
+    const incoming = entry.image;
+    const existingAttachment = existingImagesById.get(incoming.id);
+
+    if (existingAttachment) {
+      const imagePathExists = await fileExists(existingAttachment.uri);
+      if (!imagePathExists) {
+        await writeImageFromBase64(existingAttachment.filename, entry.base64);
+      }
+      imageMap.set(incoming.id, existingAttachment);
+      continue;
+    }
+
+    const filename = await ensureUniqueFilename(
+      incoming.filename || `${incoming.id}.jpg`,
+      usedFilenames,
+      getImageUri,
+      '.jpg',
+    );
+    const uri = await writeImageFromBase64(filename, entry.base64);
+    const attachment: ImageAttachment = {
+      ...incoming,
+      filename,
+      uri,
+    };
+
+    imageMap.set(incoming.id, attachment);
+    existingImagesById.set(attachment.id, attachment);
     restored += 1;
   }
 
-  return restored;
+  return { imageMap, restoredCount: restored };
 }
 
-async function restoreAssets(section: BackupAssetsSection): Promise<Asset[]> {
-  await clearAssetsStorage();
-  const restored: Asset[] = [];
+async function restoreAssets(
+  section: BackupAssetsSection,
+  strategy: DuplicateStrategy,
+): Promise<{ added: number; overwritten: number; skipped: number }> {
+  const assetsData = await loadAssetsData();
+  const existingAssetsById = new Map<string, Asset>();
+  const existingIndexById = new Map<string, number>();
+  const usedFilenames = new Set<string>();
 
-  for (const entry of section.entries) {
-    const filename = entry.asset.filename || `${entry.asset.id}.bin`;
-    const uri = await writeAssetFileFromBase64(filename, entry.base64);
-    restored.push({
-      ...entry.asset,
-      uri,
-    });
-  }
-
-  const assetsSaved = await saveAssetsData({
-    version: section.version,
-    migrated: section.migrated,
-    assets: restored,
+  assetsData.assets.forEach((asset, index) => {
+    existingAssetsById.set(asset.id, asset);
+    existingIndexById.set(asset.id, index);
+    usedFilenames.add(asset.filename);
   });
 
+  const summary = createCountSummary();
+
+  for (const entry of section.entries) {
+    const incoming = entry.asset;
+    const existingAsset = existingAssetsById.get(incoming.id);
+
+    if (existingAsset) {
+      if (strategy === 'overwrite') {
+        await writeAssetFileFromBase64(existingAsset.filename, entry.base64);
+        const updatedAsset: Asset = {
+          ...existingAsset,
+          ...incoming,
+          filename: existingAsset.filename,
+          uri: existingAsset.uri,
+        };
+        const index = existingIndexById.get(existingAsset.id);
+        if (typeof index === 'number') {
+          assetsData.assets[index] = updatedAsset;
+          existingAssetsById.set(existingAsset.id, updatedAsset);
+        }
+        summary.overwritten += 1;
+      } else {
+        const assetFileExists = await fileExists(existingAsset.uri);
+        if (!assetFileExists) {
+          await writeAssetFileFromBase64(existingAsset.filename, entry.base64);
+        }
+        summary.skipped += 1;
+      }
+      continue;
+    }
+
+    const filename = await ensureUniqueFilename(
+      incoming.filename || `${incoming.id}.bin`,
+      usedFilenames,
+      getAssetFileUri,
+      '.bin',
+    );
+    const uri = await writeAssetFileFromBase64(filename, entry.base64);
+    const asset: Asset = {
+      ...incoming,
+      filename,
+      uri,
+    };
+
+    assetsData.assets.push(asset);
+    existingAssetsById.set(asset.id, asset);
+    summary.added += 1;
+  }
+
+  assetsData.version = Math.max(assetsData.version, section.version);
+  assetsData.migrated = Boolean(assetsData.migrated || section.migrated);
+
+  const assetsSaved = await saveAssetsData(assetsData);
   if (!assetsSaved) {
     throw new Error('Failed to save assets during import.');
   }
 
-  return restored;
+  return summary;
 }
 
 function applyLegacyImageUris(vault: VaultData): VaultData {
@@ -274,46 +487,177 @@ function applyLegacyImageUris(vault: VaultData): VaultData {
   };
 }
 
-export async function importBackupFromJson(json: string): Promise<ImportResult> {
-  let parsed: VaultBackupFileV1;
-  try {
-    parsed = JSON.parse(json) as VaultBackupFileV1;
-  } catch (error) {
-    throw new Error('The selected file is not a valid IdLocker backup.');
+function updateImportedVaultImages(
+  vault: VaultData,
+  imageMap: Map<string, ImageAttachment>,
+): void {
+  for (const item of vault.items) {
+    if (!item.images || item.images.length === 0) {
+      continue;
+    }
+
+    item.images = item.images.map((image) => {
+      const updated = imageMap.get(image.id);
+      return updated
+        ? {
+            ...image,
+            filename: updated.filename,
+            uri: updated.uri,
+          }
+        : image;
+    });
+  }
+}
+
+function mergeVaultData(
+  existing: VaultData,
+  incoming: VaultData,
+  strategy: DuplicateStrategy,
+): { merged: VaultData; counts: CountSummary } {
+  const mergedItems = [...existing.items];
+  const indexById = new Map<string, number>();
+  mergedItems.forEach((item, index) => indexById.set(item.id, index));
+
+  const counts = createCountSummary();
+
+  for (const item of incoming.items) {
+    const clonedItem = {
+      ...item,
+      images: item.images?.map((image) => ({ ...image })),
+      customFields: item.customFields?.map((field) => ({ ...field })),
+      assetRefs: item.assetRefs?.map((ref) => ({ ...ref })),
+    };
+
+    const existingIndex = indexById.get(item.id);
+    if (typeof existingIndex === 'number') {
+      if (strategy === 'overwrite') {
+        mergedItems[existingIndex] = clonedItem;
+        counts.overwritten += 1;
+      } else {
+        counts.skipped += 1;
+      }
+      continue;
+    }
+
+    mergedItems.push(clonedItem);
+    indexById.set(clonedItem.id, mergedItems.length - 1);
+    counts.added += 1;
   }
 
-  assertBackupPayload(parsed);
+  return {
+    merged: {
+      version: Math.max(existing.version ?? 1, incoming.version ?? 1),
+      items: mergedItems,
+    },
+    counts,
+  };
+}
 
-  await clearVault();
+function mergeCategoriesData(
+  existing: CategoriesData,
+  incoming: CategoriesData,
+  strategy: DuplicateStrategy,
+): { merged: CategoriesData; counts: CountSummary } {
+  const mergedCategories = [...existing.categories];
+  const indexById = new Map<string, number>();
+  mergedCategories.forEach((category, index) => indexById.set(category.id, index));
 
-  const legacyCount = await restoreLegacyImages(parsed.legacyImages || []);
+  const counts = createCountSummary();
 
-  const assets = await restoreAssets(parsed.assets);
+  for (const category of incoming.categories) {
+    const clonedCategory = {
+      ...category,
+      fields: category.fields.map((field) => ({ ...field })),
+    };
 
-  const vaultWithUris = applyLegacyImageUris(parsed.vault);
+    const existingIndex = indexById.get(category.id);
+    if (typeof existingIndex === 'number') {
+      if (strategy === 'overwrite') {
+        mergedCategories[existingIndex] = clonedCategory;
+        counts.overwritten += 1;
+      } else {
+        counts.skipped += 1;
+      }
+      continue;
+    }
+
+    mergedCategories.push(clonedCategory);
+    indexById.set(clonedCategory.id, mergedCategories.length - 1);
+    counts.added += 1;
+  }
+
+  return {
+    merged: {
+      version: Math.max(existing.version ?? 1, incoming.version ?? 1),
+      categories: mergedCategories,
+    },
+    counts,
+  };
+}
+
+function mergeSettings(current: AppSettings, incoming: AppSettings): AppSettings {
+  const merged: AppSettings = {
+    ...current,
+    hasCompletedOnboarding: current.hasCompletedOnboarding || incoming.hasCompletedOnboarding,
+    autoLockTimeout:
+      current.autoLockTimeout !== DEFAULT_SETTINGS.autoLockTimeout
+        ? current.autoLockTimeout
+        : incoming.autoLockTimeout,
+    theme:
+      current.theme !== DEFAULT_SETTINGS.theme
+        ? current.theme
+        : incoming.theme,
+  };
+
+  return merged;
+}
+
+export async function importBackupFromJson(
+  json: string,
+  options?: ImportOptions,
+): Promise<ImportResult> {
+  const parsed = parseBackupJson(json);
+  const strategy: DuplicateStrategy = options?.duplicateStrategy ?? 'skip';
+
+  const [currentVault, currentCategories, currentSettings] = await Promise.all([
+    loadVault(),
+    loadCategories(),
+    loadSettings(),
+  ]);
+
+  const legacyResult = await restoreLegacyImages(parsed.legacyImages || [], currentVault);
+  updateImportedVaultImages(parsed.vault, legacyResult.imageMap);
+
+  const assetsResult = await restoreAssets(parsed.assets, strategy);
+
+  const mergedVault = mergeVaultData(currentVault, parsed.vault, strategy);
+  const vaultWithUris = applyLegacyImageUris(mergedVault.merged);
   const vaultSaved = await saveVault(vaultWithUris);
   if (!vaultSaved) {
     throw new Error('Failed to save vault data during import.');
   }
 
-  const categoriesSaved = await saveCategories(parsed.categories);
+  const mergedCategories = mergeCategoriesData(currentCategories, parsed.categories, strategy);
+  const categoriesSaved = await saveCategories(mergedCategories.merged);
   if (!categoriesSaved) {
     throw new Error('Failed to save categories during import.');
   }
 
-  const settingsSaved = await saveSettings(parsed.settings);
+  const mergedSettings = mergeSettings(currentSettings, parsed.settings);
+  const settingsSaved = await saveSettings(mergedSettings);
   if (!settingsSaved) {
     logger.warn('Settings did not persist during import (expected on Expo Go).');
   }
 
   const summary: ImportSummary = {
-    items: vaultWithUris.items.length,
-    assets: assets.length,
-    legacyImages: legacyCount,
+    items: mergedVault.counts,
+    assets: assetsResult,
+    categories: mergedCategories.counts,
+    legacyImagesRestored: legacyResult.restoredCount,
   };
 
   return {
     summary,
-    settings: parsed.settings,
+    settings: mergedSettings,
   };
 }
