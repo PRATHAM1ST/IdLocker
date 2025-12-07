@@ -229,21 +229,6 @@ export default function VaultHomeScreen() {
 									color="#FFFFFF"
 								/>
 							</TouchableOpacity>
-							{/* <TouchableOpacity
-								style={styles.viewToggle}
-								onPress={() =>
-									setViewMode(
-										viewMode === "grid" ? "list" : "grid"
-									)
-								}
-								activeOpacity={0.7}
-							>
-								<Ionicons
-									name={viewMode === "grid" ? "list" : "grid"}
-									size={20}
-									color="#FFFFFF"
-								/>
-							</TouchableOpacity> */}
 						</View>
 					</View>
 				</LinearGradient>
