@@ -9,24 +9,26 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ExpoImagePicker from 'expo-image-picker';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActionSheetIOS,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActionSheetIOS,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useAssets } from '../context/AssetProvider';
 import { useTheme } from '../context/ThemeProvider';
 import { formatFileSize } from '../storage/assetStorage';
 import { borderRadius, spacing } from '../styles/theme';
+import { assetToImageAttachment } from '../utils/assetHelpers';
 import type { Asset, AssetReference, AssetType } from '../utils/types';
+import { ImageShareModal } from './ImageShareModal';
 import { ThemedText } from './ThemedText';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -52,10 +54,26 @@ export function AssetPicker({
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showAssetBrowser, setShowAssetBrowser] = useState(false);
+  const [imageToolsAsset, setImageToolsAsset] = useState<Asset | null>(null);
 
   // Get currently linked assets - memoized to prevent re-renders
   const linkedAssetIds = useMemo(() => new Set(assetRefs.map((ref) => ref.assetId)), [assetRefs]);
   const linkedAssets = getAssetsByIds(Array.from(linkedAssetIds));
+
+  const imageToolsAttachment = useMemo(
+    () => assetToImageAttachment(imageToolsAsset),
+    [imageToolsAsset],
+  );
+
+  const handleOpenImageTools = useCallback((asset: Asset) => {
+    if (asset.type === 'image') {
+      setImageToolsAsset(asset);
+    }
+  }, []);
+
+  const handleCloseImageTools = useCallback(() => {
+    setImageToolsAsset(null);
+  }, []);
 
   const requestPermissions = async (type: 'camera' | 'library'): Promise<boolean> => {
     if (type === 'camera') {
@@ -298,6 +316,8 @@ export function AssetPicker({
       key={asset.id}
       style={[styles.thumbnailContainer, { borderColor: colors.border }]}
       onPress={() => setPreviewAsset(asset)}
+      onLongPress={() => asset.type === 'image' && handleOpenImageTools(asset)}
+      delayLongPress={200}
       activeOpacity={0.8}
     >
       {asset.type === 'image' ? (
@@ -446,6 +466,14 @@ export function AssetPicker({
             >
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
+            {previewAsset?.type === 'image' && (
+              <TouchableOpacity
+                style={[styles.toolsButton, { backgroundColor: colors.accent }]}
+                onPress={() => handleOpenImageTools(previewAsset)}
+              >
+                <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
             {!disabled && previewAsset && (
               <TouchableOpacity
                 style={[styles.deleteButton, { backgroundColor: colors.error }]}
@@ -499,6 +527,12 @@ export function AssetPicker({
           )}
         </View>
       </Modal>
+
+      <ImageShareModal
+        visible={imageToolsAttachment !== null}
+        image={imageToolsAttachment}
+        onClose={handleCloseImageTools}
+      />
     </View>
   );
 }
@@ -628,6 +662,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 60,
     right: spacing.lg,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolsButton: {
+    position: 'absolute',
+    bottom: 60,
+    left: spacing.lg,
     width: 44,
     height: 44,
     borderRadius: 22,

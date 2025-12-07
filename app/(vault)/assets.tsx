@@ -12,6 +12,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  GestureResponderEvent,
   Image,
   Modal,
   Pressable,
@@ -20,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ImageShareModal } from '../../src/components/ImageShareModal';
 import { ThemedText } from '../../src/components/ThemedText';
 import { ThemedView } from '../../src/components/ThemedView';
 import { useAssets } from '../../src/context/AssetProvider';
@@ -27,6 +29,7 @@ import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
 import { formatFileSize, shareAsset } from '../../src/storage/assetStorage';
 import { borderRadius, spacing } from '../../src/styles/theme';
+import { assetToImageAttachment } from '../../src/utils/assetHelpers';
 import type { Asset, AssetType } from '../../src/utils/types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -54,6 +57,7 @@ export default function AssetsScreen() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [imageToolsAsset, setImageToolsAsset] = useState<Asset | null>(null);
 
   // Filter assets
   const filteredAssets = useMemo(() => {
@@ -79,6 +83,36 @@ export default function AssetsScreen() {
     },
     [items],
   );
+
+  const handleOpenImageTools = useCallback((asset: Asset) => {
+    if (asset.type === 'image') {
+      setImageToolsAsset(asset);
+    }
+  }, []);
+
+  const handleCloseImageTools = useCallback(() => {
+    setImageToolsAsset(null);
+  }, []);
+
+  const imageToolsAttachment = useMemo(
+    () => assetToImageAttachment(imageToolsAsset),
+    [imageToolsAsset],
+  );
+
+  const handleNavigateToItem = useCallback(
+    (itemId: string) => {
+      setPreviewAsset(null);
+      router.push(`/(vault)/item/${itemId}` as any);
+    },
+    [router],
+  );
+
+  const previewLinkedItems = useMemo(() => {
+    if (!previewAsset) {
+      return [];
+    }
+    return getReferencingItems(previewAsset.id);
+  }, [previewAsset, getReferencingItems]);
 
   const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {
     switch (type) {
@@ -162,11 +196,20 @@ export default function AssetsScreen() {
   const renderAssetItem = ({ item }: { item: Asset }) => {
     const referencingItems = getReferencingItems(item.id);
     const refCount = referencingItems.length;
+    const connectionLabel =
+      refCount === 0
+        ? 'Not linked'
+        : refCount === 1
+          ? referencingItems[0].label
+          : `${referencingItems[0].label} +${refCount - 1}`;
+    const linkDisabled = refCount === 0;
 
     return (
       <TouchableOpacity
         style={[styles.assetItem, { backgroundColor: colors.card }]}
         onPress={() => setPreviewAsset(item)}
+        onLongPress={() => item.type === 'image' && handleOpenImageTools(item)}
+        delayLongPress={200}
         activeOpacity={0.8}
       >
         {item.type === 'image' ? (
@@ -190,6 +233,44 @@ export default function AssetsScreen() {
         <View style={[styles.typeBadge, { backgroundColor: colors.accent }]}>
           <Ionicons name={getAssetIcon(item.type)} size={10} color="#FFFFFF" />
         </View>
+
+        {/* Connection badge */}
+        <TouchableOpacity
+          style={[
+            styles.assetLinkBadge,
+            {
+              backgroundColor: linkDisabled ? colors.backgroundTertiary : colors.backgroundSecondary,
+            },
+          ]}
+          onPress={(event: GestureResponderEvent) => {
+            event.stopPropagation();
+            if (linkDisabled) {
+              return;
+            }
+            if (refCount === 1) {
+              handleNavigateToItem(referencingItems[0].id);
+            } else {
+              setPreviewAsset(item);
+            }
+          }}
+          activeOpacity={linkDisabled ? 1 : 0.7}
+        >
+          <Ionicons
+            name="link-outline"
+            size={12}
+            color={linkDisabled ? colors.textTertiary : colors.primary}
+          />
+          <ThemedText
+            variant="caption"
+            style={[
+              styles.assetLinkText,
+              { color: linkDisabled ? colors.textTertiary : colors.text },
+            ]}
+            numberOfLines={1}
+          >
+            {connectionLabel}
+          </ThemedText>
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -359,17 +440,62 @@ export default function AssetsScreen() {
                     {previewAsset.type === 'image' &&
                       ` • ${previewAsset.width}×${previewAsset.height}`}
                   </ThemedText>
-
-                  {/* Used by */}
-                  {getReferencingItems(previewAsset.id).length > 0 && (
-                    <ThemedText variant="caption" color="tertiary" style={styles.usedByText}>
-                      Used by {getReferencingItems(previewAsset.id).length} item(s)
-                    </ThemedText>
-                  )}
+                  <View style={styles.linkedItemsContainer}>
+                    {previewLinkedItems.length === 0 ? (
+                      <ThemedText variant="caption" color="tertiary">
+                        Not linked to any items yet.
+                      </ThemedText>
+                    ) : (
+                      <>
+                        <ThemedText
+                          variant="caption"
+                          color="secondary"
+                          style={styles.linkedItemsTitle}
+                        >
+                          Connected to
+                        </ThemedText>
+                        {previewLinkedItems.slice(0, 4).map((linkedItem) => (
+                          <TouchableOpacity
+                            key={linkedItem.id}
+                            style={[styles.linkedItemButton, { borderColor: colors.border }]}
+                            onPress={() => handleNavigateToItem(linkedItem.id)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.linkedItemTextWrapper}>
+                              <ThemedText variant="body" numberOfLines={1}>
+                                {linkedItem.label}
+                              </ThemedText>
+                              <ThemedText variant="caption" color="tertiary">
+                                {linkedItem.type}
+                              </ThemedText>
+                            </View>
+                            <Ionicons
+                              name="arrow-forward-circle-outline"
+                              size={18}
+                              color={colors.primary}
+                            />
+                          </TouchableOpacity>
+                        ))}
+                        {previewLinkedItems.length > 4 && (
+                          <ThemedText variant="caption" color="tertiary">
+                            +{previewLinkedItems.length - 4} more linked item(s)
+                          </ThemedText>
+                        )}
+                      </>
+                    )}
+                  </View>
                 </View>
 
                 {/* Action buttons */}
                 <View style={styles.previewActions}>
+                  {previewAsset?.type === 'image' && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: colors.accent }]}
+                      onPress={() => handleOpenImageTools(previewAsset)}
+                    >
+                      <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: colors.primary }]}
                     onPress={() => handleShare(previewAsset)}
@@ -401,6 +527,12 @@ export default function AssetsScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      <ImageShareModal
+        visible={imageToolsAttachment !== null}
+        image={imageToolsAttachment}
+        onClose={handleCloseImageTools}
+      />
     </ThemedView>
   );
 }
@@ -540,13 +672,30 @@ const styles = StyleSheet.create({
   },
   typeBadge: {
     position: 'absolute',
-    bottom: 4,
+    top: 4,
     left: 4,
     width: 18,
     height: 18,
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  assetLinkBadge: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    right: 4,
+    borderRadius: borderRadius.sm,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  assetLinkText: {
+    fontWeight: '600',
+    fontSize: 11,
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -581,8 +730,25 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.lg,
   },
-  usedByText: {
-    marginTop: spacing.xs,
+  linkedItemsContainer: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  linkedItemsTitle: {
+    fontWeight: '600',
+  },
+  linkedItemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: borderRadius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  linkedItemTextWrapper: {
+    flex: 1,
+    marginRight: spacing.xs,
   },
   previewActions: {
     position: 'absolute',

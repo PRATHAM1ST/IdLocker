@@ -9,14 +9,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetPicker } from '../../../src/components/AssetPicker';
@@ -40,7 +40,7 @@ export default function EditItemScreen() {
   const { colors, isDark } = useTheme();
   const { getItem, updateItem, isLoading } = useVault();
   const { getCategoryById } = useCategories();
-  const { migrateItemAssets } = useAssets();
+  const { migrateItemAssets, ensureAssetsLoaded } = useAssets();
 
   const item = useMemo(() => getItem(id), [getItem, id]);
   const category = useMemo(
@@ -68,15 +68,19 @@ export default function EditItemScreen() {
         // Use existing assetRefs or migrate from legacy images
         if (item.assetRefs && item.assetRefs.length > 0) {
           setAssetRefs(item.assetRefs);
+          await ensureAssetsLoaded(item.assetRefs.map((ref) => ref.assetId));
         } else if (item.images && item.images.length > 0) {
           // Migrate legacy images to assets
           const migratedRefs = await migrateItemAssets(item);
           setAssetRefs(migratedRefs);
+          if (migratedRefs.length > 0) {
+            await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
+          }
         }
       }
     };
     initForm();
-  }, [item, migrateItemAssets]);
+  }, [item, migrateItemAssets, ensureAssetsLoaded]);
 
   const handleFieldChange = useCallback(
     (key: string, value: string) => {

@@ -8,18 +8,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../../src/components/Button';
+import { ImageShareModal } from '../../../src/components/ImageShareModal';
 import { SecureField } from '../../../src/components/SecureField';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { ThemedView } from '../../../src/components/ThemedView';
@@ -29,6 +30,7 @@ import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { formatFileSize, shareAsset } from '../../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
+import { assetToImageAttachment } from '../../../src/utils/assetHelpers';
 import { SENSITIVE_FIELDS } from '../../../src/utils/constants';
 import type { Asset, AssetType } from '../../../src/utils/types';
 import { formatCardExpiry } from '../../../src/utils/validation';
@@ -40,41 +42,64 @@ export default function ItemDetailScreen() {
   const { colors, isDark } = useTheme();
   const { getItem, deleteItem, isLoading } = useVault();
   const { getCategoryById } = useCategories();
-  const { getAssetsForItem, migrateItemAssets } = useAssets();
+  const { getAssetsForItem, migrateItemAssets, ensureAssetsLoaded } = useAssets();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [itemAssets, setItemAssets] = useState<Asset[]>([]);
+  const [imageToolsAsset, setImageToolsAsset] = useState<Asset | null>(null);
 
   const item = useMemo(() => getItem(id), [getItem, id]);
 
   // Load assets for item (with migration if needed)
   useEffect(() => {
+    let isActive = true;
+
     const loadAssets = async () => {
-      if (item) {
-        console.log('[ItemDetail] Item loaded:', {
-          id: item.id,
-          label: item.label,
-          hasAssetRefs: !!item.assetRefs,
-          assetRefCount: item.assetRefs?.length || 0,
-          hasLegacyImages: !!item.images,
-          legacyImageCount: item.images?.length || 0,
-        });
+      if (!item) {
+        return;
+      }
 
-        // Get assets for this item (handles both assetRefs and legacy images)
-        let assets = getAssetsForItem(item);
+      console.log('[ItemDetail] Item loaded:', {
+        id: item.id,
+        label: item.label,
+        hasAssetRefs: !!item.assetRefs,
+        assetRefCount: item.assetRefs?.length || 0,
+        hasLegacyImages: !!item.images,
+        legacyImageCount: item.images?.length || 0,
+      });
 
-        // If item has legacy images but no assets found, try migration
-        if (assets.length === 0 && item.images && item.images.length > 0) {
-          await migrateItemAssets(item);
-          assets = getAssetsForItem(item);
-        }
+      const candidateIds: string[] = [];
+      if (item.assetRefs?.length) {
+        candidateIds.push(...item.assetRefs.map((ref) => ref.assetId));
+      }
+      if (item.images?.length) {
+        candidateIds.push(...item.images.map((img) => img.id));
+      }
 
-        setItemAssets(assets);
+      if (candidateIds.length > 0) {
+        await ensureAssetsLoaded(candidateIds);
+      }
+
+      let assetsForItem = getAssetsForItem(item);
+
+      if (assetsForItem.length === 0 && item.images && item.images.length > 0) {
+        await migrateItemAssets(item);
+        await ensureAssetsLoaded(item.images.map((img) => img.id));
+        assetsForItem = getAssetsForItem(item);
+      }
+
+      if (isActive) {
+        setItemAssets(assetsForItem);
       }
     };
+
     loadAssets();
-  }, [item, getAssetsForItem, migrateItemAssets]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [item, getAssetsForItem, migrateItemAssets, ensureAssetsLoaded]);
 
   const category = useMemo(
     () => (item ? getCategoryById(item.type) : null),
@@ -130,6 +155,21 @@ export default function ItemDetailScreen() {
   const handleShareAsset = useCallback(async (asset: Asset) => {
     await shareAsset(asset.uri, asset.mimeType);
   }, []);
+
+  const handleOpenImageTools = useCallback((asset: Asset) => {
+    if (asset.type === 'image') {
+      setImageToolsAsset(asset);
+    }
+  }, []);
+
+  const handleCloseImageTools = useCallback(() => {
+    setImageToolsAsset(null);
+  }, []);
+
+  const imageToolsAttachment = useMemo(
+    () => assetToImageAttachment(imageToolsAsset),
+    [imageToolsAsset],
+  );
 
   if (!item || !category || !categoryColor) {
     return (
@@ -306,6 +346,8 @@ export default function ItemDetailScreen() {
                     key={asset.id}
                     style={[styles.imageThumb, { borderColor: colors.border }]}
                     onPress={() => setSelectedAsset(asset)}
+                    onLongPress={() => asset.type === 'image' && handleOpenImageTools(asset)}
+                    delayLongPress={200}
                     activeOpacity={0.8}
                   >
                     {asset.type === 'image' ? (
@@ -431,6 +473,15 @@ export default function ItemDetailScreen() {
                   </ThemedText>
                 </View>
 
+                {selectedAsset.type === 'image' && (
+                  <TouchableOpacity
+                    style={[styles.toolsButton, { backgroundColor: colors.accent }]}
+                    onPress={() => handleOpenImageTools(selectedAsset)}
+                  >
+                    <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+
                 {/* Action button */}
                 <TouchableOpacity
                   style={[styles.shareButton, { backgroundColor: colors.primary }]}
@@ -451,6 +502,12 @@ export default function ItemDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      <ImageShareModal
+        visible={imageToolsAttachment !== null}
+        image={imageToolsAttachment}
+        onClose={handleCloseImageTools}
+      />
     </ThemedView>
   );
 }
@@ -649,6 +706,17 @@ const styles = StyleSheet.create({
   shareButton: {
     position: 'absolute',
     bottom: 60,
+    right: spacing.lg,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolsButton: {
+    position: 'absolute',
+    bottom: 60,
+    left: spacing.lg,
     width: 50,
     height: 50,
     borderRadius: 25,

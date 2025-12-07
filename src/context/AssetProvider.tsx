@@ -34,6 +34,7 @@ interface AssetContextValue {
   getAssetById: (id: string) => Asset | undefined;
   getAssetsByIds: (ids: string[]) => Asset[];
   getAssetsForItem: (item: VaultItem) => Asset[];
+  ensureAssetsLoaded: (assetIds: string[]) => Promise<void>;
 
   // Filtered views
   getAssetsByType: (type: AssetType) => Asset[];
@@ -172,6 +173,43 @@ export function AssetProvider({ children }: AssetProviderProps) {
     [assets],
   );
 
+  // Ensure specific assets are loaded into memory (fetch on demand if missing)
+  const ensureAssetsLoaded = useCallback(
+    async (assetIds: string[]): Promise<void> => {
+      if (!assetIds || assetIds.length === 0) {
+        return;
+      }
+
+      const uniqueIds = Array.from(new Set(assetIds.filter(Boolean)));
+      if (uniqueIds.length === 0) {
+        return;
+      }
+
+      const missingIds = uniqueIds.filter((id) => !assets.some((asset) => asset.id === id));
+      if (missingIds.length === 0) {
+        return;
+      }
+
+      try {
+        const fetchedAssets = await assetStorage.getAssetsByIds(missingIds);
+        if (fetchedAssets.length === 0) {
+          return;
+        }
+
+        setAssets((prev) => {
+          const merged = new Map(prev.map((asset) => [asset.id, asset] as const));
+          for (const asset of fetchedAssets) {
+            merged.set(asset.id, asset);
+          }
+          return Array.from(merged.values());
+        });
+      } catch (err) {
+        logger.error('Failed to ensure assets loaded:', err);
+      }
+    },
+    [assets],
+  );
+
   // Get assets for a vault item (from assetRefs)
   const getAssetsForItem = useCallback(
     (item: VaultItem): Asset[] => {
@@ -302,6 +340,7 @@ export function AssetProvider({ children }: AssetProviderProps) {
       getAssetById,
       getAssetsByIds,
       getAssetsForItem,
+      ensureAssetsLoaded,
       getAssetsByType,
       searchAssets,
       migrateItemAssets,
@@ -319,6 +358,7 @@ export function AssetProvider({ children }: AssetProviderProps) {
       getAssetById,
       getAssetsByIds,
       getAssetsForItem,
+      ensureAssetsLoaded,
       getAssetsByType,
       searchAssets,
       migrateItemAssets,
