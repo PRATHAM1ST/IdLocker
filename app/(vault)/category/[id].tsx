@@ -28,7 +28,7 @@ import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../src/utils/constants';
 import type { CategoryColor, FieldDefinition } from '../../../src/utils/types';
 
-type KeyboardType = 'default' | 'numeric' | 'email-address' | 'phone-pad';
+type KeyboardType = 'default' | 'numeric' | 'email-address' | 'phone-pad' | 'select';
 
 interface FieldFormState {
   label: string;
@@ -42,6 +42,7 @@ interface FieldFormState {
   minValue: string;
   maxValue: string;
   prefix: string;
+  options: { value: string; label: string }[];
 }
 
 const KEYBOARD_TYPE_OPTIONS: { value: KeyboardType; label: string }[] = [
@@ -49,6 +50,7 @@ const KEYBOARD_TYPE_OPTIONS: { value: KeyboardType; label: string }[] = [
   { value: 'numeric', label: 'Number' },
   { value: 'email-address', label: 'Email' },
   { value: 'phone-pad', label: 'Phone' },
+  { value: 'select' as KeyboardType, label: 'Select' },
 ];
 
 const createEmptyFieldForm = (): FieldFormState => ({
@@ -63,6 +65,7 @@ const createEmptyFieldForm = (): FieldFormState => ({
   minValue: '',
   maxValue: '',
   prefix: '',
+  options: [],
 });
 
 export default function CategoryEditScreen() {
@@ -175,6 +178,7 @@ export default function CategoryEditScreen() {
       minValue: typeof field.minValue === 'number' ? String(field.minValue) : '',
       maxValue: typeof field.maxValue === 'number' ? String(field.maxValue) : '',
       prefix: field.prefix || '',
+      options: field.options || [],
     });
     setEditingFieldKey(field.key);
   }, []);
@@ -237,6 +241,22 @@ export default function CategoryEditScreen() {
     }
 
     const prefixValue = fieldForm.prefix.trim();
+    
+    // Validate dropdown options
+    if (fieldForm.keyboardType === 'select') {
+      if (fieldForm.options.length === 0) {
+        Alert.alert('Error', 'Please add at least one option for the dropdown field');
+        return;
+      }
+      
+      // Check if all options have both value and label
+      const hasInvalidOption = fieldForm.options.some(opt => !opt.value.trim() || !opt.label.trim());
+      if (hasInvalidOption) {
+        Alert.alert('Error', 'All dropdown options must have both value and label');
+        return;
+      }
+    }
+    
     const key =
       editingFieldKey ||
       trimmedLabel
@@ -257,6 +277,7 @@ export default function CategoryEditScreen() {
       minValue: fieldForm.keyboardType === 'numeric' ? minValueNumber : undefined,
       maxValue: fieldForm.keyboardType === 'numeric' ? maxValueNumber : undefined,
       prefix: fieldForm.keyboardType === 'phone-pad' && prefixValue ? prefixValue : undefined,
+      options: fieldForm.options.length > 0 ? fieldForm.options : undefined,
     };
 
     setFields((prev) =>
@@ -527,6 +548,9 @@ export default function CategoryEditScreen() {
                           if (value !== 'phone-pad') {
                             updates.prefix = '';
                           }
+                          if (value !== 'select') {
+                            updates.options = [];
+                          }
                           return { ...prev, ...updates } as FieldFormState;
                         })
                       }
@@ -550,6 +574,67 @@ export default function CategoryEditScreen() {
                     onChangeText={(text) => setFieldForm((prev) => ({ ...prev, prefix: text }))}
                     placeholder="e.g., +91"
                   />
+                )}
+
+                {fieldForm.keyboardType === 'select' && (
+                  <>
+                    <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+                      Dropdown Options *
+                    </ThemedText>
+                    <View style={[styles.dropdownOptionsContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+                      {fieldForm.options.map((option, index) => (
+                        <View key={index} style={[styles.dropdownOptionRow, { backgroundColor: colors.card }]}>
+                          <View style={styles.dropdownOptionInputs}>
+                            <Input
+                              label="Value"
+                              value={option.value}
+                              onChangeText={(text) => {
+                                const newOptions = [...fieldForm.options];
+                                newOptions[index] = { ...newOptions[index], value: text };
+                                setFieldForm((prev) => ({ ...prev, options: newOptions }));
+                              }}
+                              placeholder="value"
+                              containerStyle={styles.dropdownOptionInput}
+                            />
+                            <Input
+                              label="Label"
+                              value={option.label}
+                              onChangeText={(text) => {
+                                const newOptions = [...fieldForm.options];
+                                newOptions[index] = { ...newOptions[index], label: text };
+                                setFieldForm((prev) => ({ ...prev, options: newOptions }));
+                              }}
+                              placeholder="Display text"
+                              containerStyle={styles.dropdownOptionInput}
+                            />
+                          </View>
+                          <TouchableOpacity
+                            style={[styles.deleteOptionButton, { backgroundColor: colors.error + '20' }]}
+                            onPress={() => {
+                              const newOptions = fieldForm.options.filter((_, i) => i !== index);
+                              setFieldForm((prev) => ({ ...prev, options: newOptions }));
+                            }}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={colors.error} />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      <TouchableOpacity
+                        style={[styles.addOptionButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                        onPress={() => {
+                          setFieldForm((prev) => ({
+                            ...prev,
+                            options: [...prev.options, { value: '', label: '' }],
+                          }));
+                        }}
+                      >
+                        <Ionicons name="add" size={20} color={colors.primary} />
+                        <ThemedText variant="bodySmall" style={{ color: colors.primary, marginLeft: spacing.xs }}>
+                          Add Option
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  </>
                 )}
 
                 <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
@@ -1002,6 +1087,7 @@ const styles = StyleSheet.create({
   },
   saveContainer: {
     marginTop: spacing.xl,
+    marginBottom: spacing.xl * 3
   },
   // Modal styles
   modalContainer: {
@@ -1079,5 +1165,43 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderWidth: 1,
     borderColor: 'transparent',
+  },
+  dropdownOptionsContainer: {
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+  },
+  dropdownOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  dropdownOptionInputs: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  dropdownOptionInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  deleteOptionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
   },
 });

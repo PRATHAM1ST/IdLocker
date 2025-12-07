@@ -225,11 +225,9 @@ export default function VaultHomeScreen() {
           {/* Section header */}
           <View style={styles.sectionHeader}>
             <ThemedText variant="subtitle" style={styles.sectionTitle}>
-              {viewMode === 'grid' && selectedFilter === 'all'
-                ? 'Categories'
-                : selectedFilter === 'all'
-                  ? 'All Items'
-                  : selectedCategory?.label || 'Items'}
+              {selectedFilter === 'all'
+                ? 'All Items'
+                : selectedCategory?.label || 'Items'}
             </ThemedText>
             <ThemedText variant="caption" color="secondary">
               {viewMode === 'grid'
@@ -238,79 +236,24 @@ export default function VaultHomeScreen() {
             </ThemedText>
           </View>
 
-          {/* Grid or List view */}
-          {viewMode === 'grid' ? (
-            <View style={styles.gridContainer}>
-              {categories.map((category) => (
-                <DynamicCategoryCard
-                  key={category.id}
-                  category={category}
-                  count={categoryCounts[category.id] || 0}
-                  onPress={() => handleCategoryPress(category.id)}
-                  onEdit={() => handleEditCategory(category)}
-                  onDelete={() => handleDeleteCategory(category)}
-                  showActions={true}
-                />
+          {filteredItems.length > 0 ? (
+            <View style={styles.itemsGrid}>
+              {filteredItems.map((item) => (
+                <VaultItemGridCard key={item.id} item={item} onPress={handleItemPress} />
               ))}
-              {/* Create new category card */}
-              <TouchableOpacity
-                style={[
-                  styles.createCategoryCard,
-                  {
-                    borderColor: colors.border,
-                    backgroundColor: colors.card,
-                  },
-                ]}
-                onPress={handleCreateCategory}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.createCategoryIcon,
-                    {
-                      backgroundColor: colors.primary + '15',
-                    },
-                  ]}
-                >
-                  <Ionicons name="add-circle" size={32} color={colors.primary} />
-                </View>
-                <View style={styles.createCategoryContent}>
-                  <ThemedText
-                    variant="subtitle"
-                    style={[styles.createCategoryLabel, { color: colors.primary }]}
-                  >
-                    New Category
-                  </ThemedText>
-                  <ThemedText variant="caption" color="tertiary" style={styles.createCategoryHint}>
-                    Tap to create
-                  </ThemedText>
-                </View>
-              </TouchableOpacity>
             </View>
           ) : (
-            <>
-              {filteredItems.length > 0 ? (
-                <View style={styles.itemsGrid}>
-                  {filteredItems.map((item) => (
-                    <VaultItemGridCard key={item.id} item={item} onPress={handleItemPress} />
-                  ))}
-                </View>
-              ) : (
-                <EmptyState
-                  icon="folder-open-outline"
-                  title="No items found"
-                  description={
-                    selectedFilter === 'all'
-                      ? 'Your vault is empty. Add your first item to get started.'
-                      : `No ${selectedCategory?.label.toLowerCase() || 'matching'} items yet.`
-                  }
-                  actionLabel="Add Item"
-                  onAction={() =>
-                    handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)
-                  }
-                />
-              )}
-            </>
+            <EmptyState
+              icon="folder-open-outline"
+              title="No items found"
+              description={
+                selectedFilter === 'all'
+                  ? 'Your vault is empty. Add your first item to get started.'
+                  : `No ${selectedCategory?.label.toLowerCase() || 'matching'} items yet.`
+              }
+              actionLabel="Add Item"
+              onAction={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
+            />
           )}
         </View>
       </ScrollView>

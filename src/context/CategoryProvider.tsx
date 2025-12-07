@@ -109,7 +109,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
 
       // Update local state immediately
       setCategories((prev) => [...prev, newCategory]);
-      logger.debug('Category added:', newCategory.id);
+      logger.debug('Category added:', newCategory);
 
       // Persist in background
       setTimeout(() => {

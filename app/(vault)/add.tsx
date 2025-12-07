@@ -627,13 +627,13 @@ export default function AddItemScreen() {
     const hint = hintParts.length ? hintParts.join(' • ') : undefined;
 
     // Render select for fields with options
-    if (fieldDef.options) {
+    if (fieldDef.options || fieldDef.keyboardType === 'select') {
       return (
         <Select
           key={fieldDef.key}
           label={fieldDef.label + (fieldDef.required ? ' *' : '')}
           value={value}
-          options={fieldDef.options}
+          options={fieldDef.options || []}
           onValueChange={(val) => handleFieldChange(fieldDef.key, val)}
           placeholder={fieldDef.placeholder || `Select ${fieldDef.label.toLowerCase()}`}
           error={error}
@@ -648,7 +648,7 @@ export default function AddItemScreen() {
         value={value}
         onChangeText={(val) => handleFieldChange(fieldDef.key, val)}
         placeholder={fieldDef.placeholder}
-        keyboardType={fieldDef.keyboardType}
+        keyboardType={(fieldDef.keyboardType as any) !== 'select' ? fieldDef.keyboardType : 'default'}
         maxLength={fieldDef.maxLength}
         multiline={fieldDef.multiline}
         numberOfLines={fieldDef.multiline ? 4 : 1}

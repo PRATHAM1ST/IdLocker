@@ -111,7 +111,7 @@ export interface FieldDefinition {
   placeholder?: string;
   required?: boolean;
   sensitive?: boolean;
-  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad' | 'select';
   minLength?: number;
   maxLength?: number;
   minValue?: number;
