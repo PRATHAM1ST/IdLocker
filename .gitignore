@@ -45,3 +45,8 @@ app-example
 # Development config - DO NOT COMMIT
 # Copy devConfig.example.ts to devConfig.ts and modify for local dev
 src/config/devConfig.ts
+
+android/app/my-upload-key.keystore
+android/gradle.properties
+
+.env
