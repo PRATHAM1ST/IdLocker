@@ -5,12 +5,12 @@
  */
 
 import React, {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
 } from "react";
 import * as vaultStorage from "../storage/vaultStorage";
 import { logger } from "../utils/logger";
@@ -260,25 +260,38 @@ export function VaultProvider({ children }: VaultProviderProps) {
 
 			if (!lowerQuery) return items;
 
-			return items.filter((item) => {
-				// Search in label
-				if (item.label.toLowerCase().includes(lowerQuery)) return true;
+			const isLastFourQuery = /^\d{4}$/.test(lowerQuery);
 
-				// Search in non-sensitive fields
-				const searchableFields = [
-					"bankName",
-					"serviceName",
-					"cardNickname",
-					"idType",
-					"title",
-				];
-				for (const key of searchableFields) {
-					if (item.fields[key]?.toLowerCase().includes(lowerQuery))
-						return true;
+			return items.filter((item) => {
+				// Match label
+				if (item.label.toLowerCase().includes(lowerQuery)) {
+					return true;
 				}
 
-				// Match last 4 digits exactly
-				if (/^\d{4}$/.test(lowerQuery)) {
+				// Match any stored field (covers secure notes, logins, etc.)
+				const fieldValues = Object.values(item.fields || {});
+				if (
+					fieldValues.some((value) =>
+						typeof value === "string" &&
+						value.toLowerCase().includes(lowerQuery)
+					)
+				) {
+					return true;
+				}
+
+				// Match any custom field label/value
+				if (
+					item.customFields?.some(
+						(field) =>
+							field.label.toLowerCase().includes(lowerQuery) ||
+							field.value.toLowerCase().includes(lowerQuery)
+					)
+				) {
+					return true;
+				}
+
+				// Match last 4 digits exactly for cards/accounts
+				if (isLastFourQuery) {
 					if (item.fields.lastFourDigits === lowerQuery) return true;
 					if (item.fields.accountNumber?.endsWith(lowerQuery))
 						return true;

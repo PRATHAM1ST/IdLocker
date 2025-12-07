@@ -21,15 +21,15 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CategoryFilterCard } from "../../src/components/CategoryCard";
+import { DynamicCategoryFilterCard } from "../../src/components/CategoryCard";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ThemedText } from "../../src/components/ThemedText";
 import { ThemedView } from "../../src/components/ThemedView";
 import { VaultItemGridCard } from "../../src/components/VaultItemGridCard";
+import { useCategories } from "../../src/context/CategoryProvider";
 import { useTheme } from "../../src/context/ThemeProvider";
 import { useVault } from "../../src/context/VaultProvider";
 import { borderRadius, layout, spacing } from "../../src/styles/theme";
-import { VAULT_ITEM_TYPES } from "../../src/utils/constants";
 import type { VaultItem, VaultItemType } from "../../src/utils/types";
 
 type FilterType = VaultItemType | "all";
@@ -38,12 +38,23 @@ export default function SearchScreen() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const { colors } = useTheme();
-	const { items } = useVault();
+	const { items, searchItems } = useVault();
+	const { categories } = useCategories();
 	const inputRef = useRef<TextInput>(null);
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
 	const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+	// Ensure selected filter stays valid when category list changes
+	useEffect(() => {
+		if (
+			selectedFilter !== "all" &&
+			!categories.some((category) => category.id === selectedFilter)
+		) {
+			setSelectedFilter("all");
+		}
+	}, [categories, selectedFilter]);
 
 	// Auto-focus search input
 	useEffect(() => {
@@ -53,64 +64,45 @@ export default function SearchScreen() {
 		return () => clearTimeout(timer);
 	}, []);
 
+	const categoryCounts = useMemo(() => {
+		return items.reduce<Record<string, number>>((acc, item) => {
+			acc[item.type] = (acc[item.type] || 0) + 1;
+			return acc;
+		}, {});
+	}, [items]);
+
 	// Filter and search items
 	const searchResults = useMemo(() => {
-		if (!searchQuery.trim() && selectedFilter === "all") {
+		const trimmedQuery = searchQuery.trim();
+		if (!trimmedQuery && selectedFilter === "all") {
 			return [];
 		}
+		const baseResults = trimmedQuery ? searchItems(trimmedQuery) : items;
+		const filteredResults =
+			selectedFilter === "all"
+				? baseResults
+				: baseResults.filter((item) => item.type === selectedFilter);
 
-		let result = items;
-
-		// Filter by category
-		if (selectedFilter !== "all") {
-			result = result.filter((item) => item.type === selectedFilter);
-		}
-
-		// Filter by search query
-		if (searchQuery.trim()) {
-			const query = searchQuery.toLowerCase();
-			result = result.filter((item) => {
-				// Search in label
-				if (item.label.toLowerCase().includes(query)) return true;
-
-				// Search in non-sensitive fields
-				const searchableFields = [
-					"bankName",
-					"serviceName",
-					"cardNickname",
-					"idType",
-					"title",
-				];
-				for (const key of searchableFields) {
-					if (item.fields[key]?.toLowerCase().includes(query))
-						return true;
-				}
-
-				// Match last 4 digits exactly
-				if (/^\d{4}$/.test(query)) {
-					if (item.fields.lastFourDigits === query) return true;
-					if (item.fields.accountNumber?.endsWith(query)) return true;
-				}
-
-				return false;
-			});
-		}
-
-		// Sort by updated date
-		return result.sort(
+		return [...filteredResults].sort(
 			(a, b) =>
 				new Date(b.updatedAt).getTime() -
 				new Date(a.updatedAt).getTime()
 		);
-	}, [items, selectedFilter, searchQuery]);
+	}, [items, searchItems, searchQuery, selectedFilter]);
+
+	const selectedCategory = useMemo(() => {
+		if (selectedFilter === "all") {
+			return null;
+		}
+		return categories.find((category) => category.id === selectedFilter);
+	}, [categories, selectedFilter]);
+
+	const hasQuery = searchQuery.trim().length > 0;
 
 	const handleItemPress = useCallback(
 		(item: VaultItem) => {
 			// Save to recent searches
-			if (
-				searchQuery.trim() &&
-				!recentSearches.includes(searchQuery.trim())
-			) {
+			if (hasQuery && !recentSearches.includes(searchQuery.trim())) {
 				setRecentSearches((prev) => [
 					searchQuery.trim(),
 					...prev.slice(0, 4),
@@ -118,7 +110,7 @@ export default function SearchScreen() {
 			}
 			router.push(`/(vault)/item/${item.id}` as any);
 		},
-		[router, searchQuery, recentSearches]
+		[router, hasQuery, searchQuery, recentSearches]
 	);
 
 	const handleRecentSearch = useCallback((query: string) => {
@@ -134,13 +126,13 @@ export default function SearchScreen() {
 		setRecentSearches([]);
 	}, []);
 
-	const showEmptyState = searchQuery.trim() || selectedFilter !== "all";
+	const showEmptyState = hasQuery || selectedFilter !== "all";
 	const showRecentSearches =
-		!searchQuery.trim() &&
+		!hasQuery &&
 		selectedFilter === "all" &&
 		recentSearches.length > 0;
 	const showSearchTips =
-		!searchQuery.trim() &&
+		!hasQuery &&
 		selectedFilter === "all" &&
 		recentSearches.length === 0;
 
@@ -230,21 +222,19 @@ export default function SearchScreen() {
 						contentContainerStyle={styles.filterScroll}
 						keyboardShouldPersistTaps="handled"
 					>
-						<CategoryFilterCard
-							type="all"
-							label="All"
-							icon="grid-outline"
+						<DynamicCategoryFilterCard
+							category={null}
+							count={items.length}
 							isSelected={selectedFilter === "all"}
 							onPress={() => setSelectedFilter("all")}
 						/>
-						{VAULT_ITEM_TYPES.map(({ type, label, icon }) => (
-							<CategoryFilterCard
-								key={type}
-								type={type}
-								label={label}
-								icon={icon}
-								isSelected={selectedFilter === type}
-								onPress={() => setSelectedFilter(type)}
+						{categories.map((category) => (
+							<DynamicCategoryFilterCard
+								key={category.id}
+								category={category}
+								count={categoryCounts[category.id] || 0}
+								isSelected={selectedFilter === category.id}
+								onPress={() => setSelectedFilter(category.id)}
 							/>
 						))}
 					</ScrollView>
@@ -280,21 +270,17 @@ export default function SearchScreen() {
 							icon="search-outline"
 							title="No results found"
 							description={
-								searchQuery
+								hasQuery
 									? `No items match "${searchQuery}"${
-											selectedFilter !== "all"
-												? ` in ${
-														VAULT_ITEM_TYPES.find(
-															(t) =>
-																t.type ===
-																selectedFilter
-														)?.label
-												  }`
-												: ""
-									  }`
-									: `No ${VAULT_ITEM_TYPES.find(
-											(t) => t.type === selectedFilter
-									  )?.label.toLowerCase()} items in your vault`
+										selectedFilter !== "all"
+											? ` in ${
+												selectedCategory?.label || "this category"
+											}`
+											: ""
+									}`
+								: selectedCategory
+									? `No ${selectedCategory.label.toLowerCase()} items in your vault`
+									: "No items in this category"
 							}
 						/>
 					)}
