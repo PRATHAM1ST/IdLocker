@@ -23,7 +23,7 @@ export default function VaultLayout() {
 
   // Check if we're on screens that shouldn't show the add button
   const hideAddButton =
-    pathname.includes('/add') || pathname.includes('/edit') || pathname.includes('/item/');
+    pathname.includes('/add') || pathname.includes('/edit') || pathname.includes('/item/') || pathname.includes('/category/');
 
   // Determine context-aware add button params based on current route
   const addButtonConfig = useMemo(() => {
