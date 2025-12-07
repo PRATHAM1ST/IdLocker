@@ -134,6 +134,7 @@ export function ImageShareModal({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
+      statusBarTranslucent={false}
     >
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.background }]}

@@ -382,6 +382,7 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
           transparent
           animationType="fade"
           onRequestClose={handleStayLoggedIn}
+          statusBarTranslucent={false}
         >
           <BlurView
             style={styles.modalOverlay}

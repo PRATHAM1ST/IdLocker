@@ -386,6 +386,7 @@ export default function ItemDetailScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setSelectedAsset(null)}
+        statusBarTranslucent={false}
       >
         <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.9)' }]}>
           <View style={styles.modalContent}>

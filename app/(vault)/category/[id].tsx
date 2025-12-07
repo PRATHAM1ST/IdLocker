@@ -91,7 +91,13 @@ function FieldEditorModal({ visible, field, onSave, onClose, colors }: FieldEdit
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+      statusBarTranslucent={false}
+    >
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
         <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onClose}>
@@ -547,7 +553,7 @@ export default function CategoryEditScreen() {
       </KeyboardAvoidingView>
 
       {/* Icon Picker Modal */}
-      <Modal visible={showIconPicker} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={showIconPicker} animationType="slide" presentationStyle="pageSheet" statusBarTranslucent={false}>
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={() => setShowIconPicker(false)}>
@@ -583,7 +589,7 @@ export default function CategoryEditScreen() {
       </Modal>
 
       {/* Color Picker Modal */}
-      <Modal visible={showColorPicker} animationType="slide" presentationStyle="pageSheet">
+      <Modal visible={showColorPicker} animationType="slide" presentationStyle="pageSheet" statusBarTranslucent={false}>
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={() => setShowColorPicker(false)}>

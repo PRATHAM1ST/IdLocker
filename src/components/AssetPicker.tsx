@@ -404,6 +404,7 @@ export function AssetPicker({
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewAsset(null)}
+        statusBarTranslucent={false}
       >
         <Pressable
           style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.9)' }]}
@@ -462,6 +463,7 @@ export function AssetPicker({
         visible={showAssetBrowser}
         animationType="slide"
         onRequestClose={() => setShowAssetBrowser(false)}
+        statusBarTranslucent={false}
       >
         <View style={[styles.browserContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.browserHeader, { backgroundColor: colors.backgroundSecondary, borderBottomColor: colors.border }]}>

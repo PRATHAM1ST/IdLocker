@@ -6,19 +6,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
 } from "react";
 import {
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+	Keyboard,
+	ScrollView,
+	StyleSheet,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategoryFilterCard } from "../../src/components/CategoryCard";
@@ -168,9 +168,23 @@ export default function SearchScreen() {
 						{ paddingTop: insets.top + spacing.md },
 					]}
 				>
-					<ThemedText variant="title" style={styles.headerTitle}>
-						Search
-					</ThemedText>
+					<View style={styles.headerContent}>
+						<TouchableOpacity
+							style={styles.backButton}
+							onPress={() => router.back()}
+							activeOpacity={0.7}
+						>
+							<Ionicons
+								name="chevron-back-outline"
+								size={24}
+								color="#FFFFFF"
+							/>
+						</TouchableOpacity>
+						<ThemedText variant="title" style={styles.headerTitle}>
+							Search
+						</ThemedText>
+						<View style={{ width: 40 }} />
+					</View>
 
 					{/* Search bar */}
 					<View style={styles.searchContainer}>
@@ -430,6 +444,20 @@ const styles = StyleSheet.create({
 	header: {
 		paddingBottom: spacing.lg,
 		paddingHorizontal: spacing.base,
+	},
+	headerContent: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		paddingBottom: spacing.md,
+	},
+	backButton: {
+		width: 40,
+		height: 40,
+		borderRadius: borderRadius.md,
+		backgroundColor: "rgba(255, 255, 255, 0.15)",
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	headerTitle: {
 		color: "#FFFFFF",

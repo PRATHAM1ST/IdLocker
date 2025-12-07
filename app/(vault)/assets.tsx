@@ -263,7 +263,7 @@ export default function AssetsScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <ThemedText variant="subtitle" style={styles.headerTitle}>
             Assets
@@ -314,6 +314,7 @@ export default function AssetsScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewAsset(null)}
+        statusBarTranslucent={false}
       >
         <Pressable
           style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.9)' }]}

@@ -87,8 +87,7 @@ export default function VaultLayout() {
         <Stack.Screen
           name="settings"
           options={{
-            title: 'Settings',
-            headerShown: true,
+            headerShown: false,
           }}
         />
         <Stack.Screen
@@ -101,7 +100,7 @@ export default function VaultLayout() {
         <Stack.Screen
           name="item/[id]"
           options={{
-            headerShown: true,
+            headerShown: false,
             title: 'Details',
           }}
         />

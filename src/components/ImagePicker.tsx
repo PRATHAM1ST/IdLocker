@@ -229,6 +229,7 @@ export function ImagePicker({
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewImage(null)}
+        statusBarTranslucent={false}
       >
         <Pressable
           style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.9)' }]}

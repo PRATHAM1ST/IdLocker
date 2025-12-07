@@ -7,7 +7,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+	Dimensions,
+	StyleProp,
+	StyleSheet,
+	TouchableOpacity,
+	View,
+	ViewStyle,
+} from "react-native";
 import { useTheme } from "../context/ThemeProvider";
 import {
 	borderRadius,
@@ -145,6 +152,7 @@ interface DynamicCategoryCardProps {
 	onEdit?: () => void;
 	onDelete?: () => void;
 	showActions?: boolean;
+	customStyle?: StyleProp<ViewStyle>;
 }
 
 export function DynamicCategoryCard({
@@ -154,11 +162,10 @@ export function DynamicCategoryCard({
 	onEdit,
 	onDelete,
 	showActions = false,
+	customStyle,
 }: DynamicCategoryCardProps) {
-	const { colors } = useTheme();
-
 	return (
-		<View style={[styles.enhancedCardContainer, shadows.md]}>
+		<View style={[styles.enhancedCardContainer, shadows.md, customStyle]}>
 			<TouchableOpacity
 				style={{ flex: 1 }}
 				onPress={onPress}
