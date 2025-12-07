@@ -2,28 +2,28 @@
  * Settings screen - fully scrollable with profile header
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Sharing from 'expo-sharing';
+import Slider from '@react-native-community/slider';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '../../src/components/ThemedView';
-import { ThemedText } from '../../src/components/ThemedText';
-import { Button } from '../../src/components/Button';
-import { useTheme } from '../../src/context/ThemeProvider';
-import { useAuthLock, getBiometricTypeName } from '../../src/context/AuthLockProvider';
-import { useVault } from '../../src/context/VaultProvider';
-import { useCategories } from '../../src/context/CategoryProvider';
-import { useAssets } from '../../src/context/AssetProvider';
-import { loadSettings, clearVault } from '../../src/storage/vaultStorage';
-import { createBackupFile, importBackupFromJson } from '../../src/storage/backupStorage';
-import { spacing, borderRadius, shadows, layout } from '../../src/styles/theme';
-import type { AppSettings } from '../../src/utils/types';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from '../../src/components/Button';
+import { ThemedText } from '../../src/components/ThemedText';
+import { ThemedView } from '../../src/components/ThemedView';
+import { useAssets } from '../../src/context/AssetProvider';
+import { getBiometricTypeName, useAuthLock } from '../../src/context/AuthLockProvider';
+import { useCategories } from '../../src/context/CategoryProvider';
+import { useTheme } from '../../src/context/ThemeProvider';
+import { useVault } from '../../src/context/VaultProvider';
+import { createBackupFile, importBackupFromJson } from '../../src/storage/backupStorage';
+import { clearVault, loadSettings } from '../../src/storage/vaultStorage';
+import { borderRadius, layout, shadows, spacing } from '../../src/styles/theme';
+import type { AppSettings } from '../../src/utils/types';
 
 // Auto-lock timeout limits (in seconds)
 const MIN_TIMEOUT = 30;

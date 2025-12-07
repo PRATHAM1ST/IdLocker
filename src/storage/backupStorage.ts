@@ -1,29 +1,29 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { logger } from '../utils/logger';
 import type {
-  AppSettings,
-  Asset,
-  CategoriesData,
-  ImageAttachment,
-  VaultData,
+    AppSettings,
+    Asset,
+    CategoriesData,
+    ImageAttachment,
+    VaultData,
 } from '../utils/types';
 import { isAppSettings, isCategoriesData, isVaultData } from '../utils/types';
 import {
-  loadVault,
-  loadSettings,
-  loadCategories,
-  saveVault,
-  saveSettings,
-  saveCategories,
-  clearVault,
-} from './vaultStorage';
-import {
-  loadAssetsData,
-  saveAssetsData,
-  writeAssetFileFromBase64,
-  clearAssetsStorage,
+    clearAssetsStorage,
+    loadAssetsData,
+    saveAssetsData,
+    writeAssetFileFromBase64,
 } from './assetStorage';
-import { clearAllImages, writeImageFromBase64, getImageUri } from './imageStorage';
+import { clearAllImages, getImageUri, writeImageFromBase64 } from './imageStorage';
+import {
+    clearVault,
+    loadCategories,
+    loadSettings,
+    loadVault,
+    saveCategories,
+    saveSettings,
+    saveVault,
+} from './vaultStorage';
 
 const BACKUP_VERSION = 1;
 const BACKUP_DIR_ROOT = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
