@@ -14,10 +14,10 @@ import type {
 
 // Storage keys
 export const STORAGE_KEYS = {
-  VAULT_META: 'vault.meta',
-  VAULT_CHUNK_PREFIX: 'vault.chunk',
-  APP_SETTINGS: 'app.settings',
-  CATEGORIES: 'categories.data',
+  VAULT_META: 'vault.meta.',
+  VAULT_CHUNK_PREFIX: 'vault.chunk.',
+  APP_SETTINGS: 'app.settings.',
+  CATEGORIES: 'categories.data.',
 } as const;
 
 // Chunking configuration
