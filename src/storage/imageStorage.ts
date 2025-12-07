@@ -367,3 +367,38 @@ export async function getImageStorageSize(): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * Write an image file from base64 data (used during backup restore for legacy attachments).
+ */
+export async function writeImageFromBase64(
+  filename: string,
+  base64Data: string,
+): Promise<string> {
+  await ensureImagesDir();
+  const uri = getImageUri(filename);
+  await FileSystem.writeAsStringAsync(uri, base64Data, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  return uri;
+}
+
+/**
+ * Remove every file inside the legacy images directory.
+ */
+export async function clearAllImages(): Promise<void> {
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(IMAGES_DIR);
+    if (dirInfo.exists) {
+      const files = await FileSystem.readDirectoryAsync(IMAGES_DIR);
+      await Promise.all(
+        files.map((filename) => FileSystem.deleteAsync(`${IMAGES_DIR}${filename}`, { idempotent: true })),
+      );
+    }
+
+    await ensureImagesDir();
+  } catch (error) {
+    logger.error('Failed to clear images directory:', error);
+    throw error;
+  }
+}

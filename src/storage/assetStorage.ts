@@ -578,3 +578,46 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
+
+/**
+ * Build an absolute URI for an asset filename stored in the vault assets directory.
+ */
+export function getAssetFileUri(filename: string): string {
+  return `${ASSETS_DIR}${filename}`;
+}
+
+/**
+ * Write an asset file from base64 encoded content (used during import/restore).
+ */
+export async function writeAssetFileFromBase64(
+  filename: string,
+  base64Data: string,
+): Promise<string> {
+  await ensureAssetsDir();
+  const uri = getAssetFileUri(filename);
+  await FileSystem.writeAsStringAsync(uri, base64Data, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  return uri;
+}
+
+/**
+ * Completely clear asset metadata and files from storage (used before importing a backup).
+ */
+export async function clearAssetsStorage(): Promise<void> {
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(ASSETS_DIR);
+    if (dirInfo.exists) {
+      const files = await FileSystem.readDirectoryAsync(ASSETS_DIR);
+      await Promise.all(
+        files.map((filename) => FileSystem.deleteAsync(`${ASSETS_DIR}${filename}`, { idempotent: true })),
+      );
+    }
+
+    await SecureStore.deleteItemAsync(ASSETS_STORE_KEY);
+    await ensureAssetsDir();
+  } catch (error) {
+    logger.error('Failed to clear assets storage:', error);
+    throw error;
+  }
+}

@@ -7,13 +7,20 @@ import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-nat
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { Button } from '../../src/components/Button';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useAuthLock, getBiometricTypeName } from '../../src/context/AuthLockProvider';
+import { useVault } from '../../src/context/VaultProvider';
+import { useCategories } from '../../src/context/CategoryProvider';
+import { useAssets } from '../../src/context/AssetProvider';
 import { loadSettings, clearVault } from '../../src/storage/vaultStorage';
+import { createBackupFile, importBackupFromJson } from '../../src/storage/backupStorage';
 import { spacing, borderRadius, shadows, layout } from '../../src/styles/theme';
 import type { AppSettings } from '../../src/utils/types';
 import { router } from 'expo-router';
@@ -39,9 +46,14 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, preference, setThemePreference } = useTheme();
   const { lock, biometricType, hasBiometrics, autoLockTimeout, setAutoLockTimeout } = useAuthLock();
+  const { refreshVault } = useVault();
+  const { refreshCategories } = useCategories();
+  const { refreshAssets } = useAssets();
 
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [sliderValue, setSliderValue] = useState(autoLockTimeout);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     loadSettings().then(setSettings);
@@ -100,6 +112,88 @@ export default function SettingsScreen() {
       ],
     );
   }, []);
+
+  const handleExportData = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      const { uri, filename, summary } = await createBackupFile();
+      const summaryLine = `${summary.items} items • ${summary.assets} attachments`;
+      const canShare = await Sharing.isAvailableAsync();
+
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Share IdLocker Backup',
+        });
+        try {
+          await FileSystem.deleteAsync(uri, { idempotent: true });
+        } catch {
+          // Cache cleanup best-effort; ignore failures.
+        }
+        Alert.alert('Backup Ready', `${filename}\n${summaryLine}`);
+      } else {
+        Alert.alert(
+          'Backup Saved Locally',
+          `${filename}\n${summaryLine}\n\nSaved at:\n${uri}`,
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to export backup.';
+      Alert.alert('Export Failed', message);
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+
+  const handleImportData = useCallback(async () => {
+    try {
+      setIsImporting(true);
+      const pickerResult = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+
+      if (pickerResult.canceled) {
+        return;
+      }
+
+      const file = pickerResult.assets?.[0];
+      if (!file?.uri) {
+        throw new Error('Unable to read the selected file.');
+      }
+
+      const content = await FileSystem.readAsStringAsync(file.uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      const { summary, settings: importedSettings } = await importBackupFromJson(content);
+
+      await Promise.all([refreshVault(), refreshCategories(), refreshAssets()]);
+      await setAutoLockTimeout(importedSettings.autoLockTimeout);
+      await setThemePreference(importedSettings.theme);
+      setSettings(importedSettings);
+      setSliderValue(importedSettings.autoLockTimeout);
+
+      Alert.alert(
+        'Import Complete',
+        `Restored ${summary.items} items with ${summary.assets} attachments.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to import backup.';
+      Alert.alert('Import Failed', message);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [
+    refreshVault,
+    refreshCategories,
+    refreshAssets,
+    setAutoLockTimeout,
+    setThemePreference,
+    setSliderValue,
+    setSettings,
+  ]);
 
   const biometricName = getBiometricTypeName(biometricType);
 
@@ -254,6 +348,35 @@ export default function SettingsScreen() {
                 handleLockNow,
               )}
             </>,
+          )}
+
+          {renderSection(
+            'Backup & Restore',
+            <View style={[styles.backupCard, { backgroundColor: colors.backgroundSecondary }]}>
+              <ThemedText variant="bodySmall" color="secondary" style={styles.backupDescription}>
+                Create an offline JSON backup that bundles every vault item and attachment, or
+                restore from a previous export.
+              </ThemedText>
+              <Button
+                title="Export Backup"
+                onPress={handleExportData}
+                icon="download-outline"
+                loading={isExporting}
+                fullWidth
+              />
+              <Button
+                title="Import Backup"
+                onPress={handleImportData}
+                variant="secondary"
+                icon="cloud-upload-outline"
+                loading={isImporting}
+                fullWidth
+              />
+              <ThemedText variant="caption" color="tertiary" style={styles.backupHint}>
+                Keep this file safe—anyone with it can read your vault contents. Assets are
+                embedded directly in the JSON.
+              </ThemedText>
+            </View>,
           )}
 
           {/* Appearance Section */}
@@ -552,6 +675,17 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: spacing.sm,
     lineHeight: 18,
+  },
+  backupCard: {
+    padding: spacing.base,
+    gap: spacing.sm,
+  },
+  backupDescription: {
+    marginBottom: spacing.sm,
+  },
+  backupHint: {
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   dangerHint: {
     textAlign: 'center',
