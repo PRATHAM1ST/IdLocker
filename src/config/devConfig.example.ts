@@ -14,13 +14,13 @@ export const DEV_CONFIG = {
    * Enable dummy data loading in development mode
    * Set to true to load sample vault items for UI testing
    */
-  USE_DUMMY_DATA: true,
+  USE_DUMMY_DATA: false,
   
   /**
    * Skip authentication in development (DANGEROUS - for UI testing only)
    * Set to true to bypass biometric lock
    */
-  SKIP_AUTH: false,
+  SKIP_AUTH: true,
   
   /**
    * Enable verbose logging

@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LockOverlay } from '../../src/components/LockOverlay';
@@ -53,6 +53,17 @@ export default function VaultLayout() {
       icon: 'add' as const,
     };
   }, [pathname]);
+
+  const handleAddPress = useCallback(() => {
+    const params = addButtonConfig.params || {};
+    const query = Object.entries(params)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      .join('&');
+
+    const href = query ? `${addButtonConfig.pathname}?${query}` : addButtonConfig.pathname;
+    router.push(href as any);
+  }, [addButtonConfig, router]);
 
   const currentShadows = isDark ? darkShadows : shadows;
 
@@ -130,10 +141,7 @@ export default function VaultLayout() {
               ...currentShadows.xl,
             },
           ]}
-          onPress={() => router.push({
-            pathname: addButtonConfig.pathname,
-            params: addButtonConfig.params,
-          } as any)}
+          onPress={handleAddPress}
           activeOpacity={0.85}
         >
           <Ionicons name={addButtonConfig.icon} size={32} color="#FFFFFF" />

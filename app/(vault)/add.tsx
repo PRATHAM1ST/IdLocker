@@ -61,6 +61,7 @@ export default function AddItemScreen() {
 		type: params.type,
 		categoryId: params.categoryId,
 		mode: params.mode,
+		params
 	});
 
 	// Determine mode from params (default to 'item')

@@ -11,7 +11,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { CustomCategory, FieldDefinition, CategoryColor } from '../utils/types';
+import type { CustomCategory, CategoryColor } from '../utils/types';
 import * as vaultStorage from '../storage/vaultStorage';
 import { useAuthLock } from './AuthLockProvider';
 import { logger } from '../utils/logger';
@@ -100,7 +100,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     const now = new Date().toISOString();
     const newCategory: CustomCategory = {
       ...category,
-      id: category.id || generateId(),
+      id: generateId(),
       createdAt: now,
       updatedAt: now,
     } as CustomCategory;
