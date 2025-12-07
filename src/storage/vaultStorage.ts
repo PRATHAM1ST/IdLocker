@@ -16,7 +16,8 @@ import type {
   VaultMeta,
 } from '../utils/types';
 import { isAppSettings, isCategoriesData, isVaultData } from '../utils/types';
-import { deleteImages } from './imageStorage';
+import { clearAssetsStorage } from './assetStorage';
+import { clearAllImages, deleteImages } from './imageStorage';
 
 // SecureStore options
 const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
@@ -107,6 +108,16 @@ async function deleteAllChunks(chunkCount: number): Promise<void> {
     logger.error('deleteAllChunks: Error', error);
     throw error;
   }
+}
+
+async function purgeVaultStorage(): Promise<void> {
+  const meta = await loadVaultMeta();
+
+  if (meta) {
+    await deleteAllChunks(meta.chunkCount);
+  }
+
+  await SecureStore.deleteItemAsync(STORAGE_KEYS.VAULT_META, SECURE_STORE_OPTIONS);
 }
 
 /**
@@ -355,18 +366,35 @@ export async function getItem(id: string): Promise<VaultItem | null> {
 export async function clearVault(): Promise<boolean> {
   logger.debug('clearVault: Starting vault clear');
   try {
-    const meta = await loadVaultMeta();
-
-    if (meta) {
-      await deleteAllChunks(meta.chunkCount);
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.VAULT_META, SECURE_STORE_OPTIONS);
-    }
-
+    await purgeVaultStorage();
     logger.vaultOperation('clear');
     return true;
   } catch (error) {
     logger.error('clearVault: Error clearing vault', error);
-    return true; // Return true anyway to allow UI to proceed
+    return false;
+  }
+}
+
+/**
+ * Clear every persisted surface including vault items, settings, categories, and attachments
+ */
+export async function clearAllData(): Promise<boolean> {
+  logger.debug('clearAllData: Starting full data wipe');
+  try {
+    await purgeVaultStorage();
+
+    await Promise.all([
+      SecureStore.deleteItemAsync(STORAGE_KEYS.APP_SETTINGS, SECURE_STORE_OPTIONS),
+      SecureStore.deleteItemAsync(STORAGE_KEYS.CATEGORIES, SECURE_STORE_OPTIONS),
+    ]);
+
+    await Promise.all([clearAssetsStorage(), clearAllImages()]);
+
+    logger.vaultOperation('clear all data');
+    return true;
+  } catch (error) {
+    logger.error('clearAllData: Error clearing all data', error);
+    return false;
   }
 }
 

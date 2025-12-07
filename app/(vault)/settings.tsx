@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -21,8 +22,9 @@ import { useCategories } from '../../src/context/CategoryProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
 import { createBackupFile, importBackupFromJson } from '../../src/storage/backupStorage';
-import { clearVault, loadSettings } from '../../src/storage/vaultStorage';
+import { clearAllData, loadSettings } from '../../src/storage/vaultStorage';
 import { borderRadius, layout, shadows, spacing } from '../../src/styles/theme';
+import { DEFAULT_SETTINGS } from '../../src/utils/constants';
 import type { AppSettings } from '../../src/utils/types';
 
 // Auto-lock timeout limits (in seconds)
@@ -54,6 +56,7 @@ export default function SettingsScreen() {
   const [sliderValue, setSliderValue] = useState(autoLockTimeout);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     loadSettings().then(setSettings);
@@ -94,24 +97,65 @@ export default function SettingsScreen() {
   const handleClearData = useCallback(() => {
     Alert.alert(
       'Clear All Data',
-      'This will permanently delete all your vault items. This action cannot be undone.\n\nAre you absolutely sure?',
+      'This will permanently delete every vault item, attachment, and category. This action cannot be undone.\n\nAre you absolutely sure?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete Everything',
           style: 'destructive',
           onPress: async () => {
-            const success = await clearVault();
-            if (success) {
+            try {
+              const authResult = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Confirm identity to erase IdLocker data',
+                fallbackLabel: 'Use device passcode',
+                cancelLabel: 'Cancel',
+                disableDeviceFallback: false,
+              });
+
+              if (!authResult.success) {
+                Alert.alert(
+                  'Authentication Required',
+                  authResult.error === 'user_cancel'
+                    ? 'Clear data cancelled.'
+                    : 'Could not verify your identity.',
+                );
+                return;
+              }
+
+              setIsClearing(true);
+
+              const cleared = await clearAllData();
+              if (!cleared) {
+                throw new Error('Failed to clear secure storage. Please try again.');
+              }
+
+              await Promise.all([refreshVault(), refreshCategories(), refreshAssets()]);
+
+              setSettings(DEFAULT_SETTINGS);
+              setSliderValue(DEFAULT_SETTINGS.autoLockTimeout);
+
               Alert.alert('Success', 'All vault data has been cleared.');
-            } else {
-              Alert.alert('Error', 'Failed to clear data. Please try again.');
+            } catch (error) {
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to clear data. Please try again.';
+              Alert.alert('Error', message);
+            } finally {
+              setIsClearing(false);
             }
           },
         },
       ],
     );
-  }, []);
+  }, [
+    refreshVault,
+    refreshCategories,
+    refreshAssets,
+    setSettings,
+    setSliderValue,
+    setIsClearing,
+  ]);
 
   const handleExportData = useCallback(async () => {
     try {
@@ -495,6 +539,8 @@ export default function SettingsScreen() {
                 onPress={handleClearData}
                 variant="danger"
                 icon="trash-outline"
+                loading={isClearing}
+                disabled={isClearing}
                 fullWidth
               />
               <ThemedText variant="caption" color="tertiary" style={styles.dangerHint}>
