@@ -407,7 +407,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingBottom: spacing.xl,
-    paddingHorizontal: spacing.base,
   },
   headerContent: {
     flexDirection: 'row',
