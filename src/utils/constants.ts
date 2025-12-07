@@ -92,7 +92,8 @@ export const ITEM_TYPE_CONFIGS: Record<VaultItemType, ItemTypeConfig> = {
         placeholder: 'Account number',
       },
       { key: 'accountType', label: 'Account Type', options: BANK_ACCOUNT_TYPES },
-      { key: 'ifsc', label: 'IFSC Code', placeholder: 'e.g., HDFC0001234', maxLength: 11 },
+      { key: 'ifsc', label: 'IFSC Code', required: true, placeholder: 'e.g., HDFC0001234', maxLength: 11 },
+      { key: 'upiId', label: 'UPI ID', placeholder: 'e.g., user@upi' },
       { key: 'swift', label: 'SWIFT/BIC Code', placeholder: 'For international transfers' },
       { key: 'branch', label: 'Branch', placeholder: 'Branch name or location' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
@@ -133,6 +134,22 @@ export const ITEM_TYPE_CONFIGS: Record<VaultItemType, ItemTypeConfig> = {
         maxLength: 4,
         placeholder: 'YYYY',
       },
+      {
+        key: 'cvv',
+        label: 'CVV',
+        sensitive: true,
+        keyboardType: 'numeric',
+        maxLength: 4,
+        placeholder: '123',
+      },
+      {
+        key: 'pin',
+        label: 'ATM PIN',
+        sensitive: true,
+        keyboardType: 'numeric',
+        maxLength: 6,
+        placeholder: '****',
+      },
       { key: 'cardholderName', label: 'Cardholder Name', placeholder: 'Name as on card' },
       {
         key: 'billingAddress',
@@ -166,6 +183,7 @@ export const ITEM_TYPE_CONFIGS: Record<VaultItemType, ItemTypeConfig> = {
       },
       { key: 'issueDate', label: 'Issue Date', placeholder: 'DD/MM/YYYY' },
       { key: 'expiryDate', label: 'Expiry Date', placeholder: 'DD/MM/YYYY' },
+      { key: 'address', label: 'Address', multiline: true, placeholder: 'Address as on ID' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
   },
@@ -273,7 +291,8 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
         placeholder: 'Account number',
       },
       { key: 'accountType', label: 'Account Type', options: BANK_ACCOUNT_TYPES },
-      { key: 'ifsc', label: 'IFSC Code', placeholder: 'e.g., HDFC0001234', maxLength: 11 },
+      { key: 'ifsc', label: 'IFSC Code', required: true, placeholder: 'e.g., HDFC0001234', maxLength: 11 },
+      { key: 'upiId', label: 'UPI ID', placeholder: 'e.g., user@upi' },
       { key: 'swift', label: 'SWIFT/BIC Code', placeholder: 'For international transfers' },
       { key: 'branch', label: 'Branch', placeholder: 'Branch name or location' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
@@ -323,6 +342,22 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
         maxLength: 4,
         placeholder: 'YYYY',
       },
+      {
+        key: 'cvv',
+        label: 'CVV',
+        sensitive: true,
+        keyboardType: 'numeric',
+        maxLength: 4,
+        placeholder: '123',
+      },
+      {
+        key: 'pin',
+        label: 'ATM PIN',
+        sensitive: true,
+        keyboardType: 'numeric',
+        maxLength: 6,
+        placeholder: '****',
+      },
       { key: 'cardholderName', label: 'Cardholder Name', placeholder: 'Name as on card' },
       {
         key: 'billingAddress',
@@ -365,6 +400,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       },
       { key: 'issueDate', label: 'Issue Date', placeholder: 'DD/MM/YYYY' },
       { key: 'expiryDate', label: 'Expiry Date', placeholder: 'DD/MM/YYYY' },
+      { key: 'address', label: 'Address', multiline: true, placeholder: 'Address as on ID' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
     createdAt: now,
@@ -613,7 +649,7 @@ export const CATEGORY_COLORS = [
 ];
 
 // Sensitive field keys that should be masked by default
-export const SENSITIVE_FIELDS = new Set(['accountNumber', 'idNumber', 'password', 'content']);
+export const SENSITIVE_FIELDS = new Set(['accountNumber', 'idNumber', 'password', 'content', 'cvv', 'pin']);
 
 // Fields that show masked preview in list
 export const PREVIEW_MASK_LENGTH = 4;
