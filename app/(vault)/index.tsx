@@ -6,26 +6,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Alert,
-  Dimensions,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DynamicCategoryCard, DynamicCategoryFilterCard } from '../../src/components/CategoryCard';
+import { DynamicCategoryFilterCard } from '../../src/components/CategoryCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { ThemedText } from '../../src/components/ThemedText';
 import { ThemedView } from '../../src/components/ThemedView';
 import { VaultItemGridCard } from '../../src/components/VaultItemGridCard';
 import { useCategories } from '../../src/context/CategoryProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
-import { useGroupedItems, useVault } from '../../src/context/VaultProvider';
+import { useVault } from '../../src/context/VaultProvider';
 import { borderRadius, layout, spacing } from '../../src/styles/theme';
-import type { CustomCategory, VaultItem, VaultItemType } from '../../src/utils/types';
+import type { VaultItem, VaultItemType } from '../../src/utils/types';
 
 type FilterType = VaultItemType | 'all';
 
@@ -33,12 +25,10 @@ export default function VaultHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { items, isLoading } = useVault();
-  const { categories, deleteCategory } = useCategories();
-  const groupedItems = useGroupedItems();
+  const { items } = useVault();
+  const { categories } = useCategories();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   // Calculate category counts dynamically
   const categoryCounts = useMemo(() => {
@@ -72,11 +62,6 @@ export default function VaultHomeScreen() {
     [router],
   );
 
-  const handleCategoryPress = useCallback((categoryId: string) => {
-    setSelectedFilter(categoryId);
-    setViewMode('list');
-  }, []);
-
   const handleAddItem = useCallback(
     (type?: VaultItemType) => {
       if (type) {
@@ -100,53 +85,6 @@ export default function VaultHomeScreen() {
     router.push('/(vault)/settings' as any);
   }, [router]);
 
-  const handleCreateCategory = useCallback(() => {
-    router.push('/(vault)/category/new' as any);
-  }, [router]);
-
-  const handleEditCategory = useCallback(
-    (category: CustomCategory) => {
-      router.push(`/(vault)/category/${category.id}` as any);
-    },
-    [router],
-  );
-
-  const handleDeleteCategory = useCallback(
-    (category: CustomCategory) => {
-      const itemCount = categoryCounts[category.id] || 0;
-
-      if (itemCount > 0) {
-        Alert.alert(
-          'Cannot Delete',
-          `This category has ${itemCount} item${
-            itemCount === 1 ? '' : 's'
-          }. Please delete or move the items first.`,
-          [{ text: 'OK' }],
-        );
-        return;
-      }
-
-      Alert.alert(
-        'Delete Category',
-        `Are you sure you want to delete "${category.label}"? This action cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              const success = await deleteCategory(category.id);
-              if (!success) {
-                Alert.alert('Error', 'Failed to delete category.');
-              }
-            },
-          },
-        ],
-      );
-    },
-    [deleteCategory, categoryCounts],
-  );
-
   // Get the selected category
   const selectedCategory = useMemo(() => {
     if (selectedFilter === 'all') return null;
@@ -155,87 +93,83 @@ export default function VaultHomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[{ paddingBottom: layout.tabBarHeight + spacing.xl }]}
-        showsVerticalScrollIndicator={false}
+      {/* Header - scrolls with content */}
+      <LinearGradient
+        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
       >
-        {/* Header - scrolls with content */}
-        <LinearGradient
-          colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.header, { paddingTop: insets.top + spacing.md }]}
+        <View style={styles.headerContent}>
+          <ThemedText variant="title" style={styles.headerTitle}>
+            IdLocker
+          </ThemedText>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleAssetsPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="folder-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleSearchPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="search" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleSettingsPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Main Content */}
+      <View style={[styles.content, { backgroundColor: colors.background }]}>
+        {/* Filter cards */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
         >
-          <View style={styles.headerContent}>
-            <ThemedText variant="title" style={styles.headerTitle}>
-              IdLocker
-            </ThemedText>
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.headerButton}
-                onPress={handleAssetsPress}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="folder-outline" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.headerButton}
-                onPress={handleSearchPress}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="search" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.headerButton}
-                onPress={handleSettingsPress}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* Main Content */}
-        <View style={[styles.content, { backgroundColor: colors.background }]}>
-          {/* Filter cards */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
+          <DynamicCategoryFilterCard
+            category={null}
+            isSelected={selectedFilter === 'all'}
+            count={categoryCounts.all}
+            onPress={() => setSelectedFilter('all')}
+          />
+          {categories.map((category) => (
             <DynamicCategoryFilterCard
-              category={null}
-              isSelected={selectedFilter === 'all'}
-              count={categoryCounts.all}
-              onPress={() => setSelectedFilter('all')}
+              key={category.id}
+              category={category}
+              isSelected={selectedFilter === category.id}
+              count={categoryCounts[category.id] || 0}
+              onPress={() => setSelectedFilter(category.id)}
             />
-            {categories.map((category) => (
-              <DynamicCategoryFilterCard
-                key={category.id}
-                category={category}
-                isSelected={selectedFilter === category.id}
-                count={categoryCounts[category.id] || 0}
-                onPress={() => setSelectedFilter(category.id)}
-              />
-            ))}
-          </ScrollView>
+          ))}
+        </ScrollView>
 
-          {/* Section header */}
-          <View style={styles.sectionHeader}>
-            <ThemedText variant="subtitle" style={styles.sectionTitle}>
-              {selectedFilter === 'all'
-                ? 'All Items'
-                : selectedCategory?.label || 'Items'}
-            </ThemedText>
-            <ThemedText variant="caption" color="secondary">
-              {viewMode === 'grid'
-                ? `${categories.length} ${categories.length === 1 ? 'category' : 'categories'}`
-                : `${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'}`}
-            </ThemedText>
-          </View>
+        {/* Section header */}
+        <View style={styles.sectionHeader}>
+          <ThemedText variant="subtitle" style={styles.sectionTitle}>
+            {selectedFilter === 'all' ? 'All Items' : selectedCategory?.label || 'Items'}
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            {`${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'}`}
+          </ThemedText>
+        </View>
 
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[{ paddingBottom: layout.tabBarHeight + spacing.xl }]}
+          showsVerticalScrollIndicator={false}
+        >
           {filteredItems.length > 0 ? (
             <View style={styles.itemsGrid}>
               {filteredItems.map((item) => (
@@ -255,8 +189,8 @@ export default function VaultHomeScreen() {
               onAction={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
             />
           )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </ThemedView>
   );
 }
@@ -309,11 +243,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingTop: spacing.sm,
+    overflow: 'hidden',
   },
   filterScroll: {
     paddingHorizontal: spacing.base,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -321,7 +256,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
     marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
     fontWeight: '700',
