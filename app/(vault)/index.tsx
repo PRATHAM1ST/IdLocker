@@ -5,8 +5,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DynamicCategoryFilterCard } from '../../src/components/CategoryCard';
 import { EmptyState } from '../../src/components/EmptyState';
@@ -25,10 +32,12 @@ export default function VaultHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { items } = useVault();
+  const { items, searchItems } = useVault();
   const { categories } = useCategories();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   // Calculate category counts dynamically
   const categoryCounts = useMemo(() => {
@@ -54,6 +63,20 @@ export default function VaultHomeScreen() {
 
     return result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [items, selectedFilter]);
+
+  // Filter and search items
+  const searchResults = useMemo(() => {
+      const trimmedQuery = searchQuery.trim();
+      const baseResults = trimmedQuery ? searchItems(trimmedQuery) : items;
+      const filteredResults =
+        selectedFilter === 'all'
+          ? baseResults
+          : baseResults.filter((item) => item.type === selectedFilter);
+  
+      return [...filteredResults].sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+    }, [items, searchItems, searchQuery, selectedFilter]);
 
   const handleItemPress = useCallback(
     (item: VaultItem) => {
@@ -84,6 +107,11 @@ export default function VaultHomeScreen() {
   const handleSettingsPress = useCallback(() => {
     router.push('/(vault)/settings' as any);
   }, [router]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+    inputRef.current?.focus();
+  }, []);
 
   // Get the selected category
   const selectedCategory = useMemo(() => {
@@ -133,6 +161,25 @@ export default function VaultHomeScreen() {
       {/* Main Content */}
       <View style={[styles.content, { backgroundColor: colors.background }]}>
         {/* Filter cards */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="rgba(255,255,255,0.6)" />
+          <TextInput
+            ref={inputRef}
+            style={styles.searchInput}
+            placeholder="Search vault items..."
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={handleClearSearch}>
+              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
+          )}
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -170,14 +217,14 @@ export default function VaultHomeScreen() {
         </View>
 
         <ScrollView
-           contentContainerStyle={{
+          contentContainerStyle={{
             paddingBottom: layout.tabBarHeight + spacing.xl,
           }}
           showsVerticalScrollIndicator={false}
         >
-          {filteredItems.length > 0 ? (
+          {searchResults.length > 0 ? (
             <View style={styles.itemsGrid}>
-              {filteredItems.map((item) => (
+              {searchResults.map((item) => (
                 <VaultItemGridCard key={item.id} item={item} onPress={handleItemPress} />
               ))}
             </View>
@@ -247,10 +294,26 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     overflow: 'hidden',
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+    marginVertical: spacing.sm,
+    marginHorizontal: spacing.base,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginLeft: spacing.sm,
+  },
   filterScroll: {
     paddingHorizontal: spacing.base,
     paddingTop: spacing.xs,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.base,
     flexGrow: 0,
     flexShrink: 0,
   },
@@ -259,7 +322,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
-    marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
   sectionTitle: {
