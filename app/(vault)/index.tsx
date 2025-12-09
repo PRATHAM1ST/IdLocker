@@ -14,6 +14,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  EntryExitTransition,
+  ZoomIn,
+  ZoomOut,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DynamicCategoryFilterCard } from '../../src/components/CategoryCard';
 import { EmptyState } from '../../src/components/EmptyState';
@@ -52,17 +60,6 @@ export default function VaultHomeScreen() {
 
     return counts;
   }, [items, categories]);
-
-  // Filter items based on selection
-  const filteredItems = useMemo(() => {
-    let result = items;
-
-    if (selectedFilter !== 'all') {
-      result = result.filter((item) => item.type === selectedFilter);
-    }
-
-    return result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  }, [items, selectedFilter]);
 
   // Filter and search items
   const searchResults = useMemo(() => {
@@ -161,7 +158,10 @@ export default function VaultHomeScreen() {
       {/* Main Content */}
       <View style={[styles.content, { backgroundColor: colors.background }]}>
         {/* Filter cards */}
-        <View style={styles.searchContainer}>
+        <Animated.View 
+          style={styles.searchContainer}
+          layout={LinearTransition.springify().damping(18)}
+        >
           <Ionicons name="search" size={20} color="rgba(255,255,255,0.6)" />
           <TextInput
             ref={inputRef}
@@ -175,11 +175,16 @@ export default function VaultHomeScreen() {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={handleClearSearch}>
-              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.6)" />
-            </TouchableOpacity>
+            <Animated.View
+              entering={ZoomIn.duration(150)}
+              exiting={ZoomOut.duration(150)}
+            >
+              <TouchableOpacity onPress={handleClearSearch}>
+                <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.6)" />
+              </TouchableOpacity>
+            </Animated.View>
           )}
-        </View>
+        </Animated.View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -207,14 +212,27 @@ export default function VaultHomeScreen() {
         </ScrollView>
 
         {/* Section header */}
-        <View style={styles.sectionHeader}>
-          <ThemedText variant="subtitle" style={styles.sectionTitle}>
-            {selectedFilter === 'all' ? 'All Items' : selectedCategory?.label || 'Items'}
-          </ThemedText>
-          <ThemedText variant="caption" color="secondary">
-            {`${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'}`}
-          </ThemedText>
-        </View>
+        <Animated.View 
+          style={styles.sectionHeader}
+          layout={LinearTransition.springify().damping(15)}
+        >
+          <Animated.View
+            key={selectedFilter}
+            entering={FadeIn.duration(200)}
+          >
+            <ThemedText variant="subtitle" style={styles.sectionTitle}>
+              {selectedFilter === 'all' ? 'All Items' : selectedCategory?.label || 'Items'}
+            </ThemedText>
+          </Animated.View>
+          <Animated.View
+            key={`count-${searchResults.length}`}
+            entering={ZoomIn.duration(200)}
+          >
+            <ThemedText variant="caption" color="secondary">
+              {`${searchResults.length} ${searchResults.length === 1 ? 'item' : 'items'}`}
+            </ThemedText>
+          </Animated.View>
+        </Animated.View>
 
         <ScrollView
           contentContainerStyle={{
@@ -224,22 +242,34 @@ export default function VaultHomeScreen() {
         >
           {searchResults.length > 0 ? (
             <View style={styles.itemsGrid}>
-              {searchResults.map((item) => (
-                <VaultItemGridCard key={item.id} item={item} onPress={handleItemPress} />
+              {searchResults.map((item, index) => (
+                <Animated.View
+                  key={item.id}
+                  entering={FadeIn.delay(index * 50).duration(300).springify()}
+                  exiting={FadeOut.duration(200)}
+                  layout={LinearTransition}
+                >
+                  <VaultItemGridCard item={item} onPress={handleItemPress} />
+                </Animated.View>
               ))}
             </View>
           ) : (
-            <EmptyState
-              icon="folder-open-outline"
-              title="No items found"
-              description={
-                selectedFilter === 'all'
-                  ? 'Your vault is empty. Add your first item to get started.'
-                  : `No ${selectedCategory?.label.toLowerCase() || 'matching'} items yet.`
-              }
-              actionLabel="Add Item"
-              onAction={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
-            />
+            <Animated.View
+              entering={FadeIn.duration(300)}
+              exiting={FadeOut.duration(200)}
+            >
+              <EmptyState
+                icon="folder-open-outline"
+                title="No items found"
+                description={
+                  selectedFilter === 'all'
+                    ? 'Your vault is empty. Add your first item to get started.'
+                    : `No ${selectedCategory?.label.toLowerCase() || 'matching'} items yet.`
+                }
+                actionLabel="Add Item"
+                onAction={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
+              />
+            </Animated.View>
           )}
         </ScrollView>
       </View>
