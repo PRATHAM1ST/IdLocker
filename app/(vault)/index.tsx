@@ -137,6 +137,10 @@ export default function VaultHomeScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
+          style={{
+            flexGrow: 0,
+            flexShrink: 0,
+          }}
         >
           <DynamicCategoryFilterCard
             category={null}
@@ -166,8 +170,9 @@ export default function VaultHomeScreen() {
         </View>
 
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={[{ paddingBottom: layout.tabBarHeight + spacing.xl }]}
+           contentContainerStyle={{
+            paddingBottom: layout.tabBarHeight + spacing.xl,
+          }}
           showsVerticalScrollIndicator={false}
         >
           {filteredItems.length > 0 ? (
@@ -197,9 +202,6 @@ export default function VaultHomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  scrollView: {
     flex: 1,
   },
   header: {
@@ -249,6 +251,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingTop: spacing.xs,
     paddingBottom: spacing.lg,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   sectionHeader: {
     flexDirection: 'row',
