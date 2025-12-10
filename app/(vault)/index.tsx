@@ -139,13 +139,6 @@ export default function VaultHomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerButton}
-              onPress={handleSearchPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="search" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
               onPress={handleSettingsPress}
               activeOpacity={0.7}
             >
