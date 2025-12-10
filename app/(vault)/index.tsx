@@ -39,7 +39,7 @@ type FilterType = VaultItemType | 'all';
 export default function VaultHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { items, searchItems } = useVault();
   const { categories } = useCategories();
 
@@ -63,17 +63,17 @@ export default function VaultHomeScreen() {
 
   // Filter and search items
   const searchResults = useMemo(() => {
-      const trimmedQuery = searchQuery.trim();
-      const baseResults = trimmedQuery ? searchItems(trimmedQuery) : items;
-      const filteredResults =
-        selectedFilter === 'all'
-          ? baseResults
-          : baseResults.filter((item) => item.type === selectedFilter);
-  
-      return [...filteredResults].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      );
-    }, [items, searchItems, searchQuery, selectedFilter]);
+    const trimmedQuery = searchQuery.trim();
+    const baseResults = trimmedQuery ? searchItems(trimmedQuery) : items;
+    const filteredResults =
+      selectedFilter === 'all'
+        ? baseResults
+        : baseResults.filter((item) => item.type === selectedFilter);
+
+    return [...filteredResults].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  }, [items, searchItems, searchQuery, selectedFilter]);
 
   const handleItemPress = useCallback(
     (item: VaultItem) => {
@@ -158,16 +158,23 @@ export default function VaultHomeScreen() {
       {/* Main Content */}
       <View style={[styles.content, { backgroundColor: colors.background }]}>
         {/* Filter cards */}
-        <Animated.View 
-          style={styles.searchContainer}
+        <Animated.View
+          style={{
+            ...styles.searchContainer,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.1)',
+          }}
           layout={LinearTransition.springify().damping(18)}
         >
-          <Ionicons name="search" size={20} color="rgba(255,255,255,0.6)" />
+          <Ionicons
+            name="search"
+            size={20}
+            color={isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'}
+          />
           <TextInput
             ref={inputRef}
-            style={styles.searchInput}
+            style={{ ...styles.searchInput, color: colors.text }}
             placeholder="Search vault items..."
-            placeholderTextColor="rgba(255,255,255,0.5)"
+            placeholderTextColor={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
@@ -175,12 +182,13 @@ export default function VaultHomeScreen() {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <Animated.View
-              entering={ZoomIn.duration(150)}
-              exiting={ZoomOut.duration(150)}
-            >
+            <Animated.View entering={ZoomIn.duration(150)} exiting={ZoomOut.duration(150)}>
               <TouchableOpacity onPress={handleClearSearch}>
-                <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.6)" />
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'}
+                x/>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -212,22 +220,16 @@ export default function VaultHomeScreen() {
         </ScrollView>
 
         {/* Section header */}
-        <Animated.View 
+        <Animated.View
           style={styles.sectionHeader}
           layout={LinearTransition.springify().damping(15)}
         >
-          <Animated.View
-            key={selectedFilter}
-            entering={FadeIn.duration(200)}
-          >
+          <Animated.View key={selectedFilter} entering={FadeIn.duration(200)}>
             <ThemedText variant="subtitle" style={styles.sectionTitle}>
               {selectedFilter === 'all' ? 'All Items' : selectedCategory?.label || 'Items'}
             </ThemedText>
           </Animated.View>
-          <Animated.View
-            key={`count-${searchResults.length}`}
-            entering={ZoomIn.duration(200)}
-          >
+          <Animated.View key={`count-${searchResults.length}`} entering={ZoomIn.duration(200)}>
             <ThemedText variant="caption" color="secondary">
               {`${searchResults.length} ${searchResults.length === 1 ? 'item' : 'items'}`}
             </ThemedText>
@@ -245,7 +247,9 @@ export default function VaultHomeScreen() {
               {searchResults.map((item, index) => (
                 <Animated.View
                   key={item.id}
-                  entering={FadeIn.delay(index * 50).duration(300).springify()}
+                  entering={FadeIn.delay(index * 50)
+                    .duration(300)
+                    .springify()}
                   exiting={FadeOut.duration(200)}
                   layout={LinearTransition}
                 >
@@ -254,10 +258,7 @@ export default function VaultHomeScreen() {
               ))}
             </View>
           ) : (
-            <Animated.View
-              entering={FadeIn.duration(300)}
-              exiting={FadeOut.duration(200)}
-            >
+            <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
               <EmptyState
                 icon="folder-open-outline"
                 title="No items found"
@@ -267,7 +268,9 @@ export default function VaultHomeScreen() {
                     : `No ${selectedCategory?.label.toLowerCase() || 'matching'} items yet.`
                 }
                 actionLabel="Add Item"
-                onAction={() => handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
+                onAction={() =>
+                  handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)
+                }
               />
             </Animated.View>
           )}
@@ -337,7 +340,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
     marginLeft: spacing.sm,
   },
   filterScroll: {
