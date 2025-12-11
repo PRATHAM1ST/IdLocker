@@ -364,7 +364,7 @@ export default function SettingsScreen() {
       <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
         {title}
       </ThemedText>
-      <View style={[styles.sectionContent, shadows.sm]}>{children}</View>
+      <View style={[styles.sectionContent]}>{children}</View>
     </View>
   );
 

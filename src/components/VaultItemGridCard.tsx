@@ -127,25 +127,17 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
           end={{ x: 1, y: 1 }}
           style={styles.headerGradient}
         >
-          <View style={styles.iconContainer}>
-            <Ionicons
-              name={(category?.icon || 'folder-outline') as any}
-              size={28}
-              color="#FFFFFF"
-            />
-          </View>
-          <View style={styles.typeBadge}>
+          {/* <View style={styles.typeBadge}>
             <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
-          </View>
+          </View> */}
+          <ThemedText variant="label" numberOfLines={2} style={styles.label}>
+            {item.label}
+          </ThemedText>
         </LinearGradient>
       )}
 
       {/* Content section */}
       <View style={styles.content}>
-        <ThemedText variant="label" numberOfLines={2} style={styles.label}>
-          {item.label}
-        </ThemedText>
-
         <View style={{ flexGrow: 1 }}>
           <ThemedText
             variant="caption"
@@ -170,6 +162,13 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
 
         {/* Footer with time and image indicator */}
         <View style={styles.footer}>
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name={(category?.icon || 'folder-outline') as any}
+              size={24}
+              color={isDark ? categoryColor.text : categoryColor.icon}
+            />
+          </View>
           <View style={styles.footerLeft}>
             <View style={[styles.dot, { backgroundColor: categoryColor.icon }]} />
             <ThemedText variant="caption" color="tertiary" style={styles.time}>
@@ -196,21 +195,25 @@ const styles = StyleSheet.create({
   },
   // Gradient header (no image)
   headerGradient: {
-    height: 72,
+    // height: 72,
     padding: spacing.md,
+    // paddingTop: spacing.xl,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    // width: 48,
+    // height: 48,
     borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    // backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   typeBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -295,8 +298,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: '600',
-    marginBottom: spacing.xs,
-    lineHeight: 20,
+    fontSize: typography.sizes.base,
+    color: '#FFFFFF',
+    padding: 0,
+    margin: 0,
   },
   secondaryInfo: {
     marginBottom: 0,
@@ -307,7 +312,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   preview: {
-    fontFamily: 'monospace',
     fontSize: typography.sizes.xs,
   },
   footer: {

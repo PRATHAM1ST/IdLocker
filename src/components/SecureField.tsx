@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
   value: {
     flex: 1,
     fontSize: 15,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   maskedValue: {
     // letterSpacing: 2,

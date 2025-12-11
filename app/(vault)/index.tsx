@@ -18,7 +18,6 @@ import Animated, {
   FadeIn,
   FadeOut,
   LinearTransition,
-  EntryExitTransition,
   ZoomIn,
   ZoomOut,
 } from 'react-native-reanimated';
@@ -92,10 +91,6 @@ export default function VaultHomeScreen() {
     },
     [router],
   );
-
-  const handleSearchPress = useCallback(() => {
-    router.push('/(vault)/search' as any);
-  }, [router]);
 
   const handleAssetsPress = useCallback(() => {
     router.push('/(vault)/assets' as any);

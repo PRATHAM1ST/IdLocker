@@ -7,26 +7,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 import {
-  AppState,
-  AppStateStatus,
-  Modal,
-  PanResponder,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-  View,
+    AppState,
+    AppStateStatus,
+    Modal,
+    PanResponder,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from 'react-native';
+import { shouldSkipAuth } from '../config';
 import { loadSettings, updateSettings } from '../storage/vaultStorage';
 import { borderRadius, darkColors, lightColors, spacing } from '../styles/theme';
 import { DEFAULT_SETTINGS } from '../utils/constants';
@@ -68,8 +69,8 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
   const isDark = colorScheme === 'dark';
   const colors = isDark ? darkColors : lightColors;
 
-  // Auth state
-  const [isLocked, setIsLocked] = useState(true);
+  // Auth state - skip auth in dev mode if configured
+  const [isLocked, setIsLocked] = useState(!shouldSkipAuth());
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,6 +95,11 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
 
   // Check biometric capabilities on mount
   useEffect(() => {
+    // Log if auth is skipped in dev mode
+    if (shouldSkipAuth()) {
+      logger.info('🔓 Authentication DISABLED (SKIP_AUTH=true in devConfig)');
+    }
+
     const checkBiometrics = async () => {
       try {
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -280,6 +286,13 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
 
   // Unlock function
   const unlock = useCallback(async (): Promise<boolean> => {
+    // Auto-unlock if auth is skipped in dev mode
+    if (shouldSkipAuth()) {
+      setIsLocked(false);
+      logger.debug('Unlock skipped - SKIP_AUTH is enabled');
+      return true;
+    }
+
     if (isAuthenticating) return false;
 
     setIsAuthenticating(true);
@@ -321,6 +334,11 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
 
   // Lock function
   const lock = useCallback(() => {
+    // Don't lock if auth is skipped in dev mode
+    if (shouldSkipAuth()) {
+      logger.debug('Lock skipped - SKIP_AUTH is enabled');
+      return;
+    }
     setIsLocked(true);
     setError(null);
     logger.authEvent('lock', true);
