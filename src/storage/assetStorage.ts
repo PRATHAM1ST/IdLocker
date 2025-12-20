@@ -621,3 +621,4 @@ export async function clearAssetsStorage(): Promise<void> {
     throw error;
   }
 }
+

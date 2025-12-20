@@ -336,6 +336,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.base,
     flexGrow: 0,
     flexShrink: 0,
+    gap: spacing.sm,
   },
   sectionHeader: {
     flexDirection: 'row',

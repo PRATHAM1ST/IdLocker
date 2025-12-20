@@ -225,8 +225,8 @@ interface CategoryFilterCardProps {
   onPress: () => void;
 }
 
-const FILTER_CARD_WIDTH = 90;
-const FILTER_CARD_HEIGHT = 72;
+const FILTER_CARD_WIDTH = 80;
+const FILTER_CARD_HEIGHT = 64;
 
 export function CategoryFilterCard({
   type,
@@ -604,25 +604,27 @@ const styles = StyleSheet.create({
     height: FILTER_CARD_HEIGHT,
     borderRadius: borderRadius.sm,
     overflow: 'hidden',
-    marginRight: spacing.sm,
   },
   filterGradient: {
     flex: 1,
     padding: spacing.sm,
-    justifyContent: 'space-between',
+    // justifyContent: 'space-between',
   },
   filterIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 16,
+    height: 16,
+    // borderRadius: 6,
+    // backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    // alignItems: 'center',
+    // justifyContent: 'center',
+    flexGrow: 1,
   },
   filterLabelContainer: {
+    height: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   filterLabel: {
     color: '#FFFFFF',
@@ -637,8 +639,8 @@ const styles = StyleSheet.create({
   },
   selectedIndicator: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 8,
+    right: 8,
   },
   // Chip styles
   chip: {
