@@ -9,21 +9,37 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LockOverlay } from '../../src/components/LockOverlay';
+import { useCategories } from '../../src/context/CategoryProvider';
+import { useHomeFilter } from '../../src/context/HomeFilterProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { borderRadius, darkShadows, shadows, spacing } from '../../src/styles/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function VaultLayout() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { homeFilter } = useHomeFilter();
+  const { getCategoryById } = useCategories();
 
   // Prevent screen capture on all vault screens
   usePreventScreenCapture();
 
+  // Get the selected category for color (when on home screen with a filter)
+  const selectedCategory = useMemo(() => {
+    if (homeFilter === 'all') return null;
+    return getCategoryById(homeFilter) || null;
+  }, [homeFilter, getCategoryById]);
+
+  console.log('selectedCategory', selectedCategory);
+
   // Check if we're on screens that shouldn't show the add button
   const hideAddButton =
-    pathname.includes('/add') || pathname.includes('/edit') || pathname.includes('/item/') || pathname.includes('/category/');
+    pathname.includes('/add') ||
+    pathname.includes('/edit') ||
+    pathname.includes('/item/') ||
+    pathname.includes('/category/');
 
   // Determine context-aware add button params based on current route
   const addButtonConfig = useMemo(() => {
@@ -47,13 +63,22 @@ export default function VaultLayout() {
       };
     }
 
+    // On home screen with a category filter selected - pre-select that category
+    if (homeFilter !== 'all') {
+      return {
+        pathname: '/(vault)/add' as const,
+        params: { type: homeFilter },
+        icon: 'add' as const,
+      };
+    }
+
     // Default - show category selector
     return {
       pathname: '/(vault)/add' as const,
       params: {},
       icon: 'add' as const,
     };
-  }, [pathname]);
+  }, [pathname, homeFilter]);
 
   const handleAddPress = useCallback(() => {
     const params = addButtonConfig.params || {};
@@ -137,7 +162,9 @@ export default function VaultLayout() {
           style={[
             styles.floatingAddButton,
             {
-              backgroundColor: colors.accent,
+              backgroundColor: selectedCategory?.color.bg
+                ? `linear-gradient(to bottom, ${selectedCategory?.color.gradientStart}, ${selectedCategory?.color.gradientEnd})`
+                : colors.accent,
               bottom: 24 + Math.max(insets.bottom, spacing.sm),
               ...currentShadows.xl,
             },
@@ -145,7 +172,17 @@ export default function VaultLayout() {
           onPress={handleAddPress}
           activeOpacity={0.85}
         >
-          <Ionicons name={addButtonConfig.icon} size={32} color="#FFFFFF" />
+          <LinearGradient
+            colors={[
+              selectedCategory?.color.gradientStart ?? colors.accent,
+              selectedCategory?.color.gradientEnd ?? colors.accent,
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.floatingAddButton}
+          >
+            <Ionicons name={addButtonConfig.icon} size={32} color="#FFFFFF" />
+          </LinearGradient>
         </TouchableOpacity>
       )}
 

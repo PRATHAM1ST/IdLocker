@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   ScrollView,
@@ -28,6 +28,7 @@ import { ThemedText } from '../../src/components/ThemedText';
 import { ThemedView } from '../../src/components/ThemedView';
 import { VaultItemGridCard } from '../../src/components/VaultItemGridCard';
 import { useCategories } from '../../src/context/CategoryProvider';
+import { useHomeFilter } from '../../src/context/HomeFilterProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
 import { borderRadius, layout, spacing } from '../../src/styles/theme';
@@ -41,8 +42,14 @@ export default function VaultHomeScreen() {
   const { colors, isDark } = useTheme();
   const { items, searchItems } = useVault();
   const { categories } = useCategories();
+  const { setHomeFilter } = useHomeFilter();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+
+  // Sync selected filter to context for FAB to access
+  useEffect(() => {
+    setHomeFilter(selectedFilter);
+  }, [selectedFilter, setHomeFilter]);
   const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<TextInput>(null);
 

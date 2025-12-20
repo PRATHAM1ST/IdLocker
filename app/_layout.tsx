@@ -12,6 +12,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AssetProvider } from '../src/context/AssetProvider';
 import { AuthLockProvider } from '../src/context/AuthLockProvider';
 import { CategoryProvider } from '../src/context/CategoryProvider';
+import { HomeFilterProvider } from '../src/context/HomeFilterProvider';
 import { ThemeProvider, useTheme } from '../src/context/ThemeProvider';
 import { VaultProvider } from '../src/context/VaultProvider';
 import { loadSettings } from '../src/storage/vaultStorage';
@@ -76,11 +77,13 @@ export default function RootLayout() {
         <ThemeProvider initialPreference={initialSettings?.theme}>
           <AuthLockProvider>
             <CategoryProvider>
-              <VaultProvider>
-                <AssetProvider>
-                  <RootLayoutNav />
-                </AssetProvider>
-              </VaultProvider>
+              <HomeFilterProvider>
+                <VaultProvider>
+                  <AssetProvider>
+                    <RootLayoutNav />
+                  </AssetProvider>
+                </VaultProvider>
+              </HomeFilterProvider>
             </CategoryProvider>
           </AuthLockProvider>
         </ThemeProvider>
