@@ -8,15 +8,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../../src/components/Button';
@@ -34,6 +34,7 @@ import { assetToImageAttachment } from '../../../src/utils/assetHelpers';
 import { SENSITIVE_FIELDS } from '../../../src/utils/constants';
 import type { Asset, AssetType } from '../../../src/utils/types';
 import { formatCardExpiry } from '../../../src/utils/validation';
+import Animated from 'react-native-reanimated';
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -278,9 +279,11 @@ export default function ItemDetailScreen() {
             <View style={styles.iconContainer}>
               <Ionicons name={category.icon as any} size={36} color="rgba(255, 255, 255, 0.95)" />
             </View>
-            <ThemedText variant="title" style={styles.headerTitle}>
-              {item.label}
-            </ThemedText>
+            <Animated.View sharedTransitionTag="label">
+              <ThemedText variant="title" style={styles.headerTitle}>
+                {item.label}
+              </ThemedText>
+            </Animated.View>
             <View style={styles.typeBadge}>
               <ThemedText variant="caption" style={styles.typeBadgeText}>
                 {category.label}
@@ -468,7 +471,9 @@ export default function ItemDetailScreen() {
                   </ThemedText>
                   <ThemedText variant="caption" color="secondary">
                     {selectedAsset.type === 'image'
-                      ? `${selectedAsset.width}×${selectedAsset.height} • ${formatFileSize(selectedAsset.size)}`
+                      ? `${selectedAsset.width}×${selectedAsset.height} • ${formatFileSize(
+                          selectedAsset.size,
+                        )}`
                       : formatFileSize(selectedAsset.size)}
                   </ThemedText>
                 </View>

@@ -17,6 +17,7 @@ interface EmptyStateProps {
   actionLabel?: string;
   onAction?: () => void;
   style?: ViewStyle;
+  actionButtonColor?: string;
 }
 
 export function EmptyState({
@@ -26,6 +27,7 @@ export function EmptyState({
   actionLabel,
   onAction,
   style,
+  actionButtonColor = 'accent',
 }: EmptyStateProps) {
   const { colors } = useTheme();
 
@@ -46,7 +48,7 @@ export function EmptyState({
       )}
 
       {actionLabel && onAction && (
-        <Button title={actionLabel} onPress={onAction} variant="primary" style={styles.button} />
+        <Button title={actionLabel} onPress={onAction} variant="primary" style={{...styles.button, backgroundColor: actionButtonColor}} />
       )}
     </View>
   );

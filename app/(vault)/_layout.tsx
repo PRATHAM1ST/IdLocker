@@ -14,6 +14,9 @@ import { useHomeFilter } from '../../src/context/HomeFilterProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { borderRadius, darkShadows, shadows, spacing } from '../../src/styles/theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { setDynamicFeatureFlag } from 'react-native-reanimated';
+
+setDynamicFeatureFlag("EXAMPLE_DYNAMIC_FLAG", true);
 
 export default function VaultLayout() {
   const { colors, isDark } = useTheme();

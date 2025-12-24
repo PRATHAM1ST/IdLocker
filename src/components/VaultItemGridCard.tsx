@@ -13,6 +13,8 @@ import { ThemedText } from './ThemedText';
 import { spacing, borderRadius, shadows, typography } from '../styles/theme';
 import type { VaultItem } from '../utils/types';
 import { getItemPreview, formatCardExpiry } from '../utils/validation';
+import { GradientBorderView } from '@good-react-native/gradient-border';
+import Animated from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = spacing.md;
@@ -93,94 +95,115 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
       onPress={() => onPress(item)}
       activeOpacity={0.7}
     >
-      {/* Header section - Image or Gradient */}
-      {hasImages && primaryImage ? (
-        <View style={styles.imageHeader}>
-          <Image source={{ uri: primaryImage.uri }} style={styles.headerImage} resizeMode="cover" />
-          {/* Overlay gradient for readability */}
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.imageOverlay} />
-          {/* Category badge on image */}
-          <View style={styles.imageHeaderBadges}>
-            <View style={[styles.categoryBadge, { backgroundColor: categoryColor.gradientStart }]}>
+      <LinearGradient
+        colors={['rgba(255, 255, 255, 1)', 'transparent', 'transparent', 'rgba(255, 255, 255, 1)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          borderRadius: borderRadius.xl,
+          padding: 1,
+        }}
+      >
+        {/* Header section - Image or Gradient */}
+        {hasImages && primaryImage ? (
+          <View style={styles.imageHeader}>
+            <Image
+              source={{ uri: primaryImage.uri }}
+              style={styles.headerImage}
+              resizeMode="cover"
+            />
+            {/* Overlay gradient for readability */}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.7)']}
+              style={styles.imageOverlay}
+            />
+            {/* Category badge on image */}
+            <View style={styles.imageHeaderBadges}>
+              <View
+                style={[styles.categoryBadge, { backgroundColor: categoryColor.gradientStart }]}
+              >
+                <Ionicons
+                  name={(category?.icon || 'folder-outline') as any}
+                  size={12}
+                  color="#FFFFFF"
+                />
+              </View>
+              {imageCount > 1 && (
+                <View style={styles.imageCountBadge}>
+                  <Ionicons name="images" size={10} color="#FFFFFF" />
+                  <ThemedText style={styles.imageCountText}>{imageCount}</ThemedText>
+                </View>
+              )}
+            </View>
+            {/* Type badge at bottom */}
+            <View style={styles.typeBadgeOnImage}>
+              <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
+            </View>
+          </View>
+        ) : (
+          <LinearGradient
+            colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
+          >
+            {/* <View style={styles.typeBadge}>
+            <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
+          </View> */}
+            <Animated.View sharedTransitionTag="label">
+              <ThemedText variant="label" numberOfLines={2} style={styles.label}>
+                {item.label}
+              </ThemedText>
+            </Animated.View>
+          </LinearGradient>
+        )}
+
+        {/* Content section */}
+        <View style={{ ...styles.content, backgroundColor: colors.card }}>
+          <View style={{ flexGrow: 1 }}>
+            <ThemedText
+              variant="caption"
+              color="secondary"
+              numberOfLines={1}
+              style={styles.secondaryInfo}
+            >
+              {secondaryInfo}
+            </ThemedText>
+
+            <View style={styles.previewRow}>
+              <ThemedText
+                variant="bodySmall"
+                color="tertiary"
+                numberOfLines={1}
+                style={styles.preview}
+              >
+                {preview}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Footer with time and image indicator */}
+          <View style={styles.footer}>
+            <View style={styles.iconContainer}>
               <Ionicons
                 name={(category?.icon || 'folder-outline') as any}
-                size={12}
-                color="#FFFFFF"
+                size={24}
+                color={isDark ? categoryColor.text : categoryColor.icon}
               />
             </View>
-            {imageCount > 1 && (
-              <View style={styles.imageCountBadge}>
-                <Ionicons name="images" size={10} color="#FFFFFF" />
-                <ThemedText style={styles.imageCountText}>{imageCount}</ThemedText>
+            <View style={styles.footerLeft}>
+              <ThemedText variant="caption" color="tertiary" style={styles.time}>
+                {lastUpdated}
+              </ThemedText>
+            </View>
+            {hasImages && (
+              <View style={styles.attachmentIndicator}>
+                <Ionicons name="attach" size={12} color={colors.textTertiary} />
               </View>
             )}
           </View>
-          {/* Type badge at bottom */}
-          <View style={styles.typeBadgeOnImage}>
-            <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
-          </View>
         </View>
-      ) : (
-        <LinearGradient
-          colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
-          {/* <View style={styles.typeBadge}>
-            <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
-          </View> */}
-          <ThemedText variant="label" numberOfLines={2} style={styles.label}>
-            {item.label}
-          </ThemedText>
-        </LinearGradient>
-      )}
-
-      {/* Content section */}
-      <View style={styles.content}>
-        <View style={{ flexGrow: 1 }}>
-          <ThemedText
-            variant="caption"
-            color="secondary"
-            numberOfLines={1}
-            style={styles.secondaryInfo}
-          >
-            {secondaryInfo}
-          </ThemedText>
-
-          <View style={styles.previewRow}>
-            <ThemedText
-              variant="bodySmall"
-              color="tertiary"
-              numberOfLines={1}
-              style={styles.preview}
-            >
-              {preview}
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* Footer with time and image indicator */}
-        <View style={styles.footer}>
-          <View style={styles.iconContainer}>
-            <Ionicons
-              name={(category?.icon || 'folder-outline') as any}
-              size={24}
-              color={isDark ? categoryColor.text : categoryColor.icon}
-            />
-          </View>
-          <View style={styles.footerLeft}>
-            <ThemedText variant="caption" color="tertiary" style={styles.time}>
-              {lastUpdated}
-            </ThemedText>
-          </View>
-          {hasImages && (
-            <View style={styles.attachmentIndicator}>
-              <Ionicons name="attach" size={12} color={colors.textTertiary} />
-            </View>
-          )}
-        </View>
-      </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
@@ -200,12 +223,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderTopRightRadius: borderRadius.xl - 1,
+    borderTopLeftRadius: borderRadius.xl - 1,
   },
   iconContainer: {
     // width: 48,
     // height: 48,
     borderRadius: borderRadius.md,
-    // backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -294,6 +318,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingTop: spacing.sm,
     justifyContent: 'space-between',
+    borderBottomRightRadius: borderRadius.xl - 1,
+    borderBottomLeftRadius: borderRadius.xl - 1,
   },
   label: {
     fontWeight: '600',

@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Swipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -52,6 +53,7 @@ export default function VaultHomeScreen() {
   }, [selectedFilter, setHomeFilter]);
   const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<TextInput>(null);
+  const swipeableRef = useRef<SwipeableMethods>(null);
 
   // Calculate category counts dynamically
   const categoryCounts = useMemo(() => {
@@ -118,6 +120,102 @@ export default function VaultHomeScreen() {
     return categories.find((c) => c.id === selectedFilter) || null;
   }, [selectedFilter, categories]);
 
+  // Create unified filter list for swipe navigation
+  const filterList = useMemo(() => {
+    return ['all' as FilterType, ...categories.map((c) => c.id as FilterType)];
+  }, [categories]);
+
+  const currentFilterIndex = filterList.indexOf(selectedFilter);
+
+  // Get previous and next category info for swipe indicators
+  const prevCategory = useMemo(() => {
+    if (currentFilterIndex <= 0) return null;
+    const prevFilter = filterList[currentFilterIndex - 1];
+    if (prevFilter === 'all')
+      return {
+        id: 'all',
+        label: 'All Items',
+        icon: 'apps',
+        color: { gradientStart: colors.accent, gradientEnd: colors.accentLight },
+      };
+    return categories.find((c) => c.id === prevFilter) || null;
+  }, [currentFilterIndex, filterList, categories]);
+
+  const nextCategory = useMemo(() => {
+    if (currentFilterIndex >= filterList.length - 1) return null;
+    const nextFilter = filterList[currentFilterIndex + 1];
+    if (nextFilter === 'all')
+      return {
+        id: 'all',
+        label: 'All Items',
+        icon: 'apps',
+        color: { gradientStart: colors.accent, gradientEnd: colors.accentLight },
+      };
+    return categories.find((c) => c.id === nextFilter) || null;
+  }, [currentFilterIndex, filterList, categories]);
+
+  // Render right swipe action (shows next category)
+  const renderRightActions = useCallback(() => {
+    if (!nextCategory) return null;
+    return (
+      <View style={[styles.swipeAction, styles.swipeActionRight]}>
+        <View
+          style={[
+            styles.swipeActionContent,
+            { backgroundColor: nextCategory?.color?.gradientStart, borderRadius: borderRadius.md },
+          ]}
+        >
+          <Ionicons name={(nextCategory.icon || 'folder') as any} size={24} color={colors.text} />
+          <ThemedText variant="caption" style={styles.swipeActionText} color="primary">
+            {nextCategory.label}
+          </ThemedText>
+          <Ionicons name="chevron-forward" size={20} color={colors.text} />
+        </View>
+      </View>
+    );
+  }, [nextCategory, isDark, colors]);
+
+  // Render left swipe action (shows previous category)
+  const renderLeftActions = useCallback(() => {
+    if (!prevCategory) return null;
+    return (
+      <View style={[styles.swipeAction, styles.swipeActionLeft]}>
+        <View
+          style={[
+            styles.swipeActionContent,
+            { backgroundColor: prevCategory?.color?.gradientStart, borderRadius: borderRadius.md },
+          ]}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
+          <ThemedText variant="caption" style={styles.swipeActionText} color="primary">
+            {prevCategory.label}
+          </ThemedText>
+          <Ionicons name={(prevCategory.icon || 'folder') as any} size={24} color={colors.text} />
+        </View>
+      </View>
+    );
+  }, [prevCategory, isDark, colors]);
+
+  // Handle swipe gesture to navigate between categories
+  const handleSwipeOpen = useCallback(
+    (direction: 'left' | 'right') => {
+      if (direction === 'right') {
+        // Swipe left (reveals right side) → go to PREVIOUS
+        if (currentFilterIndex > 0) {
+          setSelectedFilter(filterList[currentFilterIndex - 1]);
+        }
+      } else {
+        // Swipe right (reveals left side) → go to NEXT
+        if (currentFilterIndex < filterList.length - 1) {
+          setSelectedFilter(filterList[currentFilterIndex + 1]);
+        }
+      }
+      // Close swipeable after action
+      swipeableRef.current?.close();
+    },
+    [currentFilterIndex, filterList],
+  );
+
   return (
     <ThemedView style={styles.container}>
       {/* Header - scrolls with content */}
@@ -153,9 +251,11 @@ export default function VaultHomeScreen() {
       {/* Main Content */}
       <View style={[styles.content, { backgroundColor: colors.background }]}>
         {/* Filter cards */}
+
         <Animated.View
           style={{
             ...styles.searchContainer,
+            borderRadius: borderRadius.sm - 1,
             backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.1)',
           }}
           layout={LinearTransition.springify().damping(18)}
@@ -183,7 +283,8 @@ export default function VaultHomeScreen() {
                   name="close-circle"
                   size={20}
                   color={isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'}
-                x/>
+                  x
+                />
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -231,45 +332,62 @@ export default function VaultHomeScreen() {
           </Animated.View>
         </Animated.View>
 
-        <ScrollView
-          contentContainerStyle={{
-            paddingBottom: layout.tabBarHeight + spacing.xl,
-          }}
-          showsVerticalScrollIndicator={false}
+        <Swipeable
+          ref={swipeableRef}
+          onSwipeableOpen={handleSwipeOpen}
+          renderLeftActions={prevCategory ? renderLeftActions : undefined}
+          renderRightActions={nextCategory ? renderRightActions : undefined}
         >
-          {searchResults.length > 0 ? (
-            <View style={styles.itemsGrid}>
-              {searchResults.map((item, index) => (
-                <Animated.View
-                  key={item.id}
-                  entering={FadeIn.delay(index * 50)
-                    .duration(300)
-                    .springify()}
-                  exiting={FadeOut.duration(200)}
-                  layout={LinearTransition}
-                >
-                  <VaultItemGridCard item={item} onPress={handleItemPress} />
-                </Animated.View>
-              ))}
-            </View>
-          ) : (
-            <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
-              <EmptyState
-                icon="folder-open-outline"
-                title="No items found"
-                description={
-                  selectedFilter === 'all'
-                    ? 'Your vault is empty. Add your first item to get started.'
-                    : `No ${selectedCategory?.label.toLowerCase() || 'matching'} items yet.`
-                }
-                actionLabel="Add Item"
-                onAction={() =>
-                  handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)
-                }
-              />
-            </Animated.View>
-          )}
-        </ScrollView>
+          <ScrollView
+            contentContainerStyle={{
+              paddingBottom: 500,
+              backgroundColor: colors.background,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {searchResults.length > 0 ? (
+              <View style={styles.itemsGrid}>
+                {searchResults.map((item, index) => (
+                  <Animated.View
+                    key={item.id}
+                    entering={FadeIn.delay(index * 50)
+                      .duration(300)
+                      .springify()}
+                    exiting={FadeOut.duration(300).springify()}
+                    layout={LinearTransition}
+                  >
+                    <VaultItemGridCard item={item} onPress={handleItemPress} />
+                  </Animated.View>
+                ))}
+              </View>
+            ) : (
+              <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
+                <EmptyState
+                  icon={
+                    selectedFilter === 'all'
+                      ? 'folder-open-outline'
+                      : (selectedCategory?.icon as any)
+                  }
+                  title={
+                    selectedFilter === 'all'
+                      ? 'No items found'
+                      : `No ${selectedCategory?.label.toLowerCase()} items found.`
+                  }
+                  description={
+                    selectedFilter === 'all'
+                      ? 'Your vault is empty. Add your first item to get started.'
+                      : `Please add your first ${selectedCategory?.label.toLowerCase()} item to get started or change the filter to see other items.`
+                  }
+                  actionLabel="Add Item"
+                  onAction={() =>
+                    handleAddItem(selectedFilter === 'all' ? undefined : selectedFilter)
+                  }
+                  actionButtonColor={selectedCategory?.color.gradientStart}
+                />
+              </Animated.View>
+            )}
+          </ScrollView>
+        </Swipeable>
       </View>
     </ThemedView>
   );
@@ -395,5 +513,26 @@ const styles = StyleSheet.create({
   },
   createCategoryHint: {
     fontSize: 11,
+  },
+  swipeAction: {
+    justifyContent: 'flex-start',
+    paddingHorizontal: spacing.md,
+  },
+  swipeActionLeft: {
+    alignItems: 'flex-start',
+  },
+  swipeActionRight: {
+    alignItems: 'flex-end',
+  },
+  swipeActionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  swipeActionText: {
+    fontWeight: '600',
   },
 });

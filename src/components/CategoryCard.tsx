@@ -324,32 +324,47 @@ export function DynamicCategoryFilterCard({
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={gradientColors}
+        colors={['rgba(255, 255, 255, 1)', 'transparent', 'transparent', 'rgba(255, 255, 255, 1)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.filterGradient}
+        style={{
+          borderRadius: borderRadius.sm,
+          padding: 1,
+          flex: 1,
+        }}
       >
-        {/* Icon */}
-        <View style={styles.filterIconContainer}>
-          <Ionicons name={icon as any} size={16} color="rgba(255, 255, 255, 0.9)" />
-        </View>
-
-        {/* Label and count */}
-        <View style={styles.filterLabelContainer}>
-          <ThemedText variant="caption" style={styles.filterLabel} numberOfLines={1}>
-            {label}
-          </ThemedText>
-          <ThemedText variant="caption" style={styles.filterCount}>
-            {count}
-          </ThemedText>
-        </View>
-
-        {/* Selection indicator */}
-        {isSelected && (
-          <View style={styles.selectedIndicator}>
-            <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            flex: 1,
+            padding: spacing.sm,
+            borderRadius: borderRadius.sm - 1,
+          }}
+        >
+          {/* Icon */}
+          <View style={styles.filterIconContainer}>
+            <Ionicons name={icon as any} size={16} color="rgba(255, 255, 255, 0.9)" />
           </View>
-        )}
+
+          {/* Label and count */}
+          <View style={styles.filterLabelContainer}>
+            <ThemedText variant="caption" style={styles.filterLabel} numberOfLines={1}>
+              {label}
+            </ThemedText>
+            <ThemedText variant="caption" style={styles.filterCount}>
+              {count}
+            </ThemedText>
+          </View>
+
+          {/* Selection indicator */}
+          {isSelected && (
+            <View style={styles.selectedIndicator}>
+              <Ionicons name="checkmark-circle" size={12} color="#FFFFFF" />
+            </View>
+          )}
+        </LinearGradient>
       </LinearGradient>
     </TouchableOpacity>
   );
