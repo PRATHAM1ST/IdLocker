@@ -7,25 +7,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import {
-    AppState,
-    AppStateStatus,
-    Modal,
-    PanResponder,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  AppState,
+  AppStateStatus,
+  Modal,
+  PanResponder,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from 'react-native';
 import { shouldSkipAuth } from '../config';
 import { loadSettings, updateSettings } from '../storage/vaultStorage';
@@ -135,6 +135,13 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
     });
   }, []);
 
+  // Refs for functions used in app state handler to avoid stale closures
+  const lockRef = useRef(() => {
+    setIsLocked(true);
+    setError(null);
+    logger.authEvent('lock', true);
+  });
+
   // Handle app state changes (background/foreground)
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -142,6 +149,12 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
         // App going to background - record time
         backgroundTimeRef.current = Date.now();
         logger.info('App backgrounded');
+
+        // Clear idle timer when going to background (JS timers don't run in background)
+        if (idleTimerRef.current) {
+          clearInterval(idleTimerRef.current);
+          idleTimerRef.current = null;
+        }
 
         // Hide warning if app goes to background
         if (showLogoutWarning) {
@@ -153,23 +166,43 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
           }
         }
       } else if (nextAppState === 'active') {
-        // App coming to foreground - check if we should show warning
+        // App coming to foreground - check timeout status
         if (backgroundTimeRef.current && !isLocked) {
           const backgroundDuration = Date.now() - backgroundTimeRef.current;
+          // Calculate total idle time: time idle before background + time in background
+          const idleBeforeBackground = backgroundTimeRef.current - lastActivityRef.current;
+          const totalIdleTime = idleBeforeBackground + backgroundDuration;
           const timeoutMs = autoLockTimeout * 1000;
+          const remainingMs = timeoutMs - totalIdleTime;
+          const remainingSeconds = remainingMs / 1000;
 
-          if (backgroundDuration >= timeoutMs) {
-            logger.info('Background timeout reached - showing warning');
-            // Show warning dialog instead of directly locking
-            setCountdown(LOGOUT_WARNING_SECONDS);
+          logger.info('App resumed', {
+            backgroundDuration: Math.round(backgroundDuration / 1000),
+            idleBeforeBackground: Math.round(idleBeforeBackground / 1000),
+            totalIdleTime: Math.round(totalIdleTime / 1000),
+            timeoutSeconds: autoLockTimeout,
+            remainingSeconds: Math.round(remainingSeconds),
+          });
+
+          if (remainingSeconds <= 0) {
+            // Time expired - logout immediately without showing modal
+            logger.info('Session expired - logging out immediately');
+            lockRef.current();
+          } else if (remainingSeconds <= LOGOUT_WARNING_SECONDS) {
+            // Less than 20 seconds remaining - show warning with actual remaining time
+            logger.info('Less than 20s remaining - showing warning', { remainingSeconds });
+            setCountdown(Math.ceil(remainingSeconds));
             setShowLogoutWarning(true);
+          } else {
+            // More than 20 seconds remaining - continue idle tracking
+            logger.info('Timeout not reached, continuing idle tracking');
           }
 
           backgroundTimeRef.current = null;
+        } else if (!isLocked) {
+          // First activation or no background time recorded - reset activity
+          lastActivityRef.current = Date.now();
         }
-
-        // Reset activity timer
-        lastActivityRef.current = Date.now();
       }
     };
 
@@ -180,12 +213,17 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
     };
   }, [autoLockTimeout, showLogoutWarning, isLocked]);
 
-  // Show logout warning with countdown
-  const showLogoutWarningDialog = useCallback(() => {
+  // Show logout warning with countdown (accepts remaining seconds)
+  const showLogoutWarningDialog = useCallback((remainingSeconds?: number) => {
     if (showLogoutWarning || isLocked) return;
 
-    logger.info('Showing logout warning dialog');
-    setCountdown(LOGOUT_WARNING_SECONDS);
+    // Use provided remaining seconds, capped at LOGOUT_WARNING_SECONDS
+    const initialCountdown = remainingSeconds !== undefined 
+      ? Math.min(Math.max(Math.ceil(remainingSeconds), 1), LOGOUT_WARNING_SECONDS)
+      : LOGOUT_WARNING_SECONDS;
+
+    logger.info('Showing logout warning dialog', { initialCountdown });
+    setCountdown(initialCountdown);
     setShowLogoutWarning(true);
   }, [showLogoutWarning, isLocked]);
 
@@ -220,7 +258,13 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
     logger.authEvent('lock', true);
   }, []);
 
-  // Countdown timer effect
+  // Store handleLogout in a ref so we can call it from the interval without stale closures
+  const handleLogoutRef = useRef(handleLogout);
+  useEffect(() => {
+    handleLogoutRef.current = handleLogout;
+  }, [handleLogout]);
+
+  // Countdown timer effect - handles decrementing and triggers logout at zero
   useEffect(() => {
     if (!showLogoutWarning) {
       // Clear timer when warning is not shown
@@ -234,21 +278,30 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
     // Start countdown
     countdownTimerRef.current = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) {
-          // Auto-lock when countdown reaches 0
-          handleLogout();
-          return LOGOUT_WARNING_SECONDS;
+        const next = prev - 1;
+        if (next <= 0) {
+          // Clear interval immediately to prevent multiple calls
+          if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+          }
+          // Schedule logout on next tick to avoid state update conflicts
+          setTimeout(() => {
+            handleLogoutRef.current();
+          }, 0);
+          return 0;
         }
-        return prev - 1;
+        return next;
       });
     }, 1000);
 
     return () => {
       if (countdownTimerRef.current) {
         clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
       }
     };
-  }, [showLogoutWarning, handleLogout]);
+  }, [showLogoutWarning]);
 
   // Idle timeout tracking (when app is in foreground)
   useEffect(() => {
@@ -261,20 +314,28 @@ export function AuthLockProvider({ children }: AuthLockProviderProps) {
       return;
     }
 
-    // Check for idle timeout every 10 seconds
+    // Check for idle timeout every 1 second for accurate timing
     idleTimerRef.current = setInterval(() => {
       const idleTime = Date.now() - lastActivityRef.current;
       const timeoutMs = autoLockTimeout * 1000;
+      const remainingMs = timeoutMs - idleTime;
+      const remainingSeconds = remainingMs / 1000;
 
-      if (idleTime >= timeoutMs) {
-        logger.info('Idle timeout reached - showing warning');
-        showLogoutWarningDialog();
+      if (remainingSeconds <= 0) {
+        // Time expired - logout immediately
+        logger.info('Session expired - logging out immediately');
+        lockRef.current();
+      } else if (remainingSeconds <= LOGOUT_WARNING_SECONDS) {
+        // Less than 20 seconds remaining - show warning with actual remaining time
+        logger.info('Less than 20s remaining - showing warning', { remainingSeconds: Math.ceil(remainingSeconds) });
+        showLogoutWarningDialog(remainingSeconds);
       }
-    }, 10000);
+    }, 1000);
 
     return () => {
       if (idleTimerRef.current) {
         clearInterval(idleTimerRef.current);
+        idleTimerRef.current = null;
       }
     };
   }, [isLocked, autoLockTimeout, showLogoutWarning, showLogoutWarningDialog]);

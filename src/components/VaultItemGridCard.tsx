@@ -170,7 +170,6 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
             />
           </View>
           <View style={styles.footerLeft}>
-            <View style={[styles.dot, { backgroundColor: categoryColor.icon }]} />
             <ThemedText variant="caption" color="tertiary" style={styles.time}>
               {lastUpdated}
             </ThemedText>
