@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../../src/components/Button';
 import { ImageShareModal } from '../../../src/components/ImageShareModal';
+import { PageContent } from '../../../src/components/PageContent';
 import { SecureField } from '../../../src/components/SecureField';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { ThemedView } from '../../../src/components/ThemedView';
@@ -249,7 +250,7 @@ export default function ItemDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Gradient Header */}
+        {/* Gradient Header - Specialized for item detail */}
         <LinearGradient
           colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
           start={{ x: 0, y: 0 }}
@@ -293,7 +294,8 @@ export default function ItemDetailScreen() {
         </LinearGradient>
 
         {/* Content */}
-        <View style={styles.content}>
+        <PageContent scrollable={false} contentPadding={false}>
+          <View style={styles.content}>
           {/* Fields */}
           <View style={[styles.fieldsCard, { backgroundColor: colors.card }, shadows.md]}>
             <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
@@ -429,7 +431,8 @@ export default function ItemDetailScreen() {
               disabled={isDeleting}
             />
           </View>
-        </View>
+          </View>
+        </PageContent>
       </ScrollView>
 
       {/* Asset Preview Modal */}
@@ -605,10 +608,6 @@ const styles = StyleSheet.create({
   // Content styles
   content: {
     padding: spacing.base,
-    marginTop: -spacing.lg,
-    flex: 1,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
     paddingTop: spacing.sm,
   },
   fieldsCard: {

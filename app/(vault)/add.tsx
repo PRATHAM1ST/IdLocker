@@ -21,11 +21,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetPicker } from '../../src/components/AssetPicker';
 import { Button } from '../../src/components/Button';
 import { CustomFieldEditor } from '../../src/components/CustomFieldEditor';
 import { Input, Select } from '../../src/components/Input';
+import { PageContent } from '../../src/components/PageContent';
+import { PageHeader } from '../../src/components/PageHeader';
 import { ThemedText } from '../../src/components/ThemedText';
 import { ThemedView } from '../../src/components/ThemedView';
 import { useAssets } from '../../src/context/AssetProvider';
@@ -68,7 +69,6 @@ export default function AddItemScreen() {
   const mode = params.mode || 'item';
   // Support both 'type' and 'categoryId' params
   const initialCategoryId = params.categoryId || params.type || null;
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { addItem, items } = useVault();
   const { categories, getCategoryById, deleteCategory } = useCategories();
@@ -740,50 +740,30 @@ export default function AddItemScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-      >
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <ThemedText variant="subtitle" style={styles.headerTitle}>
-            {mode === 'asset'
-              ? 'Add Asset'
-              : selectedType
-                ? `Add ${selectedCategory?.label}`
-                : 'Add Item'}
-          </ThemedText>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setEditingCategories((v) => !v)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={editingCategories ? 'close' : 'pencil'} size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      <PageHeader
+        title={
+          mode === 'asset'
+            ? 'Add Asset'
+            : selectedType
+              ? `Add ${selectedCategory?.label}`
+              : 'Add Item'
+        }
+        rightActions={[
+          {
+            icon: editingCategories ? 'close' : 'pencil',
+            onPress: () => setEditingCategories((v) => !v),
+          },
+        ]}
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        <View style={[styles.mainContent, { backgroundColor: colors.background }]}>
+        <PageContent scrollable={false} contentPadding={false}>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.content}
@@ -796,7 +776,7 @@ export default function AddItemScreen() {
                 ? renderTypeSelector()
                 : renderForm()}
           </ScrollView>
-        </View>
+        </PageContent>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -806,38 +786,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.base,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 40,
-  },
   keyboardAvoid: {
     flex: 1,
-  },
-  mainContent: {
-    flex: 1,
-    marginTop: -spacing.md,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
   },
   scrollView: {
     flex: 1,

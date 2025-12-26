@@ -1,9 +1,13 @@
 /**
  * Form validation utilities
+ * All validation is dynamic based on CustomCategory definitions
  */
 
-import { ITEM_TYPE_CONFIGS } from './constants';
-import type { CustomCategory, FieldDefinition, VaultItem, VaultItemType } from './types';
+import { maskValue, formatCardExpiry, sanitizeInput } from './formatters';
+import type { CustomCategory, FieldDefinition, VaultItem } from './types';
+
+// Re-export formatters for backward compatibility
+export { maskValue, formatCardExpiry, sanitizeInput } from './formatters';
 
 export interface ValidationError {
   field: string;
@@ -16,7 +20,7 @@ export interface ValidationResult {
 }
 
 /**
- * Validate a single field value
+ * Validate a single field value against its definition
  */
 export function validateField(value: string | undefined, field: FieldDefinition): string | null {
   const trimmedValue = value?.trim() ?? '';
@@ -95,10 +99,13 @@ export function validateField(value: string | undefined, field: FieldDefinition)
 }
 
 /**
- * Validate all fields for a vault item
+ * Validate all fields for a vault item using category definition
+ * @param category - The category definition with fields
+ * @param label - Item label
+ * @param fields - Field values to validate
  */
 export function validateVaultItem(
-  type: VaultItemType,
+  category: CustomCategory | null | undefined,
   label: string,
   fields: Record<string, string>,
 ): ValidationResult {
@@ -111,15 +118,13 @@ export function validateVaultItem(
     errors.push({ field: 'label', message: 'Label must be 100 characters or less' });
   }
 
-  // Get field definitions for this type
-  const config = ITEM_TYPE_CONFIGS[type];
-  if (!config) {
-    errors.push({ field: 'type', message: 'Invalid item type' });
-    return { isValid: false, errors };
+  // If no category provided, only validate label
+  if (!category) {
+    return { isValid: errors.length === 0, errors };
   }
 
-  // Validate each field
-  for (const fieldDef of config.fields) {
+  // Validate each field from category definition
+  for (const fieldDef of category.fields) {
     const value = fields[fieldDef.key];
     const error = validateField(value, fieldDef);
     if (error) {
@@ -134,39 +139,8 @@ export function validateVaultItem(
 }
 
 /**
- * Sanitize input string
- */
-export function sanitizeInput(value: string): string {
-  // Remove control characters but preserve newlines for multiline fields
-  return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-}
-
-/**
- * Mask sensitive value for display
- */
-export function maskValue(value: string, visibleChars = 4): string {
-  if (!value || value.length <= visibleChars) {
-    return '•'.repeat(value?.length || 4);
-  }
-
-  const masked = '•'.repeat(value.length - visibleChars);
-  const visible = value.slice(-visibleChars);
-  return `${masked}${visible}`;
-}
-
-/**
- * Format card expiry as MM/YY
- */
-export function formatCardExpiry(month: string, year: string): string {
-  if (!month || !year) return '';
-  const m = month.padStart(2, '0');
-  const y = year.length === 4 ? year.slice(-2) : year;
-  return `${m}/${y}`;
-}
-
-/**
  * Get preview text for vault item in list
- * Accepts optional category for custom categories
+ * Uses category definition for dynamic preview
  */
 export function getItemPreview(item: VaultItem, category?: CustomCategory | null): string {
   // Try to use category's previewField if provided
@@ -174,13 +148,7 @@ export function getItemPreview(item: VaultItem, category?: CustomCategory | null
     return maskValue(item.fields[category.previewField]);
   }
 
-  // Try legacy config for preset categories
-  const config = ITEM_TYPE_CONFIGS[item.type as keyof typeof ITEM_TYPE_CONFIGS];
-  if (config?.previewField && item.fields[config.previewField]) {
-    return maskValue(item.fields[config.previewField]);
-  }
-
-  // Fallback previews by type
+  // Fallback previews by type (for preset categories)
   switch (item.type) {
     case 'bankAccount':
       return item.fields.bankName || 'Bank Account';
@@ -195,7 +163,7 @@ export function getItemPreview(item: VaultItem, category?: CustomCategory | null
     case 'note':
       return 'Secure Note';
     default:
-      // For custom categories, try to find first non-empty field
+      // For custom categories, try to find first non-empty, non-sensitive field
       if (category) {
         for (const fieldDef of category.fields) {
           if (item.fields[fieldDef.key] && !fieldDef.sensitive) {
@@ -209,6 +177,7 @@ export function getItemPreview(item: VaultItem, category?: CustomCategory | null
 
 /**
  * Check if a vault item matches search query
+ * Searches label and common non-sensitive fields
  */
 export function matchesSearch(item: VaultItem, query: string): boolean {
   const lowerQuery = query.toLowerCase().trim();

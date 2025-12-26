@@ -4,8 +4,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,8 +19,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImageShareModal } from '../../src/components/ImageShareModal';
+import { PageContent } from '../../src/components/PageContent';
+import { PageHeader } from '../../src/components/PageHeader';
 import { ThemedText } from '../../src/components/ThemedText';
 import { ThemedView } from '../../src/components/ThemedView';
 import { useAssets } from '../../src/context/AssetProvider';
@@ -48,8 +48,6 @@ const FILTERS: { key: FilterType; label: string; icon: keyof typeof Ionicons.gly
 ];
 
 export default function AssetsScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { assets, isLoading, deleteAsset, refreshAssets } = useAssets();
   const { items } = useVault();
@@ -342,36 +340,18 @@ export default function AssetsScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-      >
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <ThemedText variant="subtitle" style={styles.headerTitle}>
-            Assets
-          </ThemedText>
-          <TouchableOpacity
-            style={styles.refreshButton}
-            onPress={refreshAssets}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="refresh-outline" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      <PageHeader
+        title="Assets"
+        rightActions={[
+          {
+            icon: 'refresh-outline',
+            onPress: refreshAssets,
+          },
+        ]}
+      />
 
-      {/* Main content */}
-      <View style={[styles.mainContent, { backgroundColor: colors.background }]}>
+      <PageContent scrollable={false} contentPadding={false}>
+        <View style={[styles.mainContent, { backgroundColor: colors.background }]}>
         {/* Stats */}
         {assets.length > 0 && renderStats()}
 
@@ -396,7 +376,8 @@ export default function AssetsScreen() {
             showsVerticalScrollIndicator={false}
           />
         )}
-      </View>
+        </View>
+      </PageContent>
 
       {/* Preview Modal */}
       <Modal
@@ -541,40 +522,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.base,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   mainContent: {
     flex: 1,
-    marginTop: -spacing.md,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
     paddingTop: spacing.lg,
   },
   statsContainer: {

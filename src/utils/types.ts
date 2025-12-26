@@ -149,15 +149,6 @@ export interface CategoriesData {
   categories: CustomCategory[];
 }
 
-// Type-specific field configurations (kept for backward compatibility)
-export interface ItemTypeConfig {
-  type: VaultItemType;
-  label: string;
-  icon: string;
-  fields: FieldDefinition[];
-  previewField?: string; // Field to show in list preview (masked)
-}
-
 // Vault metadata for chunked storage
 export interface VaultMeta {
   version: number;

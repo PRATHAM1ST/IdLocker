@@ -9,20 +9,7 @@ import * as vaultStorage from '../storage/vaultStorage';
 import { useAuthLock } from './AuthLockProvider';
 import { logger } from '../utils/logger';
 import { DEFAULT_CATEGORIES, CATEGORY_COLORS } from '../utils/constants';
-
-/**
- * Generate a simple UUID v4
- */
-function generateId(): string {
-  return (
-    'cat-' +
-    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    })
-  );
-}
+import { generatePrefixedId } from '../utils/uuid';
 
 interface CategoryContextValue {
   // State
@@ -102,7 +89,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       const now = new Date().toISOString();
       const newCategory: CustomCategory = {
         ...category,
-        id: generateId(),
+        id: generatePrefixedId('cat'),
         createdAt: now,
         updatedAt: now,
       } as CustomCategory;
@@ -229,7 +216,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
 
   // Generate a new category ID
   const generateCategoryId = useCallback((): string => {
-    return generateId();
+    return generatePrefixedId('cat');
   }, []);
 
   const value = useMemo(

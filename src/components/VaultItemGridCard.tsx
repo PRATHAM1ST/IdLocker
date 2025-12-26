@@ -12,8 +12,8 @@ import { useCategories } from '../context/CategoryProvider';
 import { ThemedText } from './ThemedText';
 import { spacing, borderRadius, shadows, typography } from '../styles/theme';
 import type { VaultItem } from '../utils/types';
-import { getItemPreview, formatCardExpiry } from '../utils/validation';
-import { GradientBorderView } from '@good-react-native/gradient-border';
+import { getItemPreview } from '../utils/validation';
+import { formatCardExpiry, formatRelativeTime } from '../utils/formatters';
 import Animated from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -65,29 +65,7 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
   }, [item, category]);
 
   // Format last updated time
-  const lastUpdated = useMemo(() => {
-    const date = new Date(item.updatedAt);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      if (diffHours === 0) {
-        const diffMins = Math.floor(diffMs / (1000 * 60));
-        return diffMins <= 1 ? 'Just now' : `${diffMins}m ago`;
-      }
-      return `${diffHours}h ago`;
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays}d ago`;
-    } else if (diffDays < 30) {
-      return `${Math.floor(diffDays / 7)}w ago`;
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-  }, [item.updatedAt]);
+  const lastUpdated = useMemo(() => formatRelativeTime(item.updatedAt), [item.updatedAt]);
 
   return (
     <TouchableOpacity

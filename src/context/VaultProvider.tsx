@@ -8,19 +8,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import * as vaultStorage from '../storage/vaultStorage';
 import { logger } from '../utils/logger';
 import type { VaultItem, VaultItemType } from '../utils/types';
+import { generateUUID } from '../utils/uuid';
 import { useAuthLock } from './AuthLockProvider';
-
-/**
- * Generate a simple UUID v4
- * Fallback that works in React Native without external dependencies
- */
-function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 interface VaultContextValue {
   // State
@@ -95,7 +84,7 @@ export function VaultProvider({ children }: VaultProviderProps) {
       // Create item with ID and timestamps locally
       const now = new Date().toISOString();
       const newItem: VaultItem = {
-        id: generateId(),
+        id: generateUUID(),
         type: item.type,
         label: item.label,
         fields: { ...item.fields },

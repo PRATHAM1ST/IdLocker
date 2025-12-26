@@ -9,9 +9,11 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as SecureStore from 'expo-secure-store';
 import * as Sharing from 'expo-sharing';
+import { formatFileSize as formatSize } from '../utils/formatters';
 import { logger } from '../utils/logger';
 import type { Asset, AssetType, AssetsData, ImageAttachment } from '../utils/types';
 import { isAssetsData } from '../utils/types';
+import { generateTimestampId } from '../utils/uuid';
 
 // Directory for storing assets
 const ASSETS_DIR = `${FileSystem.documentDirectory}vault-assets/`;
@@ -33,16 +35,6 @@ const MIME_TYPES: Record<string, AssetType> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'document',
   'text/plain': 'document',
 };
-
-/**
- * Generate a unique ID
- */
-function generateId(): string {
-  const timestamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).substring(2, 15);
-  const randomPart2 = Math.random().toString(36).substring(2, 15);
-  return `${timestamp}-${randomPart}-${randomPart2}`;
-}
 
 /**
  * Get file extension from MIME type
@@ -170,7 +162,7 @@ export async function saveImageAsset(
     }
 
     // Create new asset
-    const id = generateId();
+    const id = generateTimestampId();
     const filename = `${id}.jpg`;
     const destUri = `${ASSETS_DIR}${filename}`;
 
@@ -237,7 +229,7 @@ export async function saveDocumentAsset(
     }
 
     // Create new asset
-    const id = generateId();
+    const id = generateTimestampId();
     const extension = getExtensionFromMime(mimeType);
     const filename = `${id}.${extension}`;
     const destUri = `${ASSETS_DIR}${filename}`;
@@ -570,14 +562,9 @@ export async function getAssetsStorageSize(): Promise<number> {
 
 /**
  * Format file size for display
+ * Re-exported from formatters for backward compatibility
  */
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
+export { formatFileSize } from '../utils/formatters';
 
 /**
  * Build an absolute URI for an asset filename stored in the vault assets directory.
@@ -621,5 +608,7 @@ export async function clearAssetsStorage(): Promise<void> {
     throw error;
   }
 }
+
+
 
 

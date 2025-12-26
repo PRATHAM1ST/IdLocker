@@ -1,5 +1,6 @@
 /**
  * App constants and field configurations
+ * Single source of truth for categories and fields via DEFAULT_CATEGORIES
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -9,8 +10,6 @@ import type {
   CardBrand,
   CustomCategory,
   GovIdSubtype,
-  ItemTypeConfig,
-  VaultItemType,
 } from './types';
 
 // Storage keys
@@ -39,7 +38,7 @@ export const AUTO_LOCK_OPTIONS = [
   { value: 300, label: '5 minutes' },
 ] as const;
 
-// Card brand options
+// Card brand options (used in field definitions)
 export const CARD_BRANDS: { value: CardBrand; label: string }[] = [
   { value: 'visa', label: 'Visa' },
   { value: 'mastercard', label: 'Mastercard' },
@@ -50,7 +49,7 @@ export const CARD_BRANDS: { value: CardBrand; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-// Government ID subtypes
+// Government ID subtypes (used in field definitions)
 export const GOV_ID_TYPES: { value: GovIdSubtype; label: string }[] = [
   { value: 'aadhaar', label: 'Aadhaar Card' },
   { value: 'pan', label: 'PAN Card' },
@@ -60,7 +59,7 @@ export const GOV_ID_TYPES: { value: GovIdSubtype; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-// Bank account types
+// Bank account types (used in field definitions)
 export const BANK_ACCOUNT_TYPES: { value: BankAccountType; label: string }[] = [
   { value: 'savings', label: 'Savings' },
   { value: 'current', label: 'Current' },
@@ -69,197 +68,8 @@ export const BANK_ACCOUNT_TYPES: { value: BankAccountType; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-// Item type configurations with field definitions
-export const ITEM_TYPE_CONFIGS: Record<VaultItemType, ItemTypeConfig> = {
-  bankAccount: {
-    type: 'bankAccount',
-    label: 'Bank Account',
-    icon: 'business-outline',
-    previewField: 'accountNumber',
-    fields: [
-      { key: 'bankName', label: 'Bank Name', required: true, placeholder: 'e.g., HDFC Bank' },
-      {
-        key: 'accountHolder',
-        label: 'Account Holder Name',
-        placeholder: 'Full name as on account',
-      },
-      {
-        key: 'accountNumber',
-        label: 'Account Number',
-        required: true,
-        sensitive: true,
-        keyboardType: 'numeric',
-        placeholder: 'Account number',
-      },
-      { key: 'accountType', label: 'Account Type', options: BANK_ACCOUNT_TYPES },
-      { key: 'ifsc', label: 'IFSC Code', required: true, placeholder: 'e.g., HDFC0001234', maxLength: 11 },
-      { key: 'upiId', label: 'UPI ID', placeholder: 'e.g., user@upi' },
-      { key: 'swift', label: 'SWIFT/BIC Code', placeholder: 'For international transfers' },
-      { key: 'branch', label: 'Branch', placeholder: 'Branch name or location' },
-      { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
-    ],
-  },
-  card: {
-    type: 'card',
-    label: 'Card',
-    icon: 'card-outline',
-    previewField: 'lastFourDigits',
-    fields: [
-      {
-        key: 'cardNickname',
-        label: 'Card Nickname',
-        required: true,
-        placeholder: 'e.g., Personal HDFC Credit',
-      },
-      { key: 'brand', label: 'Card Brand', options: CARD_BRANDS },
-      {
-        key: 'lastFourDigits',
-        label: 'Last 4 Digits',
-        required: true,
-        keyboardType: 'numeric',
-        maxLength: 4,
-        placeholder: '1234',
-      },
-      {
-        key: 'expiryMonth',
-        label: 'Expiry Month',
-        keyboardType: 'numeric',
-        maxLength: 2,
-        placeholder: 'MM',
-      },
-      {
-        key: 'expiryYear',
-        label: 'Expiry Year',
-        keyboardType: 'numeric',
-        maxLength: 4,
-        placeholder: 'YYYY',
-      },
-      {
-        key: 'cvv',
-        label: 'CVV',
-        sensitive: true,
-        keyboardType: 'numeric',
-        maxLength: 4,
-        placeholder: '123',
-      },
-      {
-        key: 'pin',
-        label: 'ATM PIN',
-        sensitive: true,
-        keyboardType: 'numeric',
-        maxLength: 6,
-        placeholder: '****',
-      },
-      { key: 'cardholderName', label: 'Cardholder Name', placeholder: 'Name as on card' },
-      {
-        key: 'billingAddress',
-        label: 'Billing Address',
-        multiline: true,
-        placeholder: 'Billing address...',
-      },
-      { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
-    ],
-  },
-  govId: {
-    type: 'govId',
-    label: 'Government ID',
-    icon: 'id-card-outline',
-    previewField: 'idNumber',
-    fields: [
-      { key: 'idType', label: 'ID Type', required: true, options: GOV_ID_TYPES },
-      {
-        key: 'idNumber',
-        label: 'ID Number',
-        required: true,
-        sensitive: true,
-        placeholder: 'ID number',
-      },
-      { key: 'fullName', label: 'Full Name', placeholder: 'Name as on ID' },
-      { key: 'dateOfBirth', label: 'Date of Birth', placeholder: 'DD/MM/YYYY' },
-      {
-        key: 'issuingAuthority',
-        label: 'Issuing Authority',
-        placeholder: 'e.g., UIDAI, Passport Office',
-      },
-      { key: 'issueDate', label: 'Issue Date', placeholder: 'DD/MM/YYYY' },
-      { key: 'expiryDate', label: 'Expiry Date', placeholder: 'DD/MM/YYYY' },
-      { key: 'address', label: 'Address', multiline: true, placeholder: 'Address as on ID' },
-      { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
-    ],
-  },
-  login: {
-    type: 'login',
-    label: 'Login',
-    icon: 'key-outline',
-    previewField: 'username',
-    fields: [
-      {
-        key: 'serviceName',
-        label: 'Service/Website',
-        required: true,
-        placeholder: 'e.g., Gmail, Netflix',
-      },
-      {
-        key: 'username',
-        label: 'Username/Email',
-        required: true,
-        placeholder: 'Username or email',
-      },
-      {
-        key: 'password',
-        label: 'Password',
-        required: true,
-        sensitive: true,
-        placeholder: 'Password',
-      },
-      { key: 'website', label: 'Website URL', keyboardType: 'default', placeholder: 'https://...' },
-      {
-        key: 'notes',
-        label: 'Notes',
-        multiline: true,
-        placeholder: 'Security questions, recovery codes...',
-      },
-    ],
-  },
-  note: {
-    type: 'note',
-    label: 'Secure Note',
-    icon: 'document-text-outline',
-    fields: [
-      { key: 'title', label: 'Title', required: true, placeholder: 'Note title' },
-      {
-        key: 'content',
-        label: 'Content',
-        required: true,
-        multiline: true,
-        sensitive: true,
-        placeholder: 'Your secure note...',
-      },
-    ],
-  },
-  other: {
-    type: 'other',
-    label: 'Other',
-    icon: 'ellipsis-horizontal-circle-outline',
-    fields: [
-      { key: 'title', label: 'Title', required: true, placeholder: 'Item title' },
-      { key: 'field1', label: 'Field 1', placeholder: 'Custom field' },
-      { key: 'field2', label: 'Field 2', placeholder: 'Custom field' },
-      { key: 'field3', label: 'Field 3', placeholder: 'Custom field' },
-      { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
-    ],
-  },
-};
-
-// Get all item types for category selection (legacy - use DEFAULT_CATEGORIES instead)
-export const VAULT_ITEM_TYPES: { type: VaultItemType; label: string; icon: string }[] =
-  Object.values(ITEM_TYPE_CONFIGS).map((config) => ({
-    type: config.type,
-    label: config.label,
-    icon: config.icon,
-  }));
-
 // Default preset categories with full configuration
+// This is the SINGLE SOURCE OF TRUTH for category definitions
 const now = new Date().toISOString();
 
 export const DEFAULT_CATEGORIES: CustomCategory[] = [
@@ -297,6 +107,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'branch', label: 'Branch', placeholder: 'Branch name or location' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
+    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -367,6 +178,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
+    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -403,6 +215,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'address', label: 'Address', multiline: true, placeholder: 'Address as on ID' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
+    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -446,6 +259,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
         placeholder: 'Security questions, recovery codes...',
       },
     ],
+    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -471,6 +285,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
         placeholder: 'Your secure note...',
       },
     ],
+    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -492,6 +307,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       { key: 'field3', label: 'Field 3', placeholder: 'Custom field' },
       { key: 'notes', label: 'Notes', multiline: true, placeholder: 'Additional notes...' },
     ],
+    isPreset: true,
     createdAt: now,
     updatedAt: now,
   },
@@ -500,7 +316,7 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
 // Available icons for custom categories
 export const CATEGORY_ICONS = [...Object.keys(Ionicons.glyphMap)] as const;
 
-// Available colors for custom categories
+// Available colors for custom categories (used in category picker)
 export const CATEGORY_COLORS = [
   {
     name: 'Blue',

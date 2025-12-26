@@ -5,7 +5,6 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -18,11 +17,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetPicker } from '../../../src/components/AssetPicker';
 import { Button } from '../../../src/components/Button';
 import { CustomFieldEditor } from '../../../src/components/CustomFieldEditor';
 import { Input, Select } from '../../../src/components/Input';
+import { PageContent } from '../../../src/components/PageContent';
+import { PageHeader } from '../../../src/components/PageHeader';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { ThemedView } from '../../../src/components/ThemedView';
 import { useAssets } from '../../../src/context/AssetProvider';
@@ -36,7 +36,6 @@ import { sanitizeInput, validateField } from '../../../src/utils/validation';
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { getItem, updateItem, isLoading } = useVault();
   const { getCategoryById } = useCategories();
@@ -263,41 +262,26 @@ export default function EditItemScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <LinearGradient
-        colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-      >
-        <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.closeButton} onPress={handleCancel} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <ThemedText variant="subtitle" style={styles.headerTitle}>
-            Edit {category.label}
-          </ThemedText>
-          <View style={styles.headerSpacer} />
-        </View>
-      </LinearGradient>
+      <PageHeader
+        title={`Edit ${category.label}`}
+        onBack={handleCancel}
+        gradientColors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <PageContent>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           {/* Type indicator */}
           <View style={[styles.typeIndicator, { backgroundColor: colors.card }, shadows.sm]}>
             <View style={[styles.typeIconSmall, { backgroundColor: categoryColor.bg }]}>
@@ -344,7 +328,8 @@ export default function EditItemScreen() {
               disabled={isSaving || !hasChanges}
             />
           </View>
-        </ScrollView>
+          </ScrollView>
+        </PageContent>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -354,30 +339,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.base,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 40,
-  },
   keyboardAvoid: {
     flex: 1,
   },
@@ -385,7 +346,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.base,
     paddingBottom: spacing['3xl'],
   },
   loadingContainer: {

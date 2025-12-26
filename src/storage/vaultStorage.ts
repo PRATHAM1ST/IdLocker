@@ -4,8 +4,8 @@
  */
 
 import * as SecureStore from 'expo-secure-store';
-import { v4 as uuidv4 } from 'uuid';
 import { CHUNK_SIZE, DEFAULT_CATEGORIES, DEFAULT_SETTINGS, STORAGE_KEYS } from '../utils/constants';
+import { generateUUID } from '../utils/uuid';
 import { logger } from '../utils/logger';
 import type {
   AppSettings,
@@ -247,7 +247,7 @@ export async function addItem(
     const now = new Date().toISOString();
     const newItem: VaultItem = {
       ...item,
-      id: uuidv4(),
+      id: generateUUID(),
       createdAt: now,
       updatedAt: now,
     };

@@ -17,9 +17,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../../src/components/Button';
 import { Input } from '../../../src/components/Input';
+import { PageContent } from '../../../src/components/PageContent';
+import { PageHeader } from '../../../src/components/PageHeader';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { ThemedView } from '../../../src/components/ThemedView';
 import { useCategories } from '../../../src/context/CategoryProvider';
@@ -71,7 +72,6 @@ const createEmptyFieldForm = (): FieldFormState => ({
 export default function CategoryEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { addCategory, updateCategory, getCategoryById, getDefaultColor } = useCategories();
 
@@ -394,29 +394,17 @@ export default function CategoryEditScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <LinearGradient
-        colors={[color.gradientStart, color.gradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-      >
-        <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.closeButton} onPress={handleCancel} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <ThemedText variant="subtitle" style={styles.headerTitle}>
-            {isNew ? 'New Category' : 'Edit Category'}
-          </ThemedText>
-          <View style={styles.headerSpacer} />
-        </View>
-      </LinearGradient>
+      <PageHeader
+        title={isNew ? 'New Category' : 'Edit Category'}
+        onBack={handleCancel}
+        gradientColors={[color.gradientStart, color.gradientEnd]}
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.content, { backgroundColor: colors.background }]}>
+        <PageContent>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
@@ -802,7 +790,7 @@ export default function CategoryEditScreen() {
               />
             </View>
           </ScrollView>
-        </View>
+        </PageContent>
       </KeyboardAvoidingView>
 
       {/* Icon Picker Modal */}
@@ -907,45 +895,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.base,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 40,
-  },
   keyboardAvoid: {
     flex: 1,
-  },
-  content: {
-    flex: 1,
-    marginTop: -spacing.md,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.base,
-    paddingTop: spacing.lg,
     paddingBottom: spacing['3xl'],
   },
   previewCard: {

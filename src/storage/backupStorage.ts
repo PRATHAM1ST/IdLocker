@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_SETTINGS } from '../utils/constants';
+import { generateUUID } from '../utils/uuid';
 import { logger } from '../utils/logger';
 import type {
   AppSettings,
@@ -107,7 +107,7 @@ function getFilenameParts(filename: string | undefined, fallbackExt: string): {
 } {
   const trimmed = filename?.trim();
   if (!trimmed) {
-    return { base: uuidv4(), ext: fallbackExt };
+    return { base: generateUUID(), ext: fallbackExt };
   }
 
   const lastDot = trimmed.lastIndexOf('.');

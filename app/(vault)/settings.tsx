@@ -6,14 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button } from '../../src/components/Button';
+import { PageContent } from '../../src/components/PageContent';
+import { PageHeader } from '../../src/components/PageHeader';
 import { ThemedText } from '../../src/components/ThemedText';
 import { ThemedView } from '../../src/components/ThemedView';
 import { useAssets } from '../../src/context/AssetProvider';
@@ -33,7 +33,7 @@ import {
   previewBackupImport,
 } from '../../src/storage/backupStorage';
 import { clearAllData, loadSettings } from '../../src/storage/vaultStorage';
-import { borderRadius, layout, shadows, spacing } from '../../src/styles/theme';
+import { borderRadius, spacing } from '../../src/styles/theme';
 import { DEFAULT_SETTINGS } from '../../src/utils/constants';
 import type { AppSettings } from '../../src/utils/types';
 
@@ -96,7 +96,6 @@ function buildImportSummaryMessage(summary: ImportSummary): string {
 }
 
 export default function SettingsScreen() {
-  const insets = useSafeAreaInsets();
   const { colors, isDark, preference, setThemePreference } = useTheme();
   const { lock, biometricType, hasBiometrics, autoLockTimeout, setAutoLockTimeout } = useAuthLock();
   const { refreshVault } = useVault();
@@ -370,58 +369,10 @@ export default function SettingsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: layout.tabBarHeight + spacing.xl },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header - scrolls with content */}
-        <LinearGradient
-          colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-back-outline" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-            <ThemedText variant="title" style={styles.headerTitle}>
-              Settings
-            </ThemedText>
-            <View style={{ width: 40 }} />
-          </View>
-          {/* Profile-like section */}
-          {/* <View style={styles.profileSection}>
-						<View style={styles.profileAvatar}>
-							<Ionicons
-								name="shield-checkmark"
-								size={32}
-								color="#FFFFFF"
-							/>
-						</View>
-						<ThemedText variant="title" style={styles.profileName}>
-							IdLocker
-						</ThemedText>
-						<ThemedText
-							variant="caption"
-							style={styles.profileSubtitle}
-						>
-							Your Secure Vault
-						</ThemedText>
-					</View> */}
-        </LinearGradient>
+      <PageHeader title="Settings" variant="title" />
 
-        {/* Main Content */}
-        <View style={[styles.content, { backgroundColor: colors.background }]}>
-          {/* Security Section */}
+      <PageContent>
+        {/* Security Section */}
           {renderSection(
             'Security',
             <>
@@ -647,8 +598,7 @@ export default function SettingsScreen() {
               Made with love for your privacy
             </ThemedText>
           </View>
-        </View>
-      </ScrollView>
+      </PageContent>
     </ThemedView>
   );
 }
@@ -656,64 +606,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    paddingBottom: spacing.xl,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: spacing.md,
-  },
-  profileSection: {
-    alignItems: 'center',
-    paddingTop: spacing.md,
-  },
-  profileAvatar: {
-    width: 72,
-    height: 72,
-    borderRadius: borderRadius.xl,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  profileName: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  profileSubtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: spacing.xs,
-  },
-  content: {
-    flex: 1,
-    marginTop: -spacing.md,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    padding: spacing.base,
   },
   section: {
     marginBottom: spacing.lg,

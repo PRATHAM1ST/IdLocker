@@ -3,24 +3,24 @@
  * List, add, edit, and delete categories
  */
 
-import React, { useCallback, useState } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '../../src/components/ThemedView';
-import { ThemedText } from '../../src/components/ThemedText';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback } from 'react';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button } from '../../src/components/Button';
-import { useTheme } from '../../src/context/ThemeProvider';
+import { PageContent } from '../../src/components/PageContent';
+import { PageHeader } from '../../src/components/PageHeader';
+import { ThemedText } from '../../src/components/ThemedText';
+import { ThemedView } from '../../src/components/ThemedView';
 import { useCategories } from '../../src/context/CategoryProvider';
+import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
-import { spacing, borderRadius, shadows, layout } from '../../src/styles/theme';
+import { borderRadius, shadows, spacing } from '../../src/styles/theme';
 import type { CustomCategory } from '../../src/utils/types';
 
 export default function CategoriesScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { categories, deleteCategory, resetToDefaults } = useCategories();
   const { items } = useVault();
@@ -154,50 +154,19 @@ export default function CategoriesScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <PageHeader
+        title="Manage Categories"
+        rightActions={[
+          {
+            icon: 'add',
+            onPress: handleAddCategory,
+          },
+        ]}
       />
 
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.headerGradientStart, colors.headerGradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-      >
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <ThemedText variant="subtitle" style={styles.headerTitle}>
-            Manage Categories
-          </ThemedText>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddCategory}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      {/* Content */}
-      <View style={[styles.content, { backgroundColor: colors.background }]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: layout.tabBarHeight + spacing.xl },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
+      <PageContent>
           {/* Info card */}
           <View style={[styles.infoCard, { backgroundColor: colors.primary + '10' }]}>
             <Ionicons name="information-circle" size={20} color={colors.primary} />
@@ -236,8 +205,7 @@ export default function CategoriesScreen() {
               This will restore all preset categories and remove custom ones
             </ThemedText>
           </View>
-        </ScrollView>
-      </View>
+      </PageContent>
     </ThemedView>
   );
 }
@@ -245,48 +213,6 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.base,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    flex: 1,
-    marginTop: -spacing.md,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.base,
-    paddingTop: spacing.lg,
   },
   infoCard: {
     flexDirection: 'row',

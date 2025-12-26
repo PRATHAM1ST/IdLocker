@@ -9,20 +9,10 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Sharing from 'expo-sharing';
 import { logger } from '../utils/logger';
 import type { ImageAttachment } from '../utils/types';
+import { generateTimestampId } from '../utils/uuid';
 
 // Directory for storing vault images
 const IMAGES_DIR = `${FileSystem.documentDirectory}vault-images/`;
-
-/**
- * Generate a unique ID (React Native compatible without crypto)
- * Uses timestamp + random numbers for uniqueness
- */
-function generateId(): string {
-  const timestamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).substring(2, 15);
-  const randomPart2 = Math.random().toString(36).substring(2, 15);
-  return `${timestamp}-${randomPart}-${randomPart2}`;
-}
 
 /**
  * Ensure the images directory exists
@@ -48,7 +38,7 @@ export async function saveImage(
   try {
     await ensureImagesDir();
 
-    const id = generateId();
+    const id = generateTimestampId();
     // Always use jpg extension since we'll convert via manipulator
     const filename = `${id}.jpg`;
     const destUri = `${IMAGES_DIR}${filename}`;
