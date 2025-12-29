@@ -2,20 +2,21 @@
  * Themed input component
  */
 
-import React, { useState, forwardRef } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  TextInputProps,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { forwardRef, useEffect, useRef, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  TextStyle,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { useTheme } from '../context/ThemeProvider';
+import { borderRadius, spacing } from '../styles/theme';
 import { ThemedText } from './ThemedText';
-import { spacing, borderRadius } from '../styles/theme';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -170,8 +171,19 @@ export function Select({
 }: SelectProps) {
   const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  // Reset scroll position when dropdown opens
+  useEffect(() => {
+    if (isOpen && scrollViewRef.current) {
+      // Small delay to ensure the ScrollView is rendered
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      }, 0);
+    }
+  }, [isOpen]);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -216,26 +228,38 @@ export function Select({
             },
           ]}
         >
-          {options.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.option,
-                option.value === value && { backgroundColor: colors.backgroundTertiary },
-              ]}
-              onPress={() => {
-                onValueChange(option.value);
-                setIsOpen(false);
-              }}
-            >
-              <ThemedText variant="body" color={option.value === value ? 'accent' : 'primary'}>
-                {option.label}
-              </ThemedText>
-              {option.value === value && (
-                <Ionicons name="checkmark" size={18} color={colors.accent} />
-              )}
-            </TouchableOpacity>
-          ))}
+          <ScrollView
+            ref={scrollViewRef}
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+            scrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+            alwaysBounceVertical={false}
+            style={styles.optionsScrollView}
+            contentContainerStyle={styles.optionsContent}
+          >
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.option,
+                  option.value === value && { backgroundColor: colors.backgroundTertiary },
+                ]}
+                onPress={() => {
+                  onValueChange(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                <ThemedText variant="body" color={option.value === value ? 'accent' : 'primary'}>
+                  {option.label}
+                </ThemedText>
+                {option.value === value && (
+                  <Ionicons name="checkmark" size={18} color={colors.accent} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -308,8 +332,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: borderRadius.md,
     zIndex: 1000,
-    maxHeight: 200,
+    maxHeight: 165,
     overflow: 'hidden',
+  },
+  optionsScrollView: {
+    flex: 1,
+  },
+  optionsContent: {
+    paddingVertical: 0,
   },
   option: {
     flexDirection: 'row',
