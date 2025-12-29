@@ -4,11 +4,13 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -26,6 +28,7 @@ import { ThemedView } from '../../../src/components/ThemedView';
 import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
+import { arraysEqual } from '../../../src/utils/comparison';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../src/utils/constants';
 import type { CategoryColor, FieldDefinition } from '../../../src/utils/types';
 
@@ -72,6 +75,7 @@ const createEmptyFieldForm = (): FieldFormState => ({
 export default function CategoryEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const { addCategory, updateCategory, getCategoryById, getDefaultColor } = useCategories();
 
@@ -84,7 +88,16 @@ export default function CategoryEditScreen() {
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [previewField, setPreviewField] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
+  const isShowingPrompt = useRef(false);
+
+  // Store initial state for comparison
+  const initialState = useRef<{
+    label: string;
+    icon: string;
+    color: CategoryColor;
+    fields: FieldDefinition[];
+    previewField: string | undefined;
+  } | null>(null);
 
   // Modal states
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -107,8 +120,58 @@ export default function CategoryEditScreen() {
       setColor(existingCategory.color);
       setFields([...existingCategory.fields]);
       setPreviewField(existingCategory.previewField);
+      // Store initial state for comparison
+      initialState.current = {
+        label: existingCategory.label,
+        icon: existingCategory.icon,
+        color: existingCategory.color,
+        fields: [...existingCategory.fields],
+        previewField: existingCategory.previewField,
+      };
+    } else {
+      // For new category, store initial empty state
+      const defaultColor = getDefaultColor();
+      initialState.current = {
+        label: '',
+        icon: 'folder-outline',
+        color: defaultColor,
+        fields: [],
+        previewField: undefined,
+      };
     }
-  }, [existingCategory]);
+  }, [existingCategory, getDefaultColor]);
+
+  // Smart change detection: compare current state with initial state
+  const hasChanges = useMemo(() => {
+    if (!initialState.current) return false;
+
+    const initial = initialState.current;
+
+    // Compare label
+    if (label !== initial.label) return true;
+
+    // Compare icon
+    if (icon !== initial.icon) return true;
+
+    // Compare color (deep comparison)
+    if (
+      color.gradientStart !== initial.color.gradientStart ||
+      color.gradientEnd !== initial.color.gradientEnd ||
+      color.bg !== initial.color.bg ||
+      color.icon !== initial.color.icon ||
+      color.text !== initial.color.text
+    ) {
+      return true;
+    }
+
+    // Compare fields array (deep comparison)
+    if (!arraysEqual(fields, initial.fields)) return true;
+
+    // Compare previewField
+    if (previewField !== initial.previewField) return true;
+
+    return false;
+  }, [label, icon, color, fields, previewField]);
 
   const handleSave = useCallback(async () => {
     if (!label.trim()) {
@@ -129,6 +192,14 @@ export default function CategoryEditScreen() {
       });
 
       if (newCategory) {
+        // Update initial state after successful save
+        initialState.current = {
+          label: label.trim(),
+          icon,
+          color,
+          fields,
+          previewField,
+        };
         router.back();
       } else {
         Alert.alert('Error', 'Failed to create category');
@@ -143,6 +214,14 @@ export default function CategoryEditScreen() {
       });
 
       if (updated) {
+        // Update initial state after successful save
+        initialState.current = {
+          label: label.trim(),
+          icon,
+          color,
+          fields,
+          previewField,
+        };
         router.back();
       } else {
         Alert.alert('Error', 'Failed to update category');
@@ -153,19 +232,104 @@ export default function CategoryEditScreen() {
   }, [isNew, id, label, icon, color, fields, previewField, addCategory, updateCategory, router]);
 
   const handleCancel = useCallback(() => {
-    if (hasChanges) {
+    if (hasChanges && !isShowingPrompt.current) {
+      isShowingPrompt.current = true;
       Alert.alert(
-        'Discard Changes',
-        'You have unsaved changes. Are you sure you want to discard them?',
+        'Unsaved Changes',
+        'You have unsaved changes. What would you like to do?',
         [
-          { text: 'Keep Editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              isShowingPrompt.current = false;
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              isShowingPrompt.current = false;
+              router.back();
+            },
+          },
+          {
+            text: 'Save',
+            onPress: async () => {
+              isShowingPrompt.current = false;
+              await handleSave();
+            },
+          },
         ],
       );
-    } else {
+    } else if (!hasChanges) {
       router.back();
     }
-  }, [hasChanges, router]);
+  }, [hasChanges, router, handleSave]);
+
+  // Navigation interception for unsaved changes
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasChanges) {
+        // No unsaved changes, allow navigation
+        return;
+      }
+
+      // If we're already showing a prompt, don't show another one
+      if (isShowingPrompt.current) {
+        return;
+      }
+
+      // Prevent default navigation
+      e.preventDefault();
+
+      isShowingPrompt.current = true;
+      Alert.alert(
+        'Unsaved Changes',
+        'You have unsaved changes. What would you like to do?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              isShowingPrompt.current = false;
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              isShowingPrompt.current = false;
+              navigation.dispatch(e.data.action);
+            },
+          },
+          {
+            text: 'Save',
+            onPress: async () => {
+              isShowingPrompt.current = false;
+              await handleSave();
+              // Navigation will happen in handleSave after successful save
+            },
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, hasChanges, handleSave]);
+
+  // Android hardware back button handler
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (hasChanges && !isShowingPrompt.current) {
+        handleCancel();
+        return true; // Prevent default back behavior
+      }
+      return false; // Allow default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, [hasChanges, handleCancel]);
 
   const handleEditField = useCallback((field: FieldDefinition) => {
     // Convert options from {value, label} format to string array
@@ -302,7 +466,6 @@ export default function CategoryEditScreen() {
         : [...prev, payload],
     );
     resetFieldForm();
-    setHasChanges(true);
   }, [editingFieldKey, fieldForm, resetFieldForm]);
 
   const handleDeleteField = useCallback(
@@ -317,7 +480,6 @@ export default function CategoryEditScreen() {
             if (editingFieldKey === field.key) {
               resetFieldForm();
             }
-            setHasChanges(true);
           },
         },
       ]);
@@ -333,7 +495,6 @@ export default function CategoryEditScreen() {
       [newFields[index], newFields[newIndex]] = [newFields[newIndex], newFields[index]];
       return newFields;
     });
-    setHasChanges(true);
   }, []);
 
   const isEditingField = Boolean(editingFieldKey);
@@ -741,10 +902,7 @@ export default function CategoryEditScreen() {
             <Input
               label="Category Name *"
               value={label}
-              onChangeText={(val) => {
-                setLabel(val);
-                setHasChanges(true);
-              }}
+              onChangeText={setLabel}
               placeholder="e.g., Medical Records"
             />
 
@@ -888,7 +1046,6 @@ export default function CategoryEditScreen() {
                 ]}
                 onPress={() => {
                   setIcon(iconName);
-                  setHasChanges(true);
                   setShowIconPicker(false);
                 }}
               >
@@ -936,7 +1093,6 @@ export default function CategoryEditScreen() {
                     icon: colorOption.icon,
                     text: colorOption.text,
                   });
-                  setHasChanges(true);
                   setShowColorPicker(false);
                 }}
               >

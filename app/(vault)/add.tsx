@@ -6,6 +6,7 @@
 
 import { DynamicCategoryCard } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ExpoImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +14,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   Dimensions,
   Image,
   KeyboardAvoidingView,
@@ -36,6 +38,7 @@ import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
 import { formatFileSize } from '../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../src/styles/theme';
+import { hasNonEmptyValues } from '../../src/utils/comparison';
 import type {
   Asset,
   AssetReference,
@@ -53,6 +56,7 @@ const TYPE_CARD_HEIGHT = 100;
 
 export default function AddItemScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   // Route params for context-aware add screen:
   // - type/categoryId: Pre-select a category
   // - mode: 'item' (default) or 'asset' for standalone asset upload
@@ -86,10 +90,40 @@ export default function AddItemScreen() {
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const isShowingPrompt = useRef(false);
   
   // Track the last initialCategoryId we initialized from to prevent re-initialization
   // when user manually changes the category
   const lastInitializedCategoryId = useRef<string | null>(null);
+
+  // Initial state for comparison (empty state for new item)
+  const initialState = useRef({
+    selectedType: null as VaultItemType | null,
+    label: '',
+    fields: {} as Record<string, string>,
+    customFields: [] as CustomField[],
+    assetRefs: [] as AssetReference[],
+  });
+
+  // Smart change detection: compare current state with initial empty state
+  const hasChanges = useMemo(() => {
+    // Check if selectedType is set
+    if (selectedType !== null) return true;
+    
+    // Check if label has content
+    if (label.trim().length > 0) return true;
+    
+    // Check if fields have any non-empty values
+    if (hasNonEmptyValues(fields)) return true;
+    
+    // Check if customFields array has items
+    if (customFields.length > 0) return true;
+    
+    // Check if assetRefs array has items
+    if (assetRefs.length > 0) return true;
+    
+    return false;
+  }, [selectedType, label, fields, customFields, assetRefs]);
 
   // Sync selectedType with route params only when initialCategoryId changes
   // (not when selectedType changes due to user interaction)
@@ -115,6 +149,14 @@ export default function AddItemScreen() {
     setCustomFields([]);
     setAssetRefs([]);
     setErrors({});
+    // Reset initial state when category changes (new form)
+    initialState.current = {
+      selectedType: category.id,
+      label: '',
+      fields: {},
+      customFields: [],
+      assetRefs: [],
+    };
   }, []);
 
   const handleFieldChange = useCallback(
@@ -180,6 +222,14 @@ export default function AddItemScreen() {
     setIsSaving(false);
 
     if (newItem) {
+      // Reset initial state after successful save
+      initialState.current = {
+        selectedType: null,
+        label: '',
+        fields: {},
+        customFields: [],
+        assetRefs: [],
+      };
       // Small delay to ensure navigation is ready
       setTimeout(() => {
         router.back();
@@ -188,6 +238,42 @@ export default function AddItemScreen() {
       Alert.alert('Error', 'Failed to save item. Please try again.');
     }
   }, [selectedType, selectedCategory, label, fields, customFields, assetRefs, addItem, router]);
+
+  const handleCancel = useCallback(() => {
+    if (hasChanges && !isShowingPrompt.current) {
+      isShowingPrompt.current = true;
+      Alert.alert(
+        'Unsaved Changes',
+        'You have unsaved changes. What would you like to do?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              isShowingPrompt.current = false;
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              isShowingPrompt.current = false;
+              router.back();
+            },
+          },
+          {
+            text: 'Save',
+            onPress: async () => {
+              isShowingPrompt.current = false;
+              await handleSave();
+            },
+          },
+        ],
+      );
+    } else if (!hasChanges) {
+      router.back();
+    }
+  }, [hasChanges, router, handleSave]);
 
   // ========== Asset Upload Mode Handlers ==========
   const [uploadedAssets, setUploadedAssets] = useState<Asset[]>([]);
@@ -322,6 +408,77 @@ export default function AddItemScreen() {
     refreshAssets();
     router.back();
   }, [refreshAssets, router]);
+
+  // Navigation interception for unsaved changes
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasChanges) {
+        // No unsaved changes, allow navigation
+        return;
+      }
+
+      // If we're already showing a prompt, don't show another one
+      if (isShowingPrompt.current) {
+        return;
+      }
+
+      // Prevent default navigation
+      e.preventDefault();
+
+      isShowingPrompt.current = true;
+      Alert.alert(
+        'Unsaved Changes',
+        'You have unsaved changes. What would you like to do?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              isShowingPrompt.current = false;
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              isShowingPrompt.current = false;
+              navigation.dispatch(e.data.action);
+            },
+          },
+          {
+            text: 'Save',
+            onPress: async () => {
+              // Only save if we have a valid form
+              if (selectedType && selectedCategory) {
+                isShowingPrompt.current = false;
+                await handleSave();
+                // Navigation will happen in handleSave after successful save
+              } else {
+                // If form is invalid, just discard
+                isShowingPrompt.current = false;
+                navigation.dispatch(e.data.action);
+              }
+            },
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, hasChanges, handleSave, selectedType, selectedCategory]);
+
+  // Android hardware back button handler
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (hasChanges && !isShowingPrompt.current) {
+        handleCancel();
+        return true; // Prevent default back behavior
+      }
+      return false; // Allow default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, [hasChanges, handleCancel]);
 
   const renderAssetUploader = () => (
     <View style={styles.assetUploaderContainer}>
@@ -728,10 +885,16 @@ export default function AddItemScreen() {
         {selectedCategory.fields.map(renderField)}
 
         {/* Custom fields section */}
-        <CustomFieldEditor customFields={customFields} onCustomFieldsChange={setCustomFields} />
+        <CustomFieldEditor
+          customFields={customFields}
+          onCustomFieldsChange={setCustomFields}
+        />
 
         {/* Asset attachments (images, PDFs, documents) */}
-        <AssetPicker assetRefs={assetRefs} onAssetRefsChange={setAssetRefs} />
+        <AssetPicker
+          assetRefs={assetRefs}
+          onAssetRefsChange={setAssetRefs}
+        />
 
         {/* Save button */}
         <View style={styles.saveContainer}>
@@ -761,6 +924,7 @@ export default function AddItemScreen() {
               ? `Add ${selectedCategory?.label}`
               : 'Add Item'
         }
+        onBack={handleCancel}
         rightActions={[
           {
             icon: editingCategories ? 'close' : 'pencil',

@@ -4,14 +4,15 @@
  * Supports custom categories and item-level custom fields
  */
 
-import { DynamicCategoryCard } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -32,6 +33,7 @@ import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
+import { arraysEqual } from '../../../src/utils/comparison';
 import type {
   AssetReference,
   CustomCategory,
@@ -44,6 +46,7 @@ import { sanitizeInput, validateField } from '../../../src/utils/validation';
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { colors, isDark } = useTheme();
   const { getItem, updateItem, isLoading, items } = useVault();
   const { categories, getCategoryById } = useCategories();
@@ -64,44 +67,100 @@ export default function EditItemScreen() {
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
   const [showCategorySelector, setShowCategorySelector] = useState(false);
+  const isShowingPrompt = useRef(false);
+
+  // Store initial state for comparison
+  const initialState = useRef<{
+    label: string;
+    selectedCategoryId: VaultItemType | null;
+    fields: Record<string, string>;
+    customFields: CustomField[];
+    assetRefs: AssetReference[];
+  } | null>(null);
 
   // Initialize form with item data and migrate legacy images if needed
   useEffect(() => {
     const initForm = async () => {
       if (item) {
         // Initialize selectedCategoryId from item.type
+        const categoryId = item.type;
         if (!selectedCategoryId) {
-          setSelectedCategoryId(item.type);
+          setSelectedCategoryId(categoryId);
         }
         
-        setLabel(item.label);
-        setFields({ ...item.fields });
-        setCustomFields(item.customFields || []);
-        setAssetRefs(item.assetRefs || []);
-
+        let finalAssetRefs = item.assetRefs || [];
+        
         // Use existing assetRefs or migrate from legacy images
         if (item.assetRefs && item.assetRefs.length > 0) {
           // await ensureAssetsLoaded(item.assetRefs.map((ref) => ref.assetId));
         } else if (item.images && item.images.length > 0) {
           // Migrate legacy images to assets
           const migratedRefs = await migrateItemAssets(item);
-          setAssetRefs(migratedRefs);
+          finalAssetRefs = migratedRefs;
           if (migratedRefs.length > 0) {
             // await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
           }
         }
+
+        setLabel(item.label);
+        setFields({ ...item.fields });
+        setCustomFields(item.customFields || []);
+        setAssetRefs(finalAssetRefs);
+
+        // Store initial state for comparison
+        initialState.current = {
+          label: item.label,
+          selectedCategoryId: categoryId,
+          fields: { ...item.fields },
+          customFields: item.customFields ? [...item.customFields] : [],
+          assetRefs: [...finalAssetRefs],
+        };
       }
     };
     initForm();
   }, [item, migrateItemAssets, selectedCategoryId]);
 
+  // Smart change detection: compare current state with initial state
+  const hasChanges = useMemo(() => {
+    if (!item || !initialState.current) return false;
+
+    const initial = initialState.current;
+
+    // Compare label
+    if (label !== initial.label) return true;
+
+    // Compare selectedCategoryId
+    if (selectedCategoryId !== initial.selectedCategoryId) return true;
+
+    // Compare fields object (deep comparison)
+    const initialFieldsKeys = Object.keys(initial.fields);
+    const currentFieldsKeys = Object.keys(fields);
+    
+    if (initialFieldsKeys.length !== currentFieldsKeys.length) return true;
+    
+    for (const key of initialFieldsKeys) {
+      if (fields[key] !== initial.fields[key]) return true;
+    }
+    
+    // Check for new keys in current fields
+    for (const key of currentFieldsKeys) {
+      if (!(key in initial.fields)) return true;
+    }
+
+    // Compare customFields array (deep comparison)
+    if (!arraysEqual(customFields, initial.customFields)) return true;
+
+    // Compare assetRefs array (deep comparison)
+    if (!arraysEqual(assetRefs, initial.assetRefs)) return true;
+
+    return false;
+  }, [item, label, selectedCategoryId, fields, customFields, assetRefs]);
+
   const handleFieldChange = useCallback(
     (key: string, value: string) => {
       const sanitized = sanitizeInput(value);
       setFields((prev) => ({ ...prev, [key]: sanitized }));
-      setHasChanges(true);
       // Clear error when user starts typing
       if (errors[key]) {
         setErrors((prev) => {
@@ -117,7 +176,6 @@ export default function EditItemScreen() {
   const handleLabelChange = useCallback(
     (value: string) => {
       setLabel(sanitizeInput(value));
-      setHasChanges(true);
       if (errors.label) {
         setErrors((prev) => {
           const newErrors = { ...prev };
@@ -131,12 +189,10 @@ export default function EditItemScreen() {
 
   const handleAssetRefsChange = useCallback((newRefs: AssetReference[]) => {
     setAssetRefs(newRefs);
-    setHasChanges(true);
   }, []);
 
   const handleCustomFieldsChange = useCallback((newCustomFields: CustomField[]) => {
     setCustomFields(newCustomFields);
-    setHasChanges(true);
   }, []);
 
   const handleCategoryChange = useCallback(
@@ -176,7 +232,6 @@ export default function EditItemScreen() {
       setSelectedCategoryId(newCategoryId);
       setFields(newFields);
       setShowCategorySelector(false);
-      setHasChanges(true);
       // Clear errors when changing category
       setErrors({});
     },
@@ -225,6 +280,16 @@ export default function EditItemScreen() {
     setIsSaving(false);
 
     if (updatedItem) {
+      // Update initial state after successful save
+      if (initialState.current) {
+        initialState.current = {
+          label: label.trim(),
+          selectedCategoryId: selectedCategoryId || item.type,
+          fields: { ...fields },
+          customFields: customFields ? [...customFields] : [],
+          assetRefs: assetRefs ? [...assetRefs] : [],
+        };
+      }
       // Small delay to ensure navigation is ready
       setTimeout(() => {
         router.back();
@@ -235,19 +300,104 @@ export default function EditItemScreen() {
   }, [item, category, label, fields, customFields, assetRefs, selectedCategoryId, updateItem, router]);
 
   const handleCancel = useCallback(() => {
-    if (hasChanges) {
+    if (hasChanges && !isShowingPrompt.current) {
+      isShowingPrompt.current = true;
       Alert.alert(
-        'Discard Changes',
-        'You have unsaved changes. Are you sure you want to discard them?',
+        'Unsaved Changes',
+        'You have unsaved changes. What would you like to do?',
         [
-          { text: 'Keep Editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              isShowingPrompt.current = false;
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              isShowingPrompt.current = false;
+              router.back();
+            },
+          },
+          {
+            text: 'Save',
+            onPress: async () => {
+              isShowingPrompt.current = false;
+              await handleSave();
+            },
+          },
         ],
       );
-    } else {
+    } else if (!hasChanges) {
       router.back();
     }
-  }, [hasChanges, router]);
+  }, [hasChanges, router, handleSave]);
+
+  // Navigation interception for unsaved changes
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasChanges) {
+        // No unsaved changes, allow navigation
+        return;
+      }
+
+      // If we're already showing a prompt, don't show another one
+      if (isShowingPrompt.current) {
+        return;
+      }
+
+      // Prevent default navigation
+      e.preventDefault();
+
+      isShowingPrompt.current = true;
+      Alert.alert(
+        'Unsaved Changes',
+        'You have unsaved changes. What would you like to do?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              isShowingPrompt.current = false;
+            },
+          },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              isShowingPrompt.current = false;
+              navigation.dispatch(e.data.action);
+            },
+          },
+          {
+            text: 'Save',
+            onPress: async () => {
+              isShowingPrompt.current = false;
+              await handleSave();
+              // Navigation will happen in handleSave after successful save
+            },
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, hasChanges, handleSave]);
+
+  // Android hardware back button handler
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (hasChanges && !isShowingPrompt.current) {
+        handleCancel();
+        return true; // Prevent default back behavior
+      }
+      return false; // Allow default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, [hasChanges, handleCancel]);
 
   // Calculate category counts for selector
   const categoryCounts = useMemo(() => {
