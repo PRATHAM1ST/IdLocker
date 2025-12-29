@@ -2,7 +2,8 @@
  * Helper utilities for working with centralized assets.
  */
 
-import type { Asset, ImageAttachment } from './types';
+import { Ionicons } from '@expo/vector-icons';
+import type { Asset, AssetType, ImageAttachment } from './types';
 
 /**
  * Convert an `Asset` into the legacy `ImageAttachment` shape expected by
@@ -29,4 +30,20 @@ export function assetToImageAttachment(asset: Asset | null): ImageAttachment | n
     height,
     createdAt: asset.createdAt,
   };
+}
+
+/**
+ * Get icon name for an asset type
+ */
+export function getAssetIcon(type: AssetType): keyof typeof Ionicons.glyphMap {
+  switch (type) {
+    case 'image':
+      return 'image-outline';
+    case 'pdf':
+      return 'document-text-outline';
+    case 'document':
+      return 'document-outline';
+    default:
+      return 'attach-outline';
+  }
 }

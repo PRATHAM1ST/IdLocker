@@ -8,20 +8,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AssetThumbnail } from '../../../src/components/AssetThumbnail';
 import { Button } from '../../../src/components/Button';
+import { Card } from '../../../src/components/Card';
 import { ImageShareModal } from '../../../src/components/ImageShareModal';
+import { ModalActionButton } from '../../../src/components/ModalActionButton';
 import { PageContent } from '../../../src/components/PageContent';
+import { SectionTitle } from '../../../src/components/SectionTitle';
 import { SecureField } from '../../../src/components/SecureField';
 import { ThemedText } from '../../../src/components/ThemedText';
 import { ThemedView } from '../../../src/components/ThemedView';
@@ -30,12 +35,11 @@ import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { formatFileSize, shareAsset } from '../../../src/storage/assetStorage';
-import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
-import { assetToImageAttachment } from '../../../src/utils/assetHelpers';
-import { SENSITIVE_FIELDS } from '../../../src/utils/constants';
-import type { Asset, AssetType } from '../../../src/utils/types';
-import { formatCardExpiry } from '../../../src/utils/validation';
-import Animated from 'react-native-reanimated';
+import { borderRadius, spacing } from '../../../src/styles/theme';
+import { assetToImageAttachment, getAssetIcon } from '../../../src/utils/assetHelpers';
+import { formatDate } from '../../../src/utils/formatters';
+import { buildDisplayFields } from '../../../src/utils/itemHelpers';
+import type { Asset } from '../../../src/utils/types';
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -141,19 +145,6 @@ export default function ItemDetailScreen() {
     );
   }, [item, deleteItem, router]);
 
-  const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case 'image':
-        return 'image-outline';
-      case 'pdf':
-        return 'document-text-outline';
-      case 'document':
-        return 'document-outline';
-      default:
-        return 'attach-outline';
-    }
-  };
-
   const handleShareAsset = useCallback(async (asset: Asset) => {
     await shareAsset(asset.uri, asset.mimeType);
   }, []);
@@ -195,47 +186,13 @@ export default function ItemDetailScreen() {
   }
 
   // Build display fields from category template
-  const displayFields: { key: string; label: string; value: string; sensitive: boolean }[] = [];
-
-  for (const fieldDef of category.fields) {
-    const value = item.fields[fieldDef.key];
-    if (value) {
-      // Special formatting for expiry
-      if (fieldDef.key === 'expiryMonth' && item.fields.expiryYear) {
-        continue; // Skip month, we'll combine with year
-      }
-      if (fieldDef.key === 'expiryYear' && item.fields.expiryMonth) {
-        displayFields.push({
-          key: 'expiry',
-          label: 'Expiry Date',
-          value: formatCardExpiry(item.fields.expiryMonth, item.fields.expiryYear),
-          sensitive: false,
-        });
-        continue;
-      }
-
-      displayFields.push({
-        key: fieldDef.key,
-        label: fieldDef.label,
-        value,
-        sensitive: fieldDef.sensitive || SENSITIVE_FIELDS.has(fieldDef.key),
-      });
-    }
-  }
+  const displayFields = useMemo(
+    () => buildDisplayFields(item, category),
+    [item, category],
+  );
 
   // Add custom fields to display
   const customFieldsDisplay = item.customFields || [];
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   return (
     <ThemedView style={styles.container}>
@@ -280,6 +237,7 @@ export default function ItemDetailScreen() {
             <View style={styles.iconContainer}>
               <Ionicons name={category.icon as any} size={36} color="rgba(255, 255, 255, 0.95)" />
             </View>
+            {/* @ts-expect-error - sharedTransitionTag is valid but types may be outdated */}
             <Animated.View sharedTransitionTag="label">
               <ThemedText variant="title" style={styles.headerTitle}>
                 {item.label}
@@ -297,11 +255,8 @@ export default function ItemDetailScreen() {
         <PageContent scrollable={false} contentPadding={false}>
           <View style={styles.content}>
           {/* Fields */}
-          <View style={[styles.fieldsCard, { backgroundColor: colors.card }, shadows.md]}>
-            <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
-              Details
-            </ThemedText>
-
+          <Card>
+            <SectionTitle>Details</SectionTitle>
             {displayFields.map((field) => (
               <SecureField
                 key={field.key}
@@ -311,15 +266,12 @@ export default function ItemDetailScreen() {
                 copyable
               />
             ))}
-          </View>
+          </Card>
 
           {/* Custom Fields */}
           {customFieldsDisplay.length > 0 && (
-            <View style={[styles.fieldsCard, { backgroundColor: colors.card }, shadows.md]}>
-              <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
-                Custom Fields
-              </ThemedText>
-
+            <Card>
+              <SectionTitle>Custom Fields</SectionTitle>
               {customFieldsDisplay.map((field) => (
                 <SecureField
                   key={field.id}
@@ -329,15 +281,13 @@ export default function ItemDetailScreen() {
                   copyable
                 />
               ))}
-            </View>
+            </Card>
           )}
 
           {/* Assets (Images, PDFs, Documents) */}
           {itemAssets.length > 0 && (
-            <View style={[styles.imagesCard, { backgroundColor: colors.card }, shadows.md]}>
-              <ThemedText variant="label" color="secondary" style={styles.sectionTitle}>
-                Attachments ({itemAssets.length})
-              </ThemedText>
+            <Card>
+              <SectionTitle>Attachments ({itemAssets.length})</SectionTitle>
               <ThemedText variant="caption" color="tertiary" style={styles.imageHint}>
                 Tap an attachment to preview or share
               </ThemedText>
@@ -347,48 +297,17 @@ export default function ItemDetailScreen() {
                 contentContainerStyle={styles.imagesContainer}
               >
                 {itemAssets.map((asset) => (
-                  <TouchableOpacity
+                  <AssetThumbnail
                     key={asset.id}
-                    style={[styles.imageThumb, { borderColor: colors.border }]}
+                    asset={asset}
                     onPress={() => setSelectedAsset(asset)}
-                    onLongPress={() => asset.type === 'image' && handleOpenImageTools(asset)}
-                    delayLongPress={200}
-                    activeOpacity={0.8}
-                  >
-                    {asset.type === 'image' ? (
-                      <Image source={{ uri: asset.uri }} style={styles.imageThumbInner} />
-                    ) : (
-                      <View
-                        style={[
-                          styles.docThumbInner,
-                          { backgroundColor: colors.backgroundTertiary },
-                        ]}
-                      >
-                        <Ionicons
-                          name={getAssetIcon(asset.type)}
-                          size={28}
-                          color={colors.primary}
-                        />
-                        <ThemedText variant="caption" numberOfLines={1} style={styles.docThumbName}>
-                          {asset.originalFilename}
-                        </ThemedText>
-                      </View>
-                    )}
-                    <View style={styles.imageDimensions}>
-                      <ThemedText variant="caption" style={styles.imageDimensionsText}>
-                        {asset.type === 'image'
-                          ? `${asset.width}×${asset.height}`
-                          : formatFileSize(asset.size)}
-                      </ThemedText>
-                    </View>
-                    {/* Type badge */}
-                    <View style={[styles.typeBadge, { backgroundColor: colors.accent }]}>
-                      <Ionicons name={getAssetIcon(asset.type)} size={10} color="#FFFFFF" />
-                    </View>
-                  </TouchableOpacity>
+                    onLongPress={
+                      asset.type === 'image' ? () => handleOpenImageTools(asset) : undefined
+                    }
+                  />
                 ))}
               </ScrollView>
-            </View>
+            </Card>
           )}
 
           {/* Metadata */}
@@ -482,29 +401,31 @@ export default function ItemDetailScreen() {
                 </View>
 
                 {selectedAsset.type === 'image' && (
-                  <TouchableOpacity
-                    style={[styles.toolsButton, { backgroundColor: colors.accent }]}
+                  <ModalActionButton
+                    icon="color-wand-outline"
                     onPress={() => handleOpenImageTools(selectedAsset)}
-                  >
-                    <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
+                    backgroundColor={colors.accent}
+                    style={styles.toolsButton}
+                  />
                 )}
 
                 {/* Action button */}
-                <TouchableOpacity
-                  style={[styles.shareButton, { backgroundColor: colors.primary }]}
+                <ModalActionButton
+                  icon="share-outline"
                   onPress={() => handleShareAsset(selectedAsset)}
-                >
-                  <Ionicons name="share-outline" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
+                  backgroundColor={colors.primary}
+                  style={styles.shareButton}
+                />
 
                 {/* Close button */}
-                <TouchableOpacity
-                  style={[styles.closeButton, { backgroundColor: colors.backgroundSecondary }]}
+                <ModalActionButton
+                  icon="close"
                   onPress={() => setSelectedAsset(null)}
-                >
-                  <Ionicons name="close" size={24} color={colors.text} />
-                </TouchableOpacity>
+                  backgroundColor={colors.backgroundSecondary}
+                  iconColor={colors.text}
+                  size={44}
+                  style={styles.closeButton}
+                />
               </>
             )}
           </View>
@@ -610,65 +531,11 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     paddingTop: spacing.sm,
   },
-  fieldsCard: {
-    padding: spacing.base,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    marginBottom: spacing.md,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  imagesCard: {
-    padding: spacing.base,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.md,
-  },
   imageHint: {
     marginBottom: spacing.md,
   },
   imagesContainer: {
     paddingVertical: spacing.xs,
-  },
-  imageThumb: {
-    width: 120,
-    height: 120,
-    borderRadius: borderRadius.lg,
-    marginRight: spacing.sm,
-    borderWidth: 1,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  imageThumbInner: {
-    width: '100%',
-    height: '100%',
-  },
-  imageDimensions: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  imageDimensionsText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  docThumbInner: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xs,
-  },
-  docThumbName: {
-    marginTop: spacing.xs,
-    textAlign: 'center',
-    fontSize: 9,
   },
   modalOverlay: {
     flex: 1,
@@ -711,31 +578,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 60,
     right: spacing.lg,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   toolsButton: {
     position: 'absolute',
     bottom: 60,
     left: spacing.lg,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   closeButton: {
     position: 'absolute',
     top: 60,
     right: spacing.lg,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   metaCard: {
     padding: spacing.md,

@@ -26,7 +26,7 @@ import { useAssets } from '../context/AssetProvider';
 import { useTheme } from '../context/ThemeProvider';
 import { formatFileSize } from '../storage/assetStorage';
 import { borderRadius, spacing } from '../styles/theme';
-import { assetToImageAttachment } from '../utils/assetHelpers';
+import { assetToImageAttachment, getAssetIcon } from '../utils/assetHelpers';
 import type { Asset, AssetReference, AssetType } from '../utils/types';
 import { ImageShareModal } from './ImageShareModal';
 import { ThemedText } from './ThemedText';
@@ -361,18 +361,6 @@ export function AssetPicker({
     [applyNewAssetRefs],
   );
 
-  const getAssetIcon = (type: AssetType): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case 'image':
-        return 'image-outline';
-      case 'pdf':
-        return 'document-text-outline';
-      case 'document':
-        return 'document-outline';
-      default:
-        return 'attach-outline';
-    }
-  };
 
   const renderAssetThumbnail = (asset: Asset, index: number) => (
     <TouchableOpacity
