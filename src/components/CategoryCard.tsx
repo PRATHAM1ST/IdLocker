@@ -46,8 +46,8 @@ export function DynamicCategoryCard({
       <TouchableOpacity style={{ flex: 1 }} onPress={onPress} activeOpacity={0.8}>
         <LinearGradient
           colors={['rgba(255, 255, 255, 1)', 'transparent', 'transparent', 'rgba(255, 255, 255, 1)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={styles.cardOuterGradient}
         >
           <LinearGradient
@@ -190,18 +190,18 @@ const styles = StyleSheet.create({
   // Card styles
   cardContainer: {
     width: CARD_WIDTH,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
   },
   cardOuterGradient: {
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.lg,
     padding: 1,
     flex: 1,
   },
   cardInnerGradient: {
     flex: 1,
     padding: spacing.sm,
-    borderRadius: borderRadius.sm - 1,
+    borderRadius: borderRadius.lg - 1,
   },
   cardIconContainer: {
     width: 32,

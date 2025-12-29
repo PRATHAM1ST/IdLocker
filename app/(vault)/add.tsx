@@ -987,18 +987,18 @@ const styles = StyleSheet.create({
   typeCard: {
     width: TYPE_CARD_WIDTH,
     height: TYPE_CARD_HEIGHT,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
   },
   typeCardOuterGradient: {
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.lg,
     padding: 1,
     flex: 1,
   },
   typeCardInnerGradient: {
     flex: 1,
     padding: spacing.sm,
-    borderRadius: borderRadius.sm - 1,
+    borderRadius: borderRadius.lg - 1,
   },
   typeCardIconContainer: {
     width: 32,
@@ -1026,7 +1026,7 @@ const styles = StyleSheet.create({
   createCategoryCard: {
     width: TYPE_CARD_WIDTH,
     height: TYPE_CARD_HEIGHT,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.lg,
     borderWidth: 2,
     borderStyle: 'dashed',
     marginBottom: spacing.xs,
