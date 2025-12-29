@@ -13,6 +13,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -45,6 +46,10 @@ import type {
   VaultItemType,
 } from '../../src/utils/types';
 import { sanitizeInput, validateField } from '../../src/utils/validation';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TYPE_CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - spacing.md) / 2;
+const TYPE_CARD_HEIGHT = 100;
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -537,12 +542,12 @@ export default function AddItemScreen() {
               key={category.id}
               category={category}
               count={categoryCounts[category.id] || 0}
-              onPress={() => handleTypeSelect(category)}
-              onEdit={() => handleEditCategory(category)}
+              onPress={() => handleEditCategory(category)}
               onDelete={() => handleDeleteCategory(category)}
               showActions={true}
               customStyle={{
-                marginBottom: spacing.md,
+                width: TYPE_CARD_WIDTH,
+                height: TYPE_CARD_HEIGHT,
               }}
             />
           ) : (
@@ -550,21 +555,35 @@ export default function AddItemScreen() {
               key={category.id}
               style={styles.typeCard}
               onPress={() => handleTypeSelect(category)}
-              activeOpacity={0.85}
+              activeOpacity={0.8}
             >
               <LinearGradient
-                colors={[category.color.gradientStart, category.color.gradientEnd]}
+                colors={['rgba(255, 255, 255, 1)', 'transparent', 'transparent', 'rgba(255, 255, 255, 1)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.typeCardGradient}
+                style={styles.typeCardOuterGradient}
               >
-                <View style={styles.typeCardDecor} />
-                <View style={styles.typeIconContainer}>
-                  <Ionicons name={category.icon as any} size={28} color="rgba(255,255,255,0.95)" />
-                </View>
-                <ThemedText variant="label" style={styles.typeLabel}>
-                  {category.label}
-                </ThemedText>
+                <LinearGradient
+                  colors={[category.color.gradientStart, category.color.gradientEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.typeCardInnerGradient}
+                >
+                  {/* Icon */}
+                  <View style={styles.typeCardIconContainer}>
+                    <Ionicons name={category.icon as any} size={32} color="rgba(255, 255, 255, 0.9)" />
+                  </View>
+
+                  {/* Label and count */}
+                  <View style={styles.typeCardLabelContainer}>
+                    <ThemedText variant="caption" style={styles.typeCardLabel} numberOfLines={1}>
+                      {category.label}
+                    </ThemedText>
+                    <ThemedText variant="caption" style={styles.typeCardCount}>
+                      {categoryCounts[category.id] || 0}
+                    </ThemedText>
+                  </View>
+                </LinearGradient>
               </LinearGradient>
             </TouchableOpacity>
           ),
@@ -572,34 +591,20 @@ export default function AddItemScreen() {
         <TouchableOpacity
           style={[
             styles.createCategoryCard,
-            styles.typeCard,
             {
               borderColor: colors.border,
               backgroundColor: colors.card,
             },
           ]}
           onPress={handleCreateCategory}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
         >
-          <View
-            style={[
-              styles.createCategoryIcon,
-              {
-                backgroundColor: colors.primary + '15',
-              },
-            ]}
-          >
+          <View style={styles.createCategoryIconContainer}>
             <Ionicons name="add-circle" size={32} color={colors.primary} />
           </View>
-          <View style={{ alignItems: 'center' }}>
-            <ThemedText
-              variant="subtitle"
-              style={[styles.createCategoryLabel, { color: colors.primary }]}
-            >
-              New Category
-            </ThemedText>
-            <ThemedText variant="caption" color="tertiary" style={{ marginTop: spacing.xs }}>
-              Tap to create
+          <View style={styles.createCategoryLabelContainer}>
+            <ThemedText variant="caption" style={[styles.createCategoryLabel, { color: colors.primary }]}>
+              New
             </ThemedText>
           </View>
         </TouchableOpacity>
@@ -813,63 +818,73 @@ const styles = StyleSheet.create({
   typeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   typeCard: {
-    width: '48%',
-    aspectRatio: 1.2,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.md,
+    width: TYPE_CARD_WIDTH,
+    height: TYPE_CARD_HEIGHT,
+    borderRadius: borderRadius.sm,
     overflow: 'hidden',
   },
-  typeCardGradient: {
+  typeCardOuterGradient: {
+    borderRadius: borderRadius.sm,
+    padding: 1,
     flex: 1,
-    padding: spacing.lg,
-    position: 'relative',
   },
-  typeCardDecor: {
-    position: 'absolute',
-    top: -20,
-    right: -20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  typeCardInnerGradient: {
+    flex: 1,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm - 1,
   },
-  typeIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  typeCardIconContainer: {
+    width: 32,
+    height: 32,
+    flexGrow: 1,
+  },
+  typeCardLabelContainer: {
+    height: 18,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  typeLabel: {
+  typeCardLabel: {
     color: '#FFFFFF',
     fontWeight: '600',
-    position: 'absolute',
-    bottom: spacing.lg,
-    left: spacing.lg,
+    fontSize: 14,
+    flex: 1,
+  },
+  typeCardCount: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '600',
   },
   createCategoryCard: {
-    padding: spacing.lg,
+    width: TYPE_CARD_WIDTH,
+    height: TYPE_CARD_HEIGHT,
+    borderRadius: borderRadius.sm,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: spacing.xs,
+    overflow: 'hidden',
+    padding: spacing.sm,
   },
-  createCategoryIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
+  createCategoryIconContainer: {
+    width: 32,
+    height: 32,
+    flexGrow: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+  },
+  createCategoryLabelContainer: {
+    height: 18,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
   },
   createCategoryLabel: {
     fontWeight: '600',
+    fontSize: 14,
   },
   formContainer: {
     paddingTop: spacing.sm,

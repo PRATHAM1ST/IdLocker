@@ -43,17 +43,35 @@ export function DynamicCategoryCard({
 }: DynamicCategoryCardProps) {
   return (
     <View style={[styles.cardContainer, shadows.md, customStyle]}>
-      <TouchableOpacity style={{ flex: 1 }} onPress={onPress} activeOpacity={0.85}>
+      <TouchableOpacity style={{ flex: 1 }} onPress={onPress} activeOpacity={0.8}>
         <LinearGradient
-          colors={[category.color.gradientStart, category.color.gradientEnd]}
+          colors={['rgba(255, 255, 255, 1)', 'transparent', 'transparent', 'rgba(255, 255, 255, 1)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.cardGradient}
+          style={styles.cardOuterGradient}
         >
-          {/* Top section with icon and actions */}
-          <View style={styles.topSection}>
-            <View style={styles.iconContainer}>
-              <Ionicons name={category.icon as any} size={28} color="rgba(255, 255, 255, 0.95)" />
+          <LinearGradient
+            colors={[category.color.gradientStart, category.color.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cardInnerGradient}
+          >
+            {/* Icon */}
+            <View style={styles.cardIconContainer}>
+              <Ionicons name={category.icon as any} size={32} color="rgba(255, 255, 255, 0.9)" />
+            </View>
+
+            {/* Label and counts */}
+            <View style={styles.cardLabelContainer}>
+              <ThemedText variant="caption" style={styles.cardLabel} numberOfLines={1}>
+                {category.label}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.cardCount}>
+                {count}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.cardFieldsCount}>
+                {category.fields.length}
+              </ThemedText>
             </View>
 
             {/* Action buttons overlay */}
@@ -85,32 +103,7 @@ export function DynamicCategoryCard({
                 )}
               </View>
             )}
-          </View>
-
-          {/* Content section */}
-          <View style={styles.contentSection}>
-            <View style={styles.titleRow}>
-              <ThemedText variant="subtitle" style={styles.cardLabel} numberOfLines={1}>
-                {category.label}
-              </ThemedText>
-            </View>
-
-            {/* Stats row */}
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Ionicons name="cube-outline" size={12} color="rgba(255, 255, 255, 0.8)" />
-                <ThemedText variant="caption" style={styles.statText}>
-                  {count}
-                </ThemedText>
-              </View>
-              <View style={styles.statItem}>
-                <Ionicons name="list-outline" size={12} color="rgba(255, 255, 255, 0.8)" />
-                <ThemedText variant="caption" style={styles.statText}>
-                  {category.fields.length}
-                </ThemedText>
-              </View>
-            </View>
-          </View>
+          </LinearGradient>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -197,29 +190,51 @@ const styles = StyleSheet.create({
   // Card styles
   cardContainer: {
     width: CARD_WIDTH,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.sm,
     overflow: 'hidden',
   },
-  cardGradient: {
-    minHeight: 160,
-    padding: spacing.md,
-    justifyContent: 'space-between',
+  cardOuterGradient: {
+    borderRadius: borderRadius.sm,
+    padding: 1,
+    flex: 1,
   },
-  topSection: {
+  cardInnerGradient: {
+    flex: 1,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm - 1,
+  },
+  cardIconContainer: {
+    width: 32,
+    height: 32,
+    flexGrow: 1,
+  },
+  cardLabelContainer: {
+    height: 18,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  cardLabel: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+    flex: 1,
+  },
+  cardCount: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cardFieldsCount: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '600',
   },
   actionOverlay: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
     flexDirection: 'row',
     gap: spacing.xs,
   },
@@ -230,37 +245,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  contentSection: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  cardLabel: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 16,
-    flex: 1,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'center',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 12,
-    fontWeight: '600',
   },
   // Filter card styles
   filterCard: {
