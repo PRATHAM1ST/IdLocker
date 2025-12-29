@@ -799,6 +799,18 @@ export default function CategoryEditScreen() {
                   <ThemedText variant="bodySmall" color="tertiary" style={styles.emptyText}>
                     No fields yet. Add fields to define what data this category stores.
                   </ThemedText>
+                  <TouchableOpacity
+                      style={[styles.addFieldButtonBottom, { backgroundColor: colors.primary }]}
+                      onPress={() => {
+                        resetFieldForm();
+                        setIsAddingNewField(true);
+                      }}
+                    >
+                      <Ionicons name="add" size={20} color="#FFFFFF" />
+                      <ThemedText variant="bodySmall" style={{ color: '#FFFFFF', marginLeft: spacing.sm }}>
+                        Add Field
+                      </ThemedText>
+                    </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.fieldsList}>
