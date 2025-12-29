@@ -180,7 +180,7 @@ export default function CategoryEditScreen() {
       required: field.required || false,
       sensitive: field.sensitive || false,
       multiline: field.multiline || false,
-      keyboardType: field.keyboardType || 'default',
+      keyboardType: (field.keyboardType ?? 'default') as KeyboardType,
       minLength: typeof field.minLength === 'number' ? String(field.minLength) : '',
       maxLength: typeof field.maxLength === 'number' ? String(field.maxLength) : '',
       minValue: typeof field.minValue === 'number' ? String(field.minValue) : '',
