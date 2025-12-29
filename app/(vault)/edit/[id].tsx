@@ -4,7 +4,9 @@
  * Supports custom categories and item-level custom fields
  */
 
+import { DynamicCategoryCard } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -30,21 +32,29 @@ import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
-import type { AssetReference, CustomField, FieldDefinition } from '../../../src/utils/types';
+import type {
+  AssetReference,
+  CustomCategory,
+  CustomField,
+  FieldDefinition,
+  VaultItemType,
+} from '../../../src/utils/types';
 import { sanitizeInput, validateField } from '../../../src/utils/validation';
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { getItem, updateItem, isLoading } = useVault();
-  const { getCategoryById } = useCategories();
+  const { getItem, updateItem, isLoading, items } = useVault();
+  const { categories, getCategoryById } = useCategories();
   const { migrateItemAssets, ensureAssetsLoaded } = useAssets();
 
   const item = useMemo(() => getItem(id), [getItem, id]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<VaultItemType | null>(null);
+  
   const category = useMemo(
-    () => (item ? getCategoryById(item.type) : null),
-    [item, getCategoryById],
+    () => (selectedCategoryId ? getCategoryById(selectedCategoryId) : null),
+    [selectedCategoryId, getCategoryById],
   );
   const categoryColor = category?.color || null;
 
@@ -55,11 +65,17 @@ export default function EditItemScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
 
   // Initialize form with item data and migrate legacy images if needed
   useEffect(() => {
     const initForm = async () => {
       if (item) {
+        // Initialize selectedCategoryId from item.type
+        if (!selectedCategoryId) {
+          setSelectedCategoryId(item.type);
+        }
+        
         setLabel(item.label);
         setFields({ ...item.fields });
         setCustomFields(item.customFields || []);
@@ -79,7 +95,7 @@ export default function EditItemScreen() {
       }
     };
     initForm();
-  }, [item, migrateItemAssets]);
+  }, [item, migrateItemAssets, selectedCategoryId]);
 
   const handleFieldChange = useCallback(
     (key: string, value: string) => {
@@ -123,6 +139,50 @@ export default function EditItemScreen() {
     setHasChanges(true);
   }, []);
 
+  const handleCategoryChange = useCallback(
+    (newCategory: CustomCategory) => {
+      if (!item) return;
+
+      const newCategoryId = newCategory.id;
+      
+      // Map fields intelligently: preserve compatible fields, clear incompatible ones
+      const newFields: Record<string, string> = {};
+      const newCategoryFieldKeys = new Set(newCategory.fields.map((f) => f.key));
+      
+      // If we have a current category, preserve compatible fields
+      if (category) {
+        // Preserve fields that exist in both categories
+        for (const key of Object.keys(fields)) {
+          if (newCategoryFieldKeys.has(key)) {
+            newFields[key] = fields[key];
+          }
+        }
+      } else {
+        // If no current category (initial selection), preserve all existing fields that match
+        for (const key of Object.keys(fields)) {
+          if (newCategoryFieldKeys.has(key)) {
+            newFields[key] = fields[key];
+          }
+        }
+      }
+
+      // Initialize new fields from the new category as empty
+      for (const fieldDef of newCategory.fields) {
+        if (!(fieldDef.key in newFields)) {
+          newFields[fieldDef.key] = '';
+        }
+      }
+
+      setSelectedCategoryId(newCategoryId);
+      setFields(newFields);
+      setShowCategorySelector(false);
+      setHasChanges(true);
+      // Clear errors when changing category
+      setErrors({});
+    },
+    [item, category, fields],
+  );
+
   const handleSave = useCallback(async () => {
     if (!item || !category) return;
 
@@ -147,12 +207,21 @@ export default function EditItemScreen() {
     }
 
     setIsSaving(true);
-    const updatedItem = await updateItem(item.id, {
+    
+    // Include type in updates if category changed
+    const updates: Parameters<typeof updateItem>[1] = {
       label: label.trim(),
       fields,
       customFields: customFields.length > 0 ? customFields : undefined,
       assetRefs: assetRefs.length > 0 ? assetRefs : undefined,
-    });
+    };
+    
+    // Only include type if it changed
+    if (selectedCategoryId && selectedCategoryId !== item.type) {
+      updates.type = selectedCategoryId;
+    }
+    
+    const updatedItem = await updateItem(item.id, updates);
     setIsSaving(false);
 
     if (updatedItem) {
@@ -163,7 +232,7 @@ export default function EditItemScreen() {
     } else {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
     }
-  }, [item, category, label, fields, customFields, assetRefs, updateItem, router]);
+  }, [item, category, label, fields, customFields, assetRefs, selectedCategoryId, updateItem, router]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -179,6 +248,50 @@ export default function EditItemScreen() {
       router.back();
     }
   }, [hasChanges, router]);
+
+  // Calculate category counts for selector
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: items.length,
+    };
+
+    // Calculate counts for each category
+    for (const cat of categories) {
+      counts[cat.id] = items.filter((i) => i.type === cat.id).length;
+    }
+
+    return counts;
+  }, [items, categories]);
+
+  const renderTypeSelector = () => (
+    <View style={styles.typeSelectorContainer}>
+      <View style={styles.typeGrid}>
+        {categories.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={styles.typeCard}
+            onPress={() => handleCategoryChange(cat)}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[cat.color.gradientStart, cat.color.gradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.typeCardGradient}
+            >
+              <View style={styles.typeCardDecor} />
+              <View style={styles.typeIconContainer}>
+                <Ionicons name={cat.icon as any} size={28} color="rgba(255,255,255,0.95)" />
+              </View>
+              <ThemedText variant="label" style={styles.typeLabel}>
+                {cat.label}
+              </ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 
   const renderField = (fieldDef: FieldDefinition) => {
     const value = fields[fieldDef.key] || '';
@@ -239,7 +352,7 @@ export default function EditItemScreen() {
     );
   };
 
-  if (!item || !category || !categoryColor) {
+  if (!item) {
     return (
       <ThemedView style={styles.container}>
         <Stack.Screen options={{ title: 'Edit Item', headerShown: true }} />
@@ -256,6 +369,42 @@ export default function EditItemScreen() {
             </>
           )}
         </View>
+      </ThemedView>
+    );
+  }
+
+  // Show category selector if no category selected or user wants to change
+  if (showCategorySelector || !selectedCategoryId || !category || !categoryColor) {
+    return (
+      <ThemedView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+
+        <PageHeader
+          title="Change Category"
+          onBack={() => {
+            if (selectedCategoryId) {
+              setShowCategorySelector(false);
+            } else {
+              router.back();
+            }
+          }}
+        />
+
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={0}
+        >
+          <PageContent>
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}
+            >
+              {renderTypeSelector()}
+            </ScrollView>
+          </PageContent>
+        </KeyboardAvoidingView>
       </ThemedView>
     );
   }
@@ -282,18 +431,35 @@ export default function EditItemScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-          {/* Type indicator */}
-          <View style={[styles.typeIndicator, { backgroundColor: colors.card }, shadows.sm]}>
-            <View style={[styles.typeIconSmall, { backgroundColor: categoryColor.bg }]}>
-              <Ionicons name={category.icon as any} size={20} color={categoryColor.icon} />
-            </View>
-            <ThemedText variant="label">{category.label}</ThemedText>
-            <View style={[styles.typeBadge, { backgroundColor: categoryColor.bg }]}>
-              <ThemedText variant="caption" style={{ color: categoryColor.text }}>
-                Editing
+          {/* Type indicator - clickable to change category */}
+          <TouchableOpacity
+            style={[styles.typeIndicator, shadows.sm]}
+            onPress={() => setShowCategorySelector(true)}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.typeIndicatorGradient}
+            >
+              <View style={styles.typeIndicatorIcon}>
+                <Ionicons
+                  name={category.icon as any}
+                  size={20}
+                  color="rgba(255,255,255,0.95)"
+                />
+              </View>
+              <ThemedText variant="label" style={styles.typeIndicatorLabel}>
+                {category.label}
               </ThemedText>
-            </View>
-          </View>
+              <View style={styles.changeTypeButton}>
+                <ThemedText variant="caption" style={styles.changeTypeText}>
+                  Change
+                </ThemedText>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
 
           {/* Label field */}
           <Input
@@ -358,26 +524,84 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.lg,
   },
+  typeSelectorContainer: {
+    paddingTop: spacing.md,
+  },
+  typeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  typeCard: {
+    width: '48%',
+    aspectRatio: 1.2,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  typeCardGradient: {
+    flex: 1,
+    padding: spacing.lg,
+    position: 'relative',
+  },
+  typeCardDecor: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  typeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  typeLabel: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    position: 'absolute',
+    bottom: spacing.lg,
+    left: spacing.lg,
+  },
   typeIndicator: {
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  typeIndicatorGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.lg,
   },
-  typeIconSmall: {
+  typeIndicatorIcon: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  typeBadge: {
-    marginLeft: 'auto',
+  typeIndicatorLabel: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    flex: 1,
+  },
+  changeTypeButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+  },
+  changeTypeText: {
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
   saveContainer: {
     marginTop: spacing.lg,

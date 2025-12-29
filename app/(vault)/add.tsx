@@ -10,7 +10,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ExpoImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -81,13 +81,19 @@ export default function AddItemScreen() {
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Track the last initialCategoryId we initialized from to prevent re-initialization
+  // when user manually changes the category
+  const lastInitializedCategoryId = useRef<string | null>(null);
 
-  // Sync selectedType with route params when they change
+  // Sync selectedType with route params only when initialCategoryId changes
+  // (not when selectedType changes due to user interaction)
   useEffect(() => {
-    if (initialCategoryId && !selectedType) {
+    if (initialCategoryId && initialCategoryId !== lastInitializedCategoryId.current) {
       setSelectedType(initialCategoryId as VaultItemType);
+      lastInitializedCategoryId.current = initialCategoryId;
     }
-  }, [initialCategoryId, selectedType]);
+  }, [initialCategoryId]);
 
   // Get the selected category
   const selectedCategory = useMemo(() => {
