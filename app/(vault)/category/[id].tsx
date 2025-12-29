@@ -43,7 +43,7 @@ interface FieldFormState {
   minValue: string;
   maxValue: string;
   prefix: string;
-  options: { value: string; label: string }[];
+  options: string[]; // Simplified to just strings - value and label are the same
 }
 
 const KEYBOARD_TYPE_OPTIONS: { value: KeyboardType; label: string }[] = [
@@ -91,10 +91,12 @@ export default function CategoryEditScreen() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [fieldForm, setFieldForm] = useState<FieldFormState>(() => createEmptyFieldForm());
   const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
+  const [isAddingNewField, setIsAddingNewField] = useState(false);
 
   const resetFieldForm = useCallback(() => {
     setFieldForm(createEmptyFieldForm());
     setEditingFieldKey(null);
+    setIsAddingNewField(false);
   }, []);
 
   // Initialize form with existing category data
@@ -166,6 +168,12 @@ export default function CategoryEditScreen() {
   }, [hasChanges, router]);
 
   const handleEditField = useCallback((field: FieldDefinition) => {
+    // Convert options from {value, label} format to string array
+    // Use label if available, otherwise use value (for backward compatibility)
+    const optionsAsStrings = field.options
+      ? field.options.map((opt) => opt.label || opt.value)
+      : [];
+    
     setFieldForm({
       label: field.label,
       placeholder: field.placeholder || '',
@@ -178,9 +186,10 @@ export default function CategoryEditScreen() {
       minValue: typeof field.minValue === 'number' ? String(field.minValue) : '',
       maxValue: typeof field.maxValue === 'number' ? String(field.maxValue) : '',
       prefix: field.prefix || '',
-      options: field.options || [],
+      options: optionsAsStrings,
     });
     setEditingFieldKey(field.key);
+    setIsAddingNewField(false);
   }, []);
 
   const handleSaveField = useCallback(() => {
@@ -249,10 +258,10 @@ export default function CategoryEditScreen() {
         return;
       }
       
-      // Check if all options have both value and label
-      const hasInvalidOption = fieldForm.options.some(opt => !opt.value.trim() || !opt.label.trim());
+      // Check if all options have a value
+      const hasInvalidOption = fieldForm.options.some(opt => !opt.trim());
       if (hasInvalidOption) {
-        Alert.alert('Error', 'All dropdown options must have both value and label');
+        Alert.alert('Error', 'All dropdown options must have a value');
         return;
       }
     }
@@ -263,6 +272,13 @@ export default function CategoryEditScreen() {
         .toLowerCase()
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
+
+    // Convert string options to {value, label} format where value = label
+    const optionsFormatted = fieldForm.keyboardType === 'select' && fieldForm.options.length > 0
+      ? fieldForm.options
+          .filter(opt => opt.trim())
+          .map(opt => ({ value: opt.trim(), label: opt.trim() }))
+      : undefined;
 
     const payload: FieldDefinition = {
       key,
@@ -277,7 +293,7 @@ export default function CategoryEditScreen() {
       minValue: fieldForm.keyboardType === 'numeric' ? minValueNumber : undefined,
       maxValue: fieldForm.keyboardType === 'numeric' ? maxValueNumber : undefined,
       prefix: fieldForm.keyboardType === 'phone-pad' && prefixValue ? prefixValue : undefined,
-      options: fieldForm.options.length > 0 ? fieldForm.options : undefined,
+      options: optionsFormatted,
     };
 
     setFields((prev) =>
@@ -321,71 +337,364 @@ export default function CategoryEditScreen() {
   }, []);
 
   const isEditingField = Boolean(editingFieldKey);
+  const isAddingField = isAddingNewField && !isEditingField;
   const canSubmitField = fieldForm.label.trim().length > 0;
   const supportsValueLimits = fieldForm.keyboardType === 'numeric';
   const supportsPrefix = fieldForm.keyboardType === 'phone-pad';
 
+  // Helper function to render the field editor form
+  const renderFieldEditor = useCallback(() => {
+    return (
+      <View style={[styles.fieldEditorCard, { backgroundColor: colors.card }, shadows.sm]}>
+        <ThemedText variant="label" style={styles.fieldEditorTitle}>
+          {isEditingField ? 'Edit Field' : isAddingField ? 'Add Field' : 'Edit Field'}
+        </ThemedText>
+
+        <Input
+          label="Field Label *"
+          value={fieldForm.label}
+          onChangeText={(text) => setFieldForm((prev) => ({ ...prev, label: text }))}
+          placeholder="e.g., Account Number"
+        />
+
+        <Input
+          label="Placeholder"
+          value={fieldForm.placeholder}
+          onChangeText={(text) => setFieldForm((prev) => ({ ...prev, placeholder: text }))}
+          placeholder="Hint text shown when empty"
+        />
+
+        <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+          Field Type
+        </ThemedText>
+        <View style={styles.keyboardTypeRow}>
+          {KEYBOARD_TYPE_OPTIONS.map(({ value, label: typeLabel }) => (
+            <TouchableOpacity
+              key={value}
+              style={[
+                styles.keyboardTypeOption,
+                { backgroundColor: colors.card },
+                fieldForm.keyboardType === value && { backgroundColor: colors.primary },
+              ]}
+              onPress={() =>
+                setFieldForm((prev) => {
+                  const updates: Partial<FieldFormState> = { keyboardType: value };
+                  if (value !== 'numeric') {
+                    updates.minValue = '';
+                    updates.maxValue = '';
+                  }
+                  if (value !== 'phone-pad') {
+                    updates.prefix = '';
+                  }
+                  if (value !== 'select') {
+                    updates.options = [];
+                  }
+                  return { ...prev, ...updates } as FieldFormState;
+                })
+              }
+            >
+              <ThemedText
+                variant="caption"
+                style={{
+                  color: fieldForm.keyboardType === value ? '#FFFFFF' : colors.text,
+                }}
+              >
+                {typeLabel}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {supportsPrefix && (
+          <Input
+            label="Phone Prefix"
+            value={fieldForm.prefix}
+            onChangeText={(text) => setFieldForm((prev) => ({ ...prev, prefix: text }))}
+            placeholder="e.g., +91"
+          />
+        )}
+
+        {fieldForm.keyboardType === 'select' && (
+          <>
+            <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+              Dropdown Options *
+            </ThemedText>
+            <View style={[styles.dropdownOptionsContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+              {fieldForm.options.map((option, index) => (
+                <View key={index} style={[styles.dropdownOptionRow, { backgroundColor: colors.card }]}>
+                  <View style={styles.dropdownOptionInputs}>
+                    <Input
+                      label=""
+                      value={option}
+                      onChangeText={(text) => {
+                        const newOptions = [...fieldForm.options];
+                        newOptions[index] = text;
+                        setFieldForm((prev) => ({ ...prev, options: newOptions }));
+                      }}
+                      placeholder="Option value"
+                      containerStyle={styles.dropdownOptionInputFull}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.deleteOptionButton, { backgroundColor: colors.error + '20' }]}
+                    onPress={() => {
+                      const newOptions = fieldForm.options.filter((_, i) => i !== index);
+                      setFieldForm((prev) => ({ ...prev, options: newOptions }));
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity
+                style={[styles.addOptionButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                onPress={() => {
+                  setFieldForm((prev) => ({
+                    ...prev,
+                    options: [...prev.options, ''],
+                  }));
+                }}
+              >
+                <Ionicons name="add" size={20} color={colors.primary} />
+                <ThemedText variant="bodySmall" style={{ color: colors.primary, marginLeft: spacing.xs }}>
+                  Add Option
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+          Length Limits
+        </ThemedText>
+        <View style={styles.constraintRow}>
+          <Input
+            label="Min Length"
+            value={fieldForm.minLength}
+            onChangeText={(text) => setFieldForm((prev) => ({ ...prev, minLength: text }))}
+            keyboardType="numeric"
+            placeholder="e.g., 6"
+            containerStyle={styles.constraintInput}
+          />
+          <Input
+            label="Max Length"
+            value={fieldForm.maxLength}
+            onChangeText={(text) => setFieldForm((prev) => ({ ...prev, maxLength: text }))}
+            keyboardType="numeric"
+            placeholder="e.g., 12"
+            containerStyle={styles.constraintInput}
+          />
+        </View>
+
+        {supportsValueLimits && (
+          <>
+            <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+              Value Range
+            </ThemedText>
+            <View style={styles.constraintRow}>
+              <Input
+                label="Min Value"
+                value={fieldForm.minValue}
+                onChangeText={(text) =>
+                  setFieldForm((prev) => ({ ...prev, minValue: text }))
+                }
+                keyboardType="numeric"
+                placeholder="e.g., 0"
+                containerStyle={styles.constraintInput}
+              />
+              <Input
+                label="Max Value"
+                value={fieldForm.maxValue}
+                onChangeText={(text) =>
+                  setFieldForm((prev) => ({ ...prev, maxValue: text }))
+                }
+                keyboardType="numeric"
+                placeholder="e.g., 9999"
+                containerStyle={styles.constraintInput}
+              />
+            </View>
+          </>
+        )}
+
+        <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
+          Options
+        </ThemedText>
+        <View style={styles.optionsRow}>
+          <TouchableOpacity
+            style={[
+              styles.optionToggle,
+              { backgroundColor: colors.card },
+              fieldForm.required && {
+                backgroundColor: colors.primary + '20',
+                borderColor: colors.primary,
+              },
+            ]}
+            onPress={() => setFieldForm((prev) => ({ ...prev, required: !prev.required }))}
+          >
+            <Ionicons
+              name={fieldForm.required ? 'checkbox' : 'square-outline'}
+              size={20}
+              color={fieldForm.required ? colors.primary : colors.textSecondary}
+            />
+            <ThemedText variant="bodySmall">Required</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.optionToggle,
+              { backgroundColor: colors.card },
+              fieldForm.sensitive && {
+                backgroundColor: colors.warning + '20',
+                borderColor: colors.warning,
+              },
+            ]}
+            onPress={() =>
+              setFieldForm((prev) => ({ ...prev, sensitive: !prev.sensitive }))
+            }
+          >
+            <Ionicons
+              name={fieldForm.sensitive ? 'eye-off' : 'eye-outline'}
+              size={20}
+              color={fieldForm.sensitive ? colors.warning : colors.textSecondary}
+            />
+            <ThemedText variant="bodySmall">Sensitive</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.optionToggle,
+              { backgroundColor: colors.card },
+              fieldForm.multiline && {
+                backgroundColor: colors.accent + '20',
+                borderColor: colors.accent,
+              },
+            ]}
+            onPress={() =>
+              setFieldForm((prev) => ({ ...prev, multiline: !prev.multiline }))
+            }
+          >
+            <Ionicons
+              name={fieldForm.multiline ? 'document-text' : 'document-text-outline'}
+              size={20}
+              color={fieldForm.multiline ? colors.accent : colors.textSecondary}
+            />
+            <ThemedText variant="bodySmall">Multiline</ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.fieldEditorActions}>
+          {(isEditingField || isAddingField) && (
+            <TouchableOpacity
+              style={[
+                styles.fieldEditorActionButton,
+                {
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  backgroundColor: colors.background,
+                },
+              ]}
+              onPress={resetFieldForm}
+            >
+              <ThemedText variant="bodySmall" style={{ color: colors.textSecondary }}>
+                Cancel
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[
+              styles.fieldEditorActionButton,
+              { backgroundColor: colors.primary, opacity: canSubmitField ? 1 : 0.5 },
+            ]}
+            onPress={handleSaveField}
+            disabled={!canSubmitField}
+          >
+            <ThemedText variant="bodySmall" style={{ color: '#FFFFFF' }}>
+              {isEditingField ? 'Update Field' : isAddingField ? 'Add Field' : 'Update Field'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }, [
+    isEditingField,
+    isAddingField,
+    fieldForm,
+    colors,
+    supportsPrefix,
+    supportsValueLimits,
+    canSubmitField,
+    handleSaveField,
+    resetFieldForm,
+  ]);
+
   const renderFieldItem = (field: FieldDefinition, index: number) => {
     const isEditing = editingFieldKey === field.key;
     return (
-      <View
-        key={field.key}
-        style={[
-          styles.fieldCard,
-          { backgroundColor: colors.card },
-          isEditing && { borderColor: colors.primary },
-          shadows.sm,
-        ]}
-      >
-        <View style={styles.fieldInfo}>
-          <View style={styles.fieldHeader}>
-            <ThemedText variant="body" style={styles.fieldLabel}>
-              {field.label}
-            </ThemedText>
-            {field.required && (
-              <View style={[styles.fieldBadge, { backgroundColor: colors.primary + '20' }]}>
-                <ThemedText variant="caption" style={{ color: colors.primary }}>
-                  Required
-                </ThemedText>
-              </View>
-            )}
-            {field.sensitive && (
-              <View style={[styles.fieldBadge, { backgroundColor: colors.warning + '20' }]}>
-                <ThemedText variant="caption" style={{ color: colors.warning }}>
-                  Sensitive
-                </ThemedText>
-              </View>
+      <View key={field.key}>
+        <View
+          style={[
+            styles.fieldCard,
+            { backgroundColor: colors.card },
+            isEditing && { borderColor: colors.primary, borderWidth: 2 },
+            shadows.sm,
+          ]}
+        >
+          <View style={styles.fieldInfo}>
+            <View style={styles.fieldHeader}>
+              <ThemedText variant="body" style={styles.fieldLabel}>
+                {field.label}
+              </ThemedText>
+              {field.required && (
+                <View style={[styles.fieldBadge, { backgroundColor: colors.primary + '20' }]}>
+                  <ThemedText variant="caption" style={{ color: colors.primary }}>
+                    Required
+                  </ThemedText>
+                </View>
+              )}
+              {field.sensitive && (
+                <View style={[styles.fieldBadge, { backgroundColor: colors.warning + '20' }]}>
+                  <ThemedText variant="caption" style={{ color: colors.warning }}>
+                    Sensitive
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+            {field.placeholder && (
+              <ThemedText variant="caption" color="tertiary">
+                {field.placeholder}
+              </ThemedText>
             )}
           </View>
-          {field.placeholder && (
-            <ThemedText variant="caption" color="tertiary">
-              {field.placeholder}
-            </ThemedText>
-          )}
-        </View>
 
-        <View style={styles.fieldActions}>
-          <TouchableOpacity
-            style={[styles.fieldActionBtn, { opacity: index === 0 ? 0.3 : 1 }]}
-            onPress={() => handleMoveField(index, 'up')}
-            disabled={index === 0}
-          >
-            <Ionicons name="chevron-up" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.fieldActionBtn, { opacity: index === fields.length - 1 ? 0.3 : 1 }]}
-            onPress={() => handleMoveField(index, 'down')}
-            disabled={index === fields.length - 1}
-          >
-            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleEditField(field)}>
-            <Ionicons name="pencil" size={16} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleDeleteField(field)}>
-            <Ionicons name="trash-outline" size={16} color={colors.error} />
-          </TouchableOpacity>
+          <View style={styles.fieldActions}>
+            <TouchableOpacity
+              style={[styles.fieldActionBtn, { opacity: index === 0 ? 0.3 : 1 }]}
+              onPress={() => handleMoveField(index, 'up')}
+              disabled={index === 0}
+            >
+              <Ionicons name="chevron-up" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.fieldActionBtn, { opacity: index === fields.length - 1 ? 0.3 : 1 }]}
+              onPress={() => handleMoveField(index, 'down')}
+              disabled={index === fields.length - 1}
+            >
+              <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleEditField(field)}>
+              <Ionicons name="pencil" size={16} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleDeleteField(field)}>
+              <Ionicons name="trash-outline" size={16} color={colors.error} />
+            </TouchableOpacity>
+          </View>
         </View>
+        {/* Inline editor appears right after the field being edited */}
+        {isEditing && (
+          <View style={styles.inlineEditorContainer}>
+            {renderFieldEditor()}
+          </View>
+        )}
       </View>
     );
   };
@@ -484,7 +793,7 @@ export default function CategoryEditScreen() {
                 <ThemedText variant="subtitle">Fields</ThemedText>
               </View>
 
-              {fields.length === 0 ? (
+              {fields.length === 0 && !isAddingField ? (
                 <View style={[styles.emptyFields, { backgroundColor: colors.backgroundTertiary }]}>
                   <Ionicons name="list-outline" size={32} color={colors.textTertiary} />
                   <ThemedText variant="bodySmall" color="tertiary" style={styles.emptyText}>
@@ -492,289 +801,31 @@ export default function CategoryEditScreen() {
                   </ThemedText>
                 </View>
               ) : (
-                <View style={styles.fieldsList}>{fields.map(renderFieldItem)}</View>
-              )}
-
-              <View style={[styles.fieldEditorCard, { backgroundColor: colors.card }, shadows.sm]}>
-                <ThemedText variant="label" style={styles.fieldEditorTitle}>
-                  {isEditingField ? 'Edit Field' : 'Add Field'}
-                </ThemedText>
-
-                <Input
-                  label="Field Label *"
-                  value={fieldForm.label}
-                  onChangeText={(text) => setFieldForm((prev) => ({ ...prev, label: text }))}
-                  placeholder="e.g., Account Number"
-                />
-
-                <Input
-                  label="Placeholder"
-                  value={fieldForm.placeholder}
-                  onChangeText={(text) => setFieldForm((prev) => ({ ...prev, placeholder: text }))}
-                  placeholder="Hint text shown when empty"
-                />
-
-                <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
-                  Field Type
-                </ThemedText>
-                <View style={styles.keyboardTypeRow}>
-                  {KEYBOARD_TYPE_OPTIONS.map(({ value, label: typeLabel }) => (
-                    <TouchableOpacity
-                      key={value}
-                      style={[
-                        styles.keyboardTypeOption,
-                        { backgroundColor: colors.card },
-                        fieldForm.keyboardType === value && { backgroundColor: colors.primary },
-                      ]}
-                      onPress={() =>
-                        setFieldForm((prev) => {
-                          const updates: Partial<FieldFormState> = { keyboardType: value };
-                          if (value !== 'numeric') {
-                            updates.minValue = '';
-                            updates.maxValue = '';
-                          }
-                          if (value !== 'phone-pad') {
-                            updates.prefix = '';
-                          }
-                          if (value !== 'select') {
-                            updates.options = [];
-                          }
-                          return { ...prev, ...updates } as FieldFormState;
-                        })
-                      }
-                    >
-                      <ThemedText
-                        variant="caption"
-                        style={{
-                          color: fieldForm.keyboardType === value ? '#FFFFFF' : colors.text,
-                        }}
-                      >
-                        {typeLabel}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {supportsPrefix && (
-                  <Input
-                    label="Phone Prefix"
-                    value={fieldForm.prefix}
-                    onChangeText={(text) => setFieldForm((prev) => ({ ...prev, prefix: text }))}
-                    placeholder="e.g., +91"
-                  />
-                )}
-
-                {fieldForm.keyboardType === 'select' && (
-                  <>
-                    <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
-                      Dropdown Options *
-                    </ThemedText>
-                    <View style={[styles.dropdownOptionsContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-                      {fieldForm.options.map((option, index) => (
-                        <View key={index} style={[styles.dropdownOptionRow, { backgroundColor: colors.card }]}>
-                          <View style={styles.dropdownOptionInputs}>
-                            <Input
-                              label="Value"
-                              value={option.value}
-                              onChangeText={(text) => {
-                                const newOptions = [...fieldForm.options];
-                                newOptions[index] = { ...newOptions[index], value: text };
-                                setFieldForm((prev) => ({ ...prev, options: newOptions }));
-                              }}
-                              placeholder="value"
-                              containerStyle={styles.dropdownOptionInput}
-                            />
-                            <Input
-                              label="Label"
-                              value={option.label}
-                              onChangeText={(text) => {
-                                const newOptions = [...fieldForm.options];
-                                newOptions[index] = { ...newOptions[index], label: text };
-                                setFieldForm((prev) => ({ ...prev, options: newOptions }));
-                              }}
-                              placeholder="Display text"
-                              containerStyle={styles.dropdownOptionInput}
-                            />
-                          </View>
-                          <TouchableOpacity
-                            style={[styles.deleteOptionButton, { backgroundColor: colors.error + '20' }]}
-                            onPress={() => {
-                              const newOptions = fieldForm.options.filter((_, i) => i !== index);
-                              setFieldForm((prev) => ({ ...prev, options: newOptions }));
-                            }}
-                          >
-                            <Ionicons name="trash-outline" size={18} color={colors.error} />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                      <TouchableOpacity
-                        style={[styles.addOptionButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
-                        onPress={() => {
-                          setFieldForm((prev) => ({
-                            ...prev,
-                            options: [...prev.options, { value: '', label: '' }],
-                          }));
-                        }}
-                      >
-                        <Ionicons name="add" size={20} color={colors.primary} />
-                        <ThemedText variant="bodySmall" style={{ color: colors.primary, marginLeft: spacing.xs }}>
-                          Add Option
-                        </ThemedText>
-                      </TouchableOpacity>
+                <View style={styles.fieldsList}>
+                  {fields.map(renderFieldItem)}
+                  {/* Show editor at end when adding a new field (not editing existing) */}
+                  {isAddingField && (
+                    <View style={styles.inlineEditorContainer}>
+                      {renderFieldEditor()}
                     </View>
-                  </>
-                )}
-
-                <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
-                  Length Limits
-                </ThemedText>
-                <View style={styles.constraintRow}>
-                  <Input
-                    label="Min Length"
-                    value={fieldForm.minLength}
-                    onChangeText={(text) => setFieldForm((prev) => ({ ...prev, minLength: text }))}
-                    keyboardType="numeric"
-                    placeholder="e.g., 6"
-                    containerStyle={styles.constraintInput}
-                  />
-                  <Input
-                    label="Max Length"
-                    value={fieldForm.maxLength}
-                    onChangeText={(text) => setFieldForm((prev) => ({ ...prev, maxLength: text }))}
-                    keyboardType="numeric"
-                    placeholder="e.g., 12"
-                    containerStyle={styles.constraintInput}
-                  />
-                </View>
-
-                {supportsValueLimits && (
-                  <>
-                    <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
-                      Value Range
-                    </ThemedText>
-                    <View style={styles.constraintRow}>
-                      <Input
-                        label="Min Value"
-                        value={fieldForm.minValue}
-                        onChangeText={(text) =>
-                          setFieldForm((prev) => ({ ...prev, minValue: text }))
-                        }
-                        keyboardType="numeric"
-                        placeholder="e.g., 0"
-                        containerStyle={styles.constraintInput}
-                      />
-                      <Input
-                        label="Max Value"
-                        value={fieldForm.maxValue}
-                        onChangeText={(text) =>
-                          setFieldForm((prev) => ({ ...prev, maxValue: text }))
-                        }
-                        keyboardType="numeric"
-                        placeholder="e.g., 9999"
-                        containerStyle={styles.constraintInput}
-                      />
-                    </View>
-                  </>
-                )}
-
-                <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
-                  Options
-                </ThemedText>
-                <View style={styles.optionsRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionToggle,
-                      { backgroundColor: colors.card },
-                      fieldForm.required && {
-                        backgroundColor: colors.primary + '20',
-                        borderColor: colors.primary,
-                      },
-                    ]}
-                    onPress={() => setFieldForm((prev) => ({ ...prev, required: !prev.required }))}
-                  >
-                    <Ionicons
-                      name={fieldForm.required ? 'checkbox' : 'square-outline'}
-                      size={20}
-                      color={fieldForm.required ? colors.primary : colors.textSecondary}
-                    />
-                    <ThemedText variant="bodySmall">Required</ThemedText>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.optionToggle,
-                      { backgroundColor: colors.card },
-                      fieldForm.sensitive && {
-                        backgroundColor: colors.warning + '20',
-                        borderColor: colors.warning,
-                      },
-                    ]}
-                    onPress={() =>
-                      setFieldForm((prev) => ({ ...prev, sensitive: !prev.sensitive }))
-                    }
-                  >
-                    <Ionicons
-                      name={fieldForm.sensitive ? 'eye-off' : 'eye-outline'}
-                      size={20}
-                      color={fieldForm.sensitive ? colors.warning : colors.textSecondary}
-                    />
-                    <ThemedText variant="bodySmall">Sensitive</ThemedText>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.optionToggle,
-                      { backgroundColor: colors.card },
-                      fieldForm.multiline && {
-                        backgroundColor: colors.accent + '20',
-                        borderColor: colors.accent,
-                      },
-                    ]}
-                    onPress={() =>
-                      setFieldForm((prev) => ({ ...prev, multiline: !prev.multiline }))
-                    }
-                  >
-                    <Ionicons
-                      name={fieldForm.multiline ? 'document-text' : 'document-text-outline'}
-                      size={20}
-                      color={fieldForm.multiline ? colors.accent : colors.textSecondary}
-                    />
-                    <ThemedText variant="bodySmall">Multiline</ThemedText>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.fieldEditorActions}>
-                  {isEditingField && (
+                  )}
+                  {/* Add Field button at bottom */}
+                  {!isEditingField && !isAddingField && (
                     <TouchableOpacity
-                      style={[
-                        styles.fieldEditorActionButton,
-                        {
-                          borderColor: colors.border,
-                          borderWidth: 1,
-                          backgroundColor: colors.background,
-                        },
-                      ]}
-                      onPress={resetFieldForm}
+                      style={[styles.addFieldButtonBottom, { backgroundColor: colors.primary }]}
+                      onPress={() => {
+                        resetFieldForm();
+                        setIsAddingNewField(true);
+                      }}
                     >
-                      <ThemedText variant="bodySmall" style={{ color: colors.textSecondary }}>
-                        Cancel
+                      <Ionicons name="add" size={20} color="#FFFFFF" />
+                      <ThemedText variant="bodySmall" style={{ color: '#FFFFFF', marginLeft: spacing.sm }}>
+                        Add Field
                       </ThemedText>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity
-                    style={[
-                      styles.fieldEditorActionButton,
-                      { backgroundColor: colors.primary, opacity: canSubmitField ? 1 : 0.5 },
-                    ]}
-                    onPress={handleSaveField}
-                    disabled={!canSubmitField}
-                  >
-                    <ThemedText variant="bodySmall" style={{ color: '#FFFFFF' }}>
-                      {isEditingField ? 'Update Field' : 'Add Field'}
-                    </ThemedText>
-                  </TouchableOpacity>
                 </View>
-              </View>
+              )}
             </View>
 
             {/* Save button */}
@@ -965,6 +1016,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     marginBottom: spacing.md,
   },
+  addFieldButtonBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.md,
+  },
   emptyFields: {
     padding: spacing.xl,
     borderRadius: borderRadius.lg,
@@ -985,10 +1045,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
+  inlineEditorContainer: {
+    marginTop: spacing.sm,
+  },
   fieldEditorCard: {
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    marginTop: spacing.lg,
     gap: spacing.md,
   },
   fieldEditorTitle: {
@@ -1141,6 +1203,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dropdownOptionInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  dropdownOptionInputFull: {
     flex: 1,
     marginBottom: 0,
   },
