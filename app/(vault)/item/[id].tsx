@@ -8,15 +8,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  BackHandler,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,6 +107,16 @@ export default function ItemDetailScreen() {
       isActive = false;
     };
   }, [item, getAssetsForItem, migrateItemAssets, ensureAssetsLoaded]);
+
+  // Android hardware back button handler
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true; // Prevent default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, [router]);
 
   const category = useMemo(
     () => (item ? getCategoryById(item.type) : null),

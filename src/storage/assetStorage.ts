@@ -9,7 +9,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as SecureStore from 'expo-secure-store';
 import * as Sharing from 'expo-sharing';
-import { formatFileSize as formatSize } from '../utils/formatters';
 import { logger } from '../utils/logger';
 import type { Asset, AssetType, AssetsData, ImageAttachment } from '../utils/types';
 import { isAssetsData } from '../utils/types';

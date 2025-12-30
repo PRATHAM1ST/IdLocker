@@ -7,17 +7,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  GestureResponderEvent,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    GestureResponderEvent,
+    Image,
+    Modal,
+    Pressable,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { ImageShareModal } from '../../src/components/ImageShareModal';
 import { PageContent } from '../../src/components/PageContent';
