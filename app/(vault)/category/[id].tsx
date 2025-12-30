@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   BackHandler,
   KeyboardAvoidingView,
@@ -105,6 +106,10 @@ export default function CategoryEditScreen() {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [iconSearchQuery, setIconSearchQuery] = useState('');
+  const [isLoadingIcons, setIsLoadingIcons] = useState(false);
+  const [isLoadingColors, setIsLoadingColors] = useState(false);
+  const [iconsReady, setIconsReady] = useState(false);
+  const [colorsReady, setColorsReady] = useState(false);
   const [fieldForm, setFieldForm] = useState<FieldFormState>(() => createEmptyFieldForm());
   const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
   const [isAddingNewField, setIsAddingNewField] = useState(false);
@@ -114,6 +119,64 @@ export default function CategoryEditScreen() {
     setEditingFieldKey(null);
     setIsAddingNewField(false);
   }, []);
+
+  // Load icons data when icon picker opens
+  useEffect(() => {
+    if (showIconPicker && !iconsReady) {
+      setIsLoadingIcons(true);
+      const loadIcons = async () => {
+        // Use requestAnimationFrame to allow the UI to render first
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        
+        // Access CATEGORY_ICONS to ensure they're loaded
+        // This will trigger any lazy loading or processing
+        const _icons = CATEGORY_ICONS;
+        
+        // Process icons list (if needed for filtering/search)
+        if (_icons.length > 0) {
+          // Small processing delay to simulate data preparation
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        
+        setIconsReady(true);
+        setIsLoadingIcons(false);
+      };
+      
+      loadIcons();
+    } else if (!showIconPicker) {
+      // Reset when modal closes
+      setIconsReady(false);
+    }
+  }, [showIconPicker, iconsReady]);
+
+  // Load colors data when color picker opens
+  useEffect(() => {
+    if (showColorPicker && !colorsReady) {
+      setIsLoadingColors(true);
+      const loadColors = async () => {
+        // Use requestAnimationFrame to allow the UI to render first
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        
+        // Access CATEGORY_COLORS to ensure they're loaded
+        // This will trigger any lazy loading or processing
+        const _colors = CATEGORY_COLORS;
+        
+        // Process colors list
+        if (_colors.length > 0) {
+          // Small processing delay to simulate data preparation
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        
+        setColorsReady(true);
+        setIsLoadingColors(false);
+      };
+      
+      loadColors();
+    } else if (!showColorPicker) {
+      // Reset when modal closes
+      setColorsReady(false);
+    }
+  }, [showColorPicker, colorsReady]);
 
   // Initialize form with existing category data
   useEffect(() => {
@@ -241,36 +304,32 @@ export default function CategoryEditScreen() {
   const handleCancel = useCallback(() => {
     if (hasChanges && !isShowingPrompt.current) {
       isShowingPrompt.current = true;
-      Alert.alert(
-        'Unsaved Changes',
-        'You have unsaved changes. What would you like to do?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => {
-              isShowingPrompt.current = false;
-            },
+      Alert.alert('Unsaved Changes', 'You have unsaved changes. What would you like to do?', [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            isShowingPrompt.current = false;
           },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              isShowingPrompt.current = false;
-              isDiscarding.current = true;
-              router.back();
-            },
+        },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            isShowingPrompt.current = false;
+            isDiscarding.current = true;
+            router.back();
           },
-          {
-            text: 'Save',
-            onPress: async () => {
-              isShowingPrompt.current = false;
-              isSavingAndNavigating.current = true;
-              await handleSave();
-            },
+        },
+        {
+          text: 'Save',
+          onPress: async () => {
+            isShowingPrompt.current = false;
+            isSavingAndNavigating.current = true;
+            await handleSave();
           },
-        ],
-      );
+        },
+      ]);
     } else if (!hasChanges) {
       router.back();
     }
@@ -305,37 +364,33 @@ export default function CategoryEditScreen() {
       e.preventDefault();
 
       isShowingPrompt.current = true;
-      Alert.alert(
-        'Unsaved Changes',
-        'You have unsaved changes. What would you like to do?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => {
-              isShowingPrompt.current = false;
-            },
+      Alert.alert('Unsaved Changes', 'You have unsaved changes. What would you like to do?', [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            isShowingPrompt.current = false;
           },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              isShowingPrompt.current = false;
-              isDiscarding.current = true;
-              navigation.dispatch(e.data.action);
-            },
+        },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            isShowingPrompt.current = false;
+            isDiscarding.current = true;
+            navigation.dispatch(e.data.action);
           },
-          {
-            text: 'Save',
-            onPress: async () => {
-              isShowingPrompt.current = false;
-              isSavingAndNavigating.current = true;
-              await handleSave();
-              // Navigation will happen in handleSave after successful save
-            },
+        },
+        {
+          text: 'Save',
+          onPress: async () => {
+            isShowingPrompt.current = false;
+            isSavingAndNavigating.current = true;
+            await handleSave();
+            // Navigation will happen in handleSave after successful save
           },
-        ],
-      );
+        },
+      ]);
     });
 
     return unsubscribe;
@@ -360,7 +415,7 @@ export default function CategoryEditScreen() {
     const optionsAsStrings = field.options
       ? field.options.map((opt) => opt.label || opt.value)
       : [];
-    
+
     setFieldForm({
       label: field.label,
       placeholder: field.placeholder || '',
@@ -437,22 +492,22 @@ export default function CategoryEditScreen() {
     }
 
     const prefixValue = fieldForm.prefix.trim();
-    
+
     // Validate dropdown options
     if (fieldForm.keyboardType === 'select') {
       if (fieldForm.options.length === 0) {
         Alert.alert('Error', 'Please add at least one option for the dropdown field');
         return;
       }
-      
+
       // Check if all options have a value
-      const hasInvalidOption = fieldForm.options.some(opt => !opt.trim());
+      const hasInvalidOption = fieldForm.options.some((opt) => !opt.trim());
       if (hasInvalidOption) {
         Alert.alert('Error', 'All dropdown options must have a value');
         return;
       }
     }
-    
+
     const key =
       editingFieldKey ||
       trimmedLabel
@@ -461,11 +516,12 @@ export default function CategoryEditScreen() {
         .replace(/[^a-z0-9_]/g, '');
 
     // Convert string options to {value, label} format where value = label
-    const optionsFormatted = fieldForm.keyboardType === 'select' && fieldForm.options.length > 0
-      ? fieldForm.options
-          .filter(opt => opt.trim())
-          .map(opt => ({ value: opt.trim(), label: opt.trim() }))
-      : undefined;
+    const optionsFormatted =
+      fieldForm.keyboardType === 'select' && fieldForm.options.length > 0
+        ? fieldForm.options
+            .filter((opt) => opt.trim())
+            .map((opt) => ({ value: opt.trim(), label: opt.trim() }))
+        : undefined;
 
     const payload: FieldDefinition = {
       key,
@@ -532,9 +588,7 @@ export default function CategoryEditScreen() {
       return CATEGORY_ICONS;
     }
     const query = iconSearchQuery.toLowerCase().trim();
-    return CATEGORY_ICONS.filter(iconName => 
-      iconName.toLowerCase().includes(query)
-    );
+    return CATEGORY_ICONS.filter((iconName) => iconName.toLowerCase().includes(query));
   }, [iconSearchQuery]);
 
   // Helper function to render the field editor form
@@ -614,9 +668,17 @@ export default function CategoryEditScreen() {
             <ThemedText variant="label" color="secondary" style={styles.optionsLabel}>
               Dropdown Options *
             </ThemedText>
-            <View style={[styles.dropdownOptionsContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.dropdownOptionsContainer,
+                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+              ]}
+            >
               {fieldForm.options.map((option, index) => (
-                <View key={index} style={[styles.dropdownOptionRow, { backgroundColor: colors.card }]}>
+                <View
+                  key={index}
+                  style={[styles.dropdownOptionRow, { backgroundColor: colors.card }]}
+                >
                   <View style={styles.dropdownOptionInputs}>
                     <Input
                       label=""
@@ -642,7 +704,10 @@ export default function CategoryEditScreen() {
                 </View>
               ))}
               <TouchableOpacity
-                style={[styles.addOptionButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                style={[
+                  styles.addOptionButton,
+                  { backgroundColor: colors.primary + '20', borderColor: colors.primary },
+                ]}
                 onPress={() => {
                   setFieldForm((prev) => ({
                     ...prev,
@@ -651,7 +716,10 @@ export default function CategoryEditScreen() {
                 }}
               >
                 <Ionicons name="add" size={20} color={colors.primary} />
-                <ThemedText variant="bodySmall" style={{ color: colors.primary, marginLeft: spacing.xs }}>
+                <ThemedText
+                  variant="bodySmall"
+                  style={{ color: colors.primary, marginLeft: spacing.xs }}
+                >
                   Add Option
                 </ThemedText>
               </TouchableOpacity>
@@ -690,9 +758,7 @@ export default function CategoryEditScreen() {
               <Input
                 label="Min Value"
                 value={fieldForm.minValue}
-                onChangeText={(text) =>
-                  setFieldForm((prev) => ({ ...prev, minValue: text }))
-                }
+                onChangeText={(text) => setFieldForm((prev) => ({ ...prev, minValue: text }))}
                 keyboardType="numeric"
                 placeholder="e.g., 0"
                 containerStyle={styles.constraintInput}
@@ -700,9 +766,7 @@ export default function CategoryEditScreen() {
               <Input
                 label="Max Value"
                 value={fieldForm.maxValue}
-                onChangeText={(text) =>
-                  setFieldForm((prev) => ({ ...prev, maxValue: text }))
-                }
+                onChangeText={(text) => setFieldForm((prev) => ({ ...prev, maxValue: text }))}
                 keyboardType="numeric"
                 placeholder="e.g., 9999"
                 containerStyle={styles.constraintInput}
@@ -743,9 +807,7 @@ export default function CategoryEditScreen() {
                 borderColor: colors.warning,
               },
             ]}
-            onPress={() =>
-              setFieldForm((prev) => ({ ...prev, sensitive: !prev.sensitive }))
-            }
+            onPress={() => setFieldForm((prev) => ({ ...prev, sensitive: !prev.sensitive }))}
           >
             <Ionicons
               name={fieldForm.sensitive ? 'eye-off' : 'eye-outline'}
@@ -764,9 +826,7 @@ export default function CategoryEditScreen() {
                 borderColor: colors.accent,
               },
             ]}
-            onPress={() =>
-              setFieldForm((prev) => ({ ...prev, multiline: !prev.multiline }))
-            }
+            onPress={() => setFieldForm((prev) => ({ ...prev, multiline: !prev.multiline }))}
           >
             <Ionicons
               name={fieldForm.multiline ? 'document-text' : 'document-text-outline'}
@@ -879,17 +939,16 @@ export default function CategoryEditScreen() {
             <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleEditField(field)}>
               <Ionicons name="pencil" size={16} color={colors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.fieldActionBtn} onPress={() => handleDeleteField(field)}>
+            <TouchableOpacity
+              style={styles.fieldActionBtn}
+              onPress={() => handleDeleteField(field)}
+            >
               <Ionicons name="trash-outline" size={16} color={colors.error} />
             </TouchableOpacity>
           </View>
         </View>
         {/* Inline editor appears right after the field being edited */}
-        {isEditing && (
-          <View style={styles.inlineEditorContainer}>
-            {renderFieldEditor()}
-          </View>
-        )}
+        {isEditing && <View style={styles.inlineEditorContainer}>{renderFieldEditor()}</View>}
       </View>
     );
   };
@@ -972,10 +1031,7 @@ export default function CategoryEditScreen() {
                 style={[styles.pickerButton, { backgroundColor: colors.card }]}
                 onPress={() => setShowColorPicker(true)}
               >
-                <LinearGradient
-                  colors={[gradientStart, gradientEnd]}
-                  style={styles.colorPreview}
-                />
+                <LinearGradient colors={[gradientStart, gradientEnd]} style={styles.colorPreview} />
                 <ThemedText variant="body" style={styles.pickerText}>
                   Change Color
                 </ThemedText>
@@ -996,26 +1052,27 @@ export default function CategoryEditScreen() {
                     No fields yet. Add fields to define what data this category stores.
                   </ThemedText>
                   <TouchableOpacity
-                      style={[styles.addFieldButtonBottom, { backgroundColor: colors.primary }]}
-                      onPress={() => {
-                        resetFieldForm();
-                        setIsAddingNewField(true);
-                      }}
+                    style={[styles.addFieldButtonBottom, { backgroundColor: colors.primary }]}
+                    onPress={() => {
+                      resetFieldForm();
+                      setIsAddingNewField(true);
+                    }}
+                  >
+                    <Ionicons name="add" size={20} color="#FFFFFF" />
+                    <ThemedText
+                      variant="bodySmall"
+                      style={{ color: '#FFFFFF', marginLeft: spacing.sm }}
                     >
-                      <Ionicons name="add" size={20} color="#FFFFFF" />
-                      <ThemedText variant="bodySmall" style={{ color: '#FFFFFF', marginLeft: spacing.sm }}>
-                        Add Field
-                      </ThemedText>
-                    </TouchableOpacity>
+                      Add Field
+                    </ThemedText>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.fieldsList}>
                   {fields.map(renderFieldItem)}
                   {/* Show editor at end when adding a new field (not editing existing) */}
                   {isAddingField && (
-                    <View style={styles.inlineEditorContainer}>
-                      {renderFieldEditor()}
-                    </View>
+                    <View style={styles.inlineEditorContainer}>{renderFieldEditor()}</View>
                   )}
                   {/* Add Field button at bottom */}
                   {!isEditingField && !isAddingField && (
@@ -1027,7 +1084,10 @@ export default function CategoryEditScreen() {
                       }}
                     >
                       <Ionicons name="add" size={20} color="#FFFFFF" />
-                      <ThemedText variant="bodySmall" style={{ color: '#FFFFFF', marginLeft: spacing.sm }}>
+                      <ThemedText
+                        variant="bodySmall"
+                        style={{ color: '#FFFFFF', marginLeft: spacing.sm }}
+                      >
                         Add Field
                       </ThemedText>
                     </TouchableOpacity>
@@ -1065,10 +1125,12 @@ export default function CategoryEditScreen() {
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => {
-              setIconSearchQuery('');
-              setShowIconPicker(false);
-            }}>
+            <TouchableOpacity
+              onPress={() => {
+                setIconSearchQuery('');
+                setShowIconPicker(false);
+              }}
+            >
               <ThemedText variant="body" style={{ color: colors.primary }}>
                 Done
               </ThemedText>
@@ -1076,42 +1138,53 @@ export default function CategoryEditScreen() {
             <ThemedText variant="subtitle">Choose Icon</ThemedText>
             <View style={{ width: 40 }} />
           </View>
-          <View style={styles.iconSearchContainer}>
-            <Input
-              placeholder="Search icons..."
-              value={iconSearchQuery}
-              onChangeText={setIconSearchQuery}
-              leftIcon="search-outline"
-              containerStyle={styles.iconSearchInput}
-            />
-          </View>
-          <ScrollView contentContainerStyle={styles.iconGrid}>
-            {filteredIcons.map((iconName) => (
-              <TouchableOpacity
-                key={iconName}
-                style={[
-                  styles.iconOption,
-                  { backgroundColor: colors.card },
-                  icon === iconName && {
-                    backgroundColor: color.bg,
-                    borderColor: color.icon,
-                    borderWidth: 2,
-                  },
-                ]}
-                onPress={() => {
-                  setIcon(iconName);
-                  setIconSearchQuery('');
-                  setShowIconPicker(false);
-                }}
-              >
-                <Ionicons
-                  name={iconName as any}
-                  size={28}
-                  color={icon === iconName ? color.icon : colors.text}
+          {isLoadingIcons ? (
+            <View style={[styles.modalLoadingContainer, { backgroundColor: colors.background }]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <ThemedText variant="body" color="secondary" style={styles.modalLoadingText}>
+                Loading icons...
+              </ThemedText>
+            </View>
+          ) : (
+            <>
+              <View style={styles.iconSearchContainer}>
+                <Input
+                  placeholder="Search icons..."
+                  value={iconSearchQuery}
+                  onChangeText={setIconSearchQuery}
+                  leftIcon="search-outline"
+                  containerStyle={styles.iconSearchInput}
                 />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+              </View>
+              <ScrollView contentContainerStyle={styles.iconGrid}>
+                {filteredIcons.map((iconName) => (
+                  <TouchableOpacity
+                    key={iconName}
+                    style={[
+                      styles.iconOption,
+                      { backgroundColor: colors.card },
+                      icon === iconName && {
+                        backgroundColor: color.bg,
+                        borderColor: color.icon,
+                        borderWidth: 2,
+                      },
+                    ]}
+                    onPress={() => {
+                      setIcon(iconName);
+                      setIconSearchQuery('');
+                      setShowIconPicker(false);
+                    }}
+                  >
+                    <Ionicons
+                      name={iconName as any}
+                      size={28}
+                      color={icon === iconName ? color.icon : colors.text}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
         </View>
       </Modal>
 
@@ -1121,6 +1194,7 @@ export default function CategoryEditScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
         statusBarTranslucent={false}
+        onRequestClose={() => setShowColorPicker(false)}
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
@@ -1132,36 +1206,47 @@ export default function CategoryEditScreen() {
             <ThemedText variant="subtitle">Choose Color</ThemedText>
             <View style={{ width: 40 }} />
           </View>
-          <ScrollView contentContainerStyle={styles.colorGrid}>
-            {CATEGORY_COLORS.map((colorOption, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.colorOption,
-                  color.gradientStart === colorOption.gradientStart && styles.colorOptionSelected,
-                ]}
-                onPress={() => {
-                  setColor({
-                    gradientStart: colorOption.gradientStart,
-                    gradientEnd: colorOption.gradientEnd,
-                    bg: colorOption.bg,
-                    icon: colorOption.icon,
-                    text: colorOption.text,
-                  });
-                  setShowColorPicker(false);
-                }}
-              >
-                <LinearGradient
-                  colors={[
-                    colorOption.gradientStart || '#3B82F6',
-                    colorOption.gradientEnd || '#60A5FA',
+          {isLoadingColors ? (
+            <View style={[styles.modalLoadingContainer, { backgroundColor: colors.background }]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <ThemedText variant="body" color="secondary" style={styles.modalLoadingText}>
+                Loading colors...
+              </ThemedText>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.colorGrid}>
+              {CATEGORY_COLORS.map((colorOption, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.colorOption,
+                    color.gradientStart === colorOption.gradientStart && styles.colorOptionSelected,
                   ]}
-                  style={styles.colorOptionGradient}
-                />
-                <ThemedText variant="caption">{colorOption.name}</ThemedText>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  onPress={() => {
+                    setColor({
+                      gradientStart: colorOption.gradientStart,
+                      gradientEnd: colorOption.gradientEnd,
+                      bg: colorOption.bg,
+                      icon: colorOption.icon,
+                      text: colorOption.text,
+                    });
+                    setShowColorPicker(false);
+                  }}
+                >
+                  <LinearGradient
+                    colors={[
+                      colorOption.gradientStart || '#3B82F6',
+                      colorOption.gradientEnd || '#60A5FA',
+                    ]}
+                    style={styles.colorOptionGradient}
+                  />
+                  <ThemedText variant="caption" style={{ textAlign: 'center' }}>
+                    {colorOption.name}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
       </Modal>
     </ThemedView>
@@ -1331,7 +1416,17 @@ const styles = StyleSheet.create({
   },
   saveContainer: {
     marginTop: spacing.xl,
-    marginBottom: spacing.xl * 3
+    marginBottom: spacing.xl * 3,
+  },
+  modalLoadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing['3xl'],
+  },
+  modalLoadingText: {
+    marginTop: spacing.md,
   },
   // Modal styles
   modalContainer: {
@@ -1354,7 +1449,7 @@ const styles = StyleSheet.create({
   },
   iconGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
     flexWrap: 'wrap',
     padding: spacing.base,
@@ -1370,6 +1465,7 @@ const styles = StyleSheet.create({
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-evenly',
     padding: spacing.base,
     gap: spacing.md,
   },

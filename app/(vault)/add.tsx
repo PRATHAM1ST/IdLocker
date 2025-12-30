@@ -817,7 +817,7 @@ export default function AddItemScreen() {
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+            colors={[categoryColor.gradientStart || "#000", categoryColor.gradientEnd || "#000"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.typeIndicatorGradient}
