@@ -9,6 +9,7 @@ import { spacing } from '../styles/theme';
 import type { CustomCategory, VaultItem, VaultItemType } from '../utils/types';
 import { EmptyState } from './EmptyState';
 import { VaultItemGridCard } from './VaultItemGridCard';
+import { useTheme } from '../context/ThemeProvider';
 
 type FilterType = VaultItemType | 'all';
 
@@ -35,6 +36,7 @@ export function VaultItemsGrid({
   onItemLongPress,
   onItemSelect,
 }: VaultItemsGridProps) {
+  const { colors } = useTheme();
   if (items.length === 0) {
     return (
       <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
@@ -56,7 +58,7 @@ export function VaultItemsGrid({
           }
           actionLabel="Add Item"
           onAction={() => onAddItem(selectedFilter === 'all' ? undefined : selectedFilter)}
-          actionButtonColor={selectedCategory?.color.gradientStart}
+          actionButtonColor={selectedCategory?.color.gradientStart || colors.accent}
         />
       </Animated.View>
     );
