@@ -7,6 +7,7 @@ export { BottomTabBar } from './BottomTabBar';
 export { Button, IconButton } from './Button';
 export { DynamicCategoryCard, DynamicCategoryFilterCard } from './CategoryCard';
 // CategoryTabs removed - use DynamicCategoryFilterCard instead
+export { CategoryFilterList } from './CategoryFilterList';
 export { CustomFieldEditor } from './CustomFieldEditor';
 export { EmptyState } from './EmptyState';
 export { IllustratedHeader, SimpleHeader } from './IllustratedHeader';
@@ -15,13 +16,13 @@ export { ImageResizer } from './ImageResizer';
 export { ImageShareModal } from './ImageShareModal';
 export { Input, Select } from './Input';
 export { SecureField } from './SecureField';
+export { useSwipeableActions } from './SwipeableActions';
 export { ThemedText } from './ThemedText';
 export { SafeThemedView, ThemedView } from './ThemedView';
+export { VaultHeader } from './VaultHeader';
 export { VaultItemCard, VaultItemCardCompact } from './VaultItemCard';
 export { VaultItemGridCard } from './VaultItemGridCard';
-export { VaultHeader } from './VaultHeader';
-export { VaultSearchBar } from './VaultSearchBar';
-export { CategoryFilterList } from './CategoryFilterList';
-export { VaultSectionHeader } from './VaultSectionHeader';
 export { VaultItemsGrid } from './VaultItemsGrid';
-export { useSwipeableActions } from './SwipeableActions';
+export { VaultSearchBar } from './VaultSearchBar';
+export { VaultSectionHeader } from './VaultSectionHeader';
+

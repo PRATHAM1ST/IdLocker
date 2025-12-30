@@ -3,18 +3,18 @@
  * Displays item info in a visually rich card format with image previews
  */
 
-import React, { useMemo } from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../context/ThemeProvider';
+import React, { useMemo } from 'react';
+import { Dimensions, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useCategories } from '../context/CategoryProvider';
-import { ThemedText } from './ThemedText';
-import { spacing, borderRadius, shadows, typography } from '../styles/theme';
+import { useTheme } from '../context/ThemeProvider';
+import { borderRadius, shadows, spacing, typography } from '../styles/theme';
+import { formatCardExpiry, formatRelativeTime } from '../utils/formatters';
 import type { VaultItem } from '../utils/types';
 import { getItemPreview } from '../utils/validation';
-import { formatCardExpiry, formatRelativeTime } from '../utils/formatters';
-import Animated from 'react-native-reanimated';
+import { ThemedText } from './ThemedText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = spacing.md;
@@ -23,9 +23,20 @@ const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - CARD_GAP) / 2;
 interface VaultItemGridCardProps {
   item: VaultItem;
   onPress: (item: VaultItem) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onLongPress?: () => void;
+  onSelect?: () => void;
 }
 
-export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
+export function VaultItemGridCard({
+  item,
+  onPress,
+  isSelectionMode = false,
+  isSelected = false,
+  onLongPress,
+  onSelect,
+}: VaultItemGridCardProps) {
   const { colors, isDark } = useTheme();
   const { getCategoryById } = useCategories();
 
@@ -67,19 +78,38 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
   // Format last updated time
   const lastUpdated = useMemo(() => formatRelativeTime(item.updatedAt), [item.updatedAt]);
 
+  const handlePress = () => {
+    if (isSelectionMode && onSelect) {
+      onSelect();
+    } else {
+      onPress(item);
+    }
+  };
+
   return (
     <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.card }, shadows.md]}
-      onPress={() => onPress(item)}
+      style={[
+        styles.container,
+        { backgroundColor: colors.card },
+        shadows.md,
+        // {
+        //   borderWidth: isSelectionMode ? 2 : 0,
+        //   borderColor: isSelected ? '#007AFF' : 'transparent',
+        //   borderRadius: borderRadius.xl,
+        // },
+      ]}
+      onPress={handlePress}
+      onLongPress={onLongPress}
+      delayLongPress={500}
       activeOpacity={0.7}
     >
       <LinearGradient
-        colors={['rgba(255, 255, 255, 1)', 'transparent', 'transparent', 'rgba(255, 255, 255, 1)']}
+        colors={isSelected ? ['white', 'white'] :['rgba(255, 255, 255, 1)', 'transparent', 'transparent', 'rgba(255, 255, 255, 1)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
           borderRadius: borderRadius.xl,
-          padding: 1,
+          padding: isSelected ? 3 : 1,
         }}
       >
         {/* Header section - Image or Gradient */}
@@ -113,6 +143,19 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
                 </View>
               )}
             </View>
+            {/* Selection indicator on image */}
+            {isSelectionMode && (
+              <View style={styles.selectionIndicator}>
+                <View
+                  style={[
+                    styles.selectionCheckbox,
+                    isSelected && styles.selectionCheckboxSelected,
+                  ]}
+                >
+                  {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                </View>
+              </View>
+            )}
             {/* Type badge at bottom */}
             <View style={styles.typeBadgeOnImage}>
               <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
@@ -123,16 +166,29 @@ export function VaultItemGridCard({ item, onPress }: VaultItemGridCardProps) {
             colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}
+            style={{...styles.headerGradient, padding: isSelected ? spacing.md - 2 : spacing.md}}
           >
             {/* <View style={styles.typeBadge}>
             <ThemedText style={styles.typeBadgeText}>{category?.label || 'Item'}</ThemedText>
           </View> */}
-            <Animated.View sharedTransitionTag="label">
+            <Animated.View>
               <ThemedText variant="label" numberOfLines={2} style={styles.label}>
                 {item.label}
               </ThemedText>
             </Animated.View>
+            {/* Selection indicator on gradient header */}
+            {isSelectionMode && (
+              <View style={styles.selectionIndicator}>
+                <View
+                  style={[
+                    styles.selectionCheckbox,
+                    isSelected && styles.selectionCheckboxSelected,
+                  ]}
+                >
+                  {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                </View>
+              </View>
+            )}
           </LinearGradient>
         )}
 
@@ -192,6 +248,26 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     marginBottom: CARD_GAP,
+  },
+  selectionIndicator: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    zIndex: 10,
+  },
+  selectionCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectionCheckboxSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
   },
   // Gradient header (no image)
   headerGradient: {

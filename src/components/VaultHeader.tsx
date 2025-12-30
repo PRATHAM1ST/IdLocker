@@ -7,16 +7,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedText } from './ThemedText';
 import { useTheme } from '../context/ThemeProvider';
 import { borderRadius, spacing } from '../styles/theme';
+import { ThemedText } from './ThemedText';
 
 interface VaultHeaderProps {
   onAssetsPress: () => void;
   onSettingsPress: () => void;
+  isSelectionMode?: boolean;
+  selectedCount?: number;
+  onDelete?: () => void;
+  onCancelSelection?: () => void;
 }
 
-export function VaultHeader({ onAssetsPress, onSettingsPress }: VaultHeaderProps) {
+export function VaultHeader({
+  onAssetsPress,
+  onSettingsPress,
+  isSelectionMode = false,
+  selectedCount = 0,
+  onDelete,
+  onCancelSelection,
+}: VaultHeaderProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
 
@@ -28,25 +39,49 @@ export function VaultHeader({ onAssetsPress, onSettingsPress }: VaultHeaderProps
       style={[styles.header, { paddingTop: insets.top + spacing.md }]}
     >
       <View style={styles.headerContent}>
-        <ThemedText variant="title" style={styles.headerTitle}>
-          IdLocker
-        </ThemedText>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={onAssetsPress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="folder-outline" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={onSettingsPress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        {isSelectionMode ? (
+          <>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={onCancelSelection}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <ThemedText variant="title" style={styles.headerTitle}>
+              {selectedCount} {selectedCount === 1 ? 'item' : 'items'} selected
+            </ThemedText>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={onDelete}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <ThemedText variant="title" style={styles.headerTitle}>
+              IdLocker
+            </ThemedText>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={onAssetsPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="folder-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={onSettingsPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </View>
     </LinearGradient>
   );

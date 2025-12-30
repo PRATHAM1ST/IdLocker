@@ -5,11 +5,10 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import { spacing } from '../styles/theme';
+import type { CustomCategory, VaultItem, VaultItemType } from '../utils/types';
 import { EmptyState } from './EmptyState';
 import { VaultItemGridCard } from './VaultItemGridCard';
-import { spacing } from '../styles/theme';
-import type { VaultItem, VaultItemType } from '../utils/types';
-import type { CustomCategory } from '../utils/types';
 
 type FilterType = VaultItemType | 'all';
 
@@ -19,6 +18,10 @@ interface VaultItemsGridProps {
   selectedCategory: CustomCategory | null;
   onItemPress: (item: VaultItem) => void;
   onAddItem: (type?: VaultItemType) => void;
+  isSelectionMode?: boolean;
+  selectedItemIds?: Set<string>;
+  onItemLongPress?: (item: VaultItem) => void;
+  onItemSelect?: (itemId: string) => void;
 }
 
 export function VaultItemsGrid({
@@ -27,6 +30,10 @@ export function VaultItemsGrid({
   selectedCategory,
   onItemPress,
   onAddItem,
+  isSelectionMode = false,
+  selectedItemIds = new Set(),
+  onItemLongPress,
+  onItemSelect,
 }: VaultItemsGridProps) {
   if (items.length === 0) {
     return (
@@ -64,7 +71,14 @@ export function VaultItemsGrid({
           exiting={FadeOut.duration(300).springify()}
           layout={LinearTransition}
         >
-          <VaultItemGridCard item={item} onPress={onItemPress} />
+          <VaultItemGridCard
+            item={item}
+            onPress={onItemPress}
+            isSelectionMode={isSelectionMode}
+            isSelected={selectedItemIds.has(item.id)}
+            onLongPress={onItemLongPress ? () => onItemLongPress(item) : undefined}
+            onSelect={onItemSelect ? () => onItemSelect(item.id) : undefined}
+          />
         </Animated.View>
       ))}
     </View>

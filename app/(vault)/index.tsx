@@ -4,7 +4,7 @@
 
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 import Swipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {
   CategoryFilterList,
@@ -18,6 +18,7 @@ import { ThemedView } from '../../src/components/ThemedView';
 import { useCategories } from '../../src/context/CategoryProvider';
 import { useHomeFilter } from '../../src/context/HomeFilterProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
+import { useVault } from '../../src/context/VaultProvider';
 import { useCategoryNavigation } from '../../src/hooks/useCategoryNavigation';
 import { useVaultFiltering } from '../../src/hooks/useVaultFiltering';
 import { borderRadius, spacing } from '../../src/styles/theme';
@@ -30,19 +31,34 @@ export default function VaultHomeScreen() {
   const { colors } = useTheme();
   const { categories } = useCategories();
   const { setHomeFilter } = useHomeFilter();
+  const { deleteItem } = useVault();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const swipeableRef = useRef<SwipeableMethods>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
   // Sync selected filter to context for FAB to access
   useEffect(() => {
     setHomeFilter(selectedFilter);
   }, [selectedFilter, setHomeFilter]);
 
-  // Custom hooks for filtering and navigation
-  const { categoryCounts, searchResults } = useVaultFiltering(searchQuery, selectedFilter);
-  const {
+  // Android hardware back button handler - exit selection mode
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isSelectionMode) {
+        handleExitSelectionMode();
+        return true; // Prevent default back behavior
+      }
+      return false; // Allow default back behavior
+    });
+
+    }, [isSelectionMode]);
+
+    // Custom hooks for filtering and navigation
+    const { categoryCounts, searchResults } = useVaultFiltering(searchQuery, selectedFilter);
+    const {
     prevCategory,
     nextCategory,
     navigateToPrevious,
@@ -61,12 +77,93 @@ export default function VaultHomeScreen() {
     nextCategory,
   });
 
+  // Selection mode handlers
+  const handleLongPress = useCallback(
+    (item: VaultItem) => {
+      if (!isSelectionMode) {
+        setIsSelectionMode(true);
+        setSelectedItemIds(new Set([item.id]));
+      }
+    },
+    [isSelectionMode],
+  );
+
+  const handleItemSelect = useCallback(
+    (itemId: string) => {
+      setSelectedItemIds((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(itemId)) {
+          newSet.delete(itemId);
+        } else {
+          newSet.add(itemId);
+        }
+        // Exit selection mode if no items are selected
+        if (newSet.size === 0) {
+          setIsSelectionMode(false);
+        }
+        return newSet;
+      });
+    },
+    [],
+  );
+
+  const handleExitSelectionMode = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedItemIds(new Set());
+  }, []);
+
+  const handleDeleteSelected = useCallback(async () => {
+    const selectedCount = selectedItemIds.size;
+    if (selectedCount === 0) return;
+
+    Alert.alert(
+      'Delete Items',
+      `Are you sure you want to delete ${selectedCount} item${selectedCount === 1 ? '' : 's'}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const idsToDelete = Array.from(selectedItemIds);
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const id of idsToDelete) {
+              const success = await deleteItem(id);
+              if (success) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            }
+
+            // Exit selection mode
+            handleExitSelectionMode();
+
+            // Show error if any deletions failed
+            if (failCount > 0) {
+              Alert.alert(
+                'Deletion Incomplete',
+                `Failed to delete ${failCount} item${failCount === 1 ? '' : 's'}. ${successCount} item${successCount === 1 ? '' : 's'} deleted successfully.`,
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [selectedItemIds, deleteItem, handleExitSelectionMode]);
+
   // Handlers
   const handleItemPress = useCallback(
     (item: VaultItem) => {
-      router.push(`/(vault)/item/${item.id}` as any);
+      if (isSelectionMode) {
+        handleItemSelect(item.id);
+      } else {
+        router.push(`/(vault)/item/${item.id}` as any);
+      }
     },
-    [router],
+    [isSelectionMode, handleItemSelect, router],
   );
 
   const handleAddItem = useCallback(
@@ -112,7 +209,14 @@ export default function VaultHomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <VaultHeader onAssetsPress={handleAssetsPress} onSettingsPress={handleSettingsPress} />
+      <VaultHeader
+        onAssetsPress={handleAssetsPress}
+        onSettingsPress={handleSettingsPress}
+        isSelectionMode={isSelectionMode}
+        selectedCount={selectedItemIds.size}
+        onDelete={handleDeleteSelected}
+        onCancelSelection={handleExitSelectionMode}
+      />
 
       <View style={[styles.content, { backgroundColor: colors.background }]}>
         <VaultSearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -137,7 +241,7 @@ export default function VaultHomeScreen() {
         >
           <ScrollView
             contentContainerStyle={{
-              paddingBottom: 500,
+              paddingBottom: isSelectionMode ? 100 : 500,
               backgroundColor: colors.background,
             }}
             showsVerticalScrollIndicator={false}
@@ -148,6 +252,10 @@ export default function VaultHomeScreen() {
               selectedCategory={selectedCategory}
               onItemPress={handleItemPress}
               onAddItem={handleAddItem}
+              isSelectionMode={isSelectionMode}
+              selectedItemIds={selectedItemIds}
+              onItemLongPress={handleLongPress}
+              onItemSelect={handleItemSelect}
             />
           </ScrollView>
         </Swipeable>
