@@ -13,16 +13,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  BackHandler,
-  Dimensions,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    Alert,
+    BackHandler,
+    Dimensions,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { AssetPicker } from '../../src/components/AssetPicker';
 import { Button } from '../../src/components/Button';
@@ -36,18 +36,18 @@ import { useAssets } from '../../src/context/AssetProvider';
 import { useCategories } from '../../src/context/CategoryProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
+import { useAutoSave } from '../../src/hooks/useAutoSave';
 import { formatFileSize } from '../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../src/styles/theme';
 import { hasNonEmptyValues } from '../../src/utils/comparison';
-import { useAutoSave } from '../../src/hooks/useAutoSave';
 import type {
-  Asset,
-  AssetReference,
-  AssetType,
-  CustomCategory,
-  CustomField,
-  FieldDefinition,
-  VaultItemType,
+    Asset,
+    AssetReference,
+    AssetType,
+    CustomCategory,
+    CustomField,
+    FieldDefinition,
+    VaultItemType,
 } from '../../src/utils/types';
 import { sanitizeInput, validateField } from '../../src/utils/validation';
 
@@ -91,6 +91,7 @@ export default function AddItemScreen() {
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const isShowingPrompt = useRef(false);
+  const isDiscarding = useRef(false);
   const itemCreatedRef = useRef(false);
   
   // Track the last initialCategoryId we initialized from to prevent re-initialization
@@ -108,9 +109,6 @@ export default function AddItemScreen() {
 
   // Smart change detection: compare current state with initial empty state
   const hasChanges = useMemo(() => {
-    // Check if selectedType is set
-    if (selectedType !== null) return true;
-    
     // Check if label has content
     if (label.trim().length > 0) return true;
     
@@ -124,7 +122,7 @@ export default function AddItemScreen() {
     if (assetRefs.length > 0) return true;
     
     return false;
-  }, [selectedType, label, fields, customFields, assetRefs]);
+  }, [label, fields, customFields, assetRefs]);
 
   // Sync selectedType with route params only when initialCategoryId changes
   // (not when selectedType changes due to user interaction)
@@ -292,6 +290,7 @@ export default function AddItemScreen() {
             style: 'destructive',
             onPress: () => {
               isShowingPrompt.current = false;
+              isDiscarding.current = true;
               router.back();
             },
           },
@@ -441,6 +440,12 @@ export default function AddItemScreen() {
     const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
       // If item was created, allow navigation
       if (itemCreatedRef.current) {
+        return;
+      }
+
+      // If we're already discarding (user confirmed in handleCancel), allow navigation
+      if (isDiscarding.current) {
+        isDiscarding.current = false; // Reset for next time
         return;
       }
 
