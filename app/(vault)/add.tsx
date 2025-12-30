@@ -39,7 +39,7 @@ import { useVault } from '../../src/context/VaultProvider';
 import { useAutoSave } from '../../src/hooks/useAutoSave';
 import { formatFileSize } from '../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../src/styles/theme';
-import { hasNonEmptyValues } from '../../src/utils/comparison';
+import { arraysEqual, hasNonEmptyValues } from '../../src/utils/comparison';
 import type {
   Asset,
   AssetReference,
@@ -80,7 +80,7 @@ export default function AddItemScreen() {
   // Support both 'type' and 'categoryId' params
   const initialCategoryId = params.categoryId || params.type || null;
   const { colors } = useTheme();
-  const { addItem, items } = useVault();
+  const { addItem, updateItem, items } = useVault();
   const { categories, getCategoryById, deleteCategory } = useCategories();
   const { saveImageAsset, saveDocumentAsset, refreshAssets } = useAssets();
 
@@ -90,9 +90,8 @@ export default function AddItemScreen() {
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const isShowingPrompt = useRef(false);
-  const isDiscarding = useRef(false);
   const itemCreatedRef = useRef(false);
+  const createdItemIdRef = useRef<string | null>(null);
   
   // Track the last initialCategoryId we initialized from to prevent re-initialization
   // when user manually changes the category
@@ -107,22 +106,51 @@ export default function AddItemScreen() {
     assetRefs: [] as AssetReference[],
   });
 
-  // Smart change detection: compare current state with initial empty state
+  // Smart change detection: compare current state with initial state
+  // After first save, compare against saved state; before save, compare against empty state
   const hasChanges = useMemo(() => {
-    // Check if label has content
+    const initial = initialState.current;
+    
+    // If item was already created, compare against saved state
+    if (itemCreatedRef.current && initial) {
+      // Compare label
+      if (label.trim() !== initial.label) return true;
+      
+      // Compare selectedType
+      if (selectedType !== initial.selectedType) return true;
+      
+      // Compare fields object (deep comparison)
+      const initialFieldsKeys = Object.keys(initial.fields);
+      const currentFieldsKeys = Object.keys(fields);
+      
+      if (initialFieldsKeys.length !== currentFieldsKeys.length) return true;
+      
+      for (const key of initialFieldsKeys) {
+        if (fields[key] !== initial.fields[key]) return true;
+      }
+      
+      // Check for new keys in current fields
+      for (const key of currentFieldsKeys) {
+        if (!(key in initial.fields)) return true;
+      }
+      
+      // Compare customFields array (deep comparison)
+      if (!arraysEqual(customFields, initial.customFields)) return true;
+      
+      // Compare assetRefs array (deep comparison)
+      if (!arraysEqual(assetRefs, initial.assetRefs)) return true;
+      
+      return false;
+    }
+    
+    // Before first save, check if there's any content
     if (label.trim().length > 0) return true;
-    
-    // Check if fields have any non-empty values
     if (hasNonEmptyValues(fields)) return true;
-    
-    // Check if customFields array has items
     if (customFields.length > 0) return true;
-    
-    // Check if assetRefs array has items
     if (assetRefs.length > 0) return true;
     
     return false;
-  }, [label, fields, customFields, assetRefs]);
+  }, [label, fields, customFields, assetRefs, selectedType]);
 
   // Sync selectedType with route params only when initialCategoryId changes
   // (not when selectedType changes due to user interaction)
@@ -149,6 +177,7 @@ export default function AddItemScreen() {
     setAssetRefs([]);
     setErrors({});
     itemCreatedRef.current = false; // Reset item created flag
+    createdItemIdRef.current = null; // Reset created item ID
     // Reset initial state when category changes (new form)
     initialState.current = {
       selectedType: category.id,
@@ -177,8 +206,6 @@ export default function AddItemScreen() {
 
   // Auto-save function that returns boolean
   const performSave = useCallback(async (): Promise<boolean> => {
-    // Don't save if item was already created
-    if (itemCreatedRef.current) return false;
     if (!selectedType || !selectedCategory) return false;
 
     // Basic validation
@@ -201,14 +228,30 @@ export default function AddItemScreen() {
       return false;
     }
 
-    // Debug: Log what we're saving
-    console.log('[AddItem] Auto-saving item with assets:', {
-      type: selectedType,
-      label: label.trim(),
-      assetRefCount: assetRefs.length,
-      customFieldCount: customFields.length,
-    });
+    // If item was already created, update it instead of creating a new one
+    if (itemCreatedRef.current && createdItemIdRef.current) {
+      const updatedItem = await updateItem(createdItemIdRef.current, {
+        label: label.trim(),
+        fields,
+        customFields: customFields.length > 0 ? customFields : undefined,
+        assetRefs: assetRefs.length > 0 ? assetRefs : undefined,
+      });
 
+      if (updatedItem) {
+        // Update initial state to current state after successful save
+        initialState.current = {
+          selectedType: selectedType,
+          label: label.trim(),
+          fields: { ...fields },
+          customFields: customFields ? [...customFields] : [],
+          assetRefs: assetRefs ? [...assetRefs] : [],
+        };
+        return true;
+      }
+      return false;
+    }
+
+    // First save - create new item
     const newItem = await addItem({
       type: selectedType,
       label: label.trim(),
@@ -217,28 +260,24 @@ export default function AddItemScreen() {
       assetRefs: assetRefs.length > 0 ? assetRefs : undefined,
     });
 
-    // Debug: Log the saved item
-    console.log('[AddItem] Auto-saved item:', newItem);
-
     if (newItem) {
       itemCreatedRef.current = true;
-      // Reset initial state after successful save
+      createdItemIdRef.current = newItem.id;
+      // Update initial state to current state after successful save
+      // This allows tracking of further changes as edits
       initialState.current = {
-        selectedType: null,
-        label: '',
-        fields: {},
-        customFields: [],
-        assetRefs: [],
+        selectedType: selectedType,
+        label: label.trim(),
+        fields: { ...fields },
+        customFields: customFields ? [...customFields] : [],
+        assetRefs: assetRefs ? [...assetRefs] : [],
       };
-      // Navigate back after first successful save
-      setTimeout(() => {
-        router.back();
-      }, 100);
+      // Don't navigate away - allow user to continue editing
       return true;
     }
     
     return false;
-  }, [selectedType, selectedCategory, label, fields, customFields, assetRefs, addItem, router]);
+  }, [selectedType, selectedCategory, label, fields, customFields, assetRefs, addItem, updateItem]);
 
   // Determine if auto-save should be enabled
   const isAutoSaveEnabled = useMemo(() => {
@@ -246,10 +285,9 @@ export default function AddItemScreen() {
     if (!selectedType || !selectedCategory) return false;
     // Only enable if we have at least a label (basic requirement)
     if (!label.trim()) return false;
-    // Don't save if item was already created
-    if (itemCreatedRef.current) return false;
-    return true;
-  }, [selectedType, selectedCategory, label]);
+    // Enable auto-save if there are changes (either initial creation or edits after first save)
+    return hasChanges;
+  }, [selectedType, selectedCategory, label, hasChanges]);
 
   // Use auto-save hook
   const saveStatus = useAutoSave({
@@ -265,41 +303,9 @@ export default function AddItemScreen() {
   });
 
   const handleCancel = useCallback(() => {
-    // If save is in progress, wait for it
-    if (saveStatus === 'saving') {
-      // Wait a bit and check again, or just allow navigation
-      // Auto-save will complete in background
-      return;
-    }
-
-    if (hasChanges && !isShowingPrompt.current && saveStatus !== 'saved') {
-      isShowingPrompt.current = true;
-      Alert.alert(
-        'Unsaved Changes',
-        'You have unsaved changes. What would you like to do?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => {
-              isShowingPrompt.current = false;
-            },
-          },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              isShowingPrompt.current = false;
-              isDiscarding.current = true;
-              router.back();
-            },
-          },
-        ],
-      );
-    } else if (!hasChanges || saveStatus === 'saved') {
-      router.back();
-    }
-  }, [hasChanges, router, saveStatus]);
+    // Auto-save handles saving, so just navigate back
+    router.back();
+  }, [router]);
 
   // ========== Asset Upload Mode Handlers ==========
   const [uploadedAssets, setUploadedAssets] = useState<Asset[]>([]);
@@ -435,77 +441,18 @@ export default function AddItemScreen() {
     router.back();
   }, [refreshAssets, router]);
 
-  // Navigation interception for unsaved changes
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
-      // If item was created, allow navigation
-      if (itemCreatedRef.current) {
-        return;
-      }
-
-      // If we're already discarding (user confirmed in handleCancel), allow navigation
-      if (isDiscarding.current) {
-        isDiscarding.current = false; // Reset for next time
-        return;
-      }
-
-      // If save is in progress, allow navigation (auto-save will complete in background)
-      if (saveStatus === 'saving') {
-        return;
-      }
-
-      if (!hasChanges || saveStatus === 'saved') {
-        // No unsaved changes or already saved, allow navigation
-        return;
-      }
-
-      // If we're already showing a prompt, don't show another one
-      if (isShowingPrompt.current) {
-        return;
-      }
-
-      // Prevent default navigation
-      e.preventDefault();
-
-      isShowingPrompt.current = true;
-      Alert.alert(
-        'Unsaved Changes',
-        'You have unsaved changes. What would you like to do?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => {
-              isShowingPrompt.current = false;
-            },
-          },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => {
-              isShowingPrompt.current = false;
-              navigation.dispatch(e.data.action);
-            },
-          },
-        ],
-      );
-    });
-
-    return unsubscribe;
-  }, [navigation, hasChanges, saveStatus, selectedType, selectedCategory]);
+  // Navigation interception - removed since auto-save handles saving automatically
+  // Users can navigate back freely
 
   // Android hardware back button handler
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (hasChanges && !isShowingPrompt.current) {
-        handleCancel();
-        return true; // Prevent default back behavior
-      }
-      return false; // Allow default back behavior
+      handleCancel();
+      return true; // Prevent default back behavior
     });
 
     return () => backHandler.remove();
-  }, [hasChanges, handleCancel]);
+  }, [handleCancel]);
 
   const renderAssetUploader = () => (
     <View style={styles.assetUploaderContainer}>
@@ -939,12 +886,16 @@ export default function AddItemScreen() {
               : 'Add Item'
         }
         onBack={handleCancel}
-        rightActions={[
-          {
-            icon: editingCategories ? 'close' : 'pencil',
-            onPress: () => setEditingCategories((v) => !v),
-          },
-        ]}
+        rightActions={
+          mode === 'asset' || selectedType
+            ? [] // Hide edit icon when adding item or in asset mode
+            : [
+                {
+                  icon: editingCategories ? 'close' : 'pencil',
+                  onPress: () => setEditingCategories((v) => !v),
+                },
+              ]
+        }
         saveStatus={mode === 'asset' ? undefined : saveStatus}
       />
 
