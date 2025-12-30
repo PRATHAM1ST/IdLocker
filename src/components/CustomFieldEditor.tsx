@@ -3,14 +3,15 @@
  * Allows users to add, edit, and delete custom fields on individual items
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemedText } from './ThemedText';
-import { Input } from './Input';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeProvider';
-import { spacing, borderRadius, shadows } from '../styles/theme';
+import { borderRadius, shadows, spacing } from '../styles/theme';
 import type { CustomField } from '../utils/types';
+import { Input } from './Input';
+import { SectionTitle } from './SectionTitle';
+import { ThemedText } from './ThemedText';
 
 /**
  * Generate a unique ID for custom fields
@@ -29,6 +30,19 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
   const [isAddingField, setIsAddingField] = useState(false);
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldValue, setNewFieldValue] = useState('');
+  
+  // Use ref to store latest customFields to avoid stale closure issues with auto-save
+  const customFieldsRef = useRef<CustomField[]>(customFields);
+  const onCustomFieldsChangeRef = useRef(onCustomFieldsChange);
+  
+  // Update refs whenever props change
+  useEffect(() => {
+    customFieldsRef.current = customFields;
+  }, [customFields]);
+  
+  useEffect(() => {
+    onCustomFieldsChangeRef.current = onCustomFieldsChange;
+  }, [onCustomFieldsChange]);
 
   const handleAddField = useCallback(() => {
     if (!newFieldLabel.trim()) {
@@ -59,19 +73,34 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
 
   const handleDeleteField = useCallback(
     (id: string) => {
+      // Get field info from current props (not closure) for the alert message
       const field = customFields.find((f) => f.id === id);
-      Alert.alert('Delete Field', `Are you sure you want to delete "${field?.label}"?`, [
+      if (!field) {
+        // Field not found, might have been deleted already
+        return;
+      }
+      
+      Alert.alert('Delete Field', `Are you sure you want to delete "${field.label}"?`, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            onCustomFieldsChange(customFields.filter((f) => f.id !== id));
+            // Use refs to get latest values, avoiding stale closure issues with auto-save
+            // This ensures we always use the most current state, even if auto-save updated it
+            const currentFields = customFieldsRef.current;
+            const currentOnChange = onCustomFieldsChangeRef.current;
+            const filteredFields = currentFields.filter((f) => f.id !== id);
+            
+            // Only update if the field still exists (defensive check)
+            if (currentFields.some((f) => f.id === id)) {
+              currentOnChange(filteredFields);
+            }
           },
         },
       ]);
     },
-    [customFields, onCustomFieldsChange],
+    [customFields],
   );
 
   const handleCancelAdd = useCallback(() => {
@@ -83,52 +112,45 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
   return (
     <View style={styles.container}>
       {/* Section header */}
-      <View style={styles.header}>
-        <ThemedText variant="label" color="secondary">
-          Custom Fields
-        </ThemedText>
-        {!isAddingField && (
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.primary }]}
-            onPress={() => setIsAddingField(true)}
-          >
-            <Ionicons name="add" size={16} color="#FFFFFF" />
-            <ThemedText variant="caption" style={{ color: '#FFFFFF', marginLeft: 4 }}>
-              Add
-            </ThemedText>
-          </TouchableOpacity>
-        )}
-      </View>
+      <SectionTitle>Custom Fields</SectionTitle>
 
       {/* Existing custom fields */}
       {customFields.map((field) => (
         <View
           key={field.id}
-          style={[styles.fieldCard, { backgroundColor: colors.card }, shadows.sm]}
+          style={[styles.fieldCard, { backgroundColor: colors.card, borderColor: colors.border }, shadows.sm]}
         >
-          <View style={styles.fieldContent}>
-            <View style={styles.fieldLabelRow}>
-              <View style={styles.labelInput}>
-                <Input
-                  label=""
-                  value={field.label}
-                  onChangeText={(text) => handleUpdateField(field.id, { label: text })}
-                  placeholder="Field name"
-                />
-              </View>
-              <TouchableOpacity
-                style={[styles.deleteButton, { backgroundColor: colors.error + '15' }]}
-                onPress={() => handleDeleteField(field.id)}
-              >
-                <Ionicons name="trash-outline" size={16} color={colors.error} />
-              </TouchableOpacity>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldLabelContainer} pointerEvents="box-none">
+              <Input
+                label=""
+                value={field.label}
+                onChangeText={(text) => handleUpdateField(field.id, { label: text })}
+                placeholder="Field name"
+                containerStyle={styles.compactInput}
+                inputStyle={styles.fieldLabelInput}
+              />
             </View>
+            <TouchableOpacity
+              style={[styles.deleteButton, { backgroundColor: colors.error + '20' }]}
+              onPress={(e) => {
+                e?.stopPropagation?.();
+                handleDeleteField(field.id);
+              }}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.error} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.fieldValueContainer}>
             <Input
               label=""
               value={field.value}
               onChangeText={(text) => handleUpdateField(field.id, { value: text })}
               placeholder="Field value"
               multiline
+              containerStyle={styles.compactInput}
             />
           </View>
         </View>
@@ -136,13 +158,14 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
 
       {/* Add new field form */}
       {isAddingField && (
-        <View style={[styles.newFieldCard, { backgroundColor: colors.card }, shadows.sm]}>
+        <View style={[styles.newFieldCard, { backgroundColor: colors.card, borderColor: colors.border }, shadows.sm]}>
           <Input
             label="Field Name"
             value={newFieldLabel}
             onChangeText={setNewFieldLabel}
             placeholder="e.g., Serial Number"
             autoFocus
+            containerStyle={styles.compactInput}
           />
           <Input
             label="Value"
@@ -150,21 +173,24 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
             onChangeText={setNewFieldValue}
             placeholder="Enter value"
             multiline
+            containerStyle={styles.compactInput}
           />
           <View style={styles.newFieldActions}>
             <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
+              style={[styles.actionButton, styles.cancelButton, { borderColor: colors.border }]}
               onPress={handleCancelAdd}
+              activeOpacity={0.7}
             >
               <ThemedText variant="bodySmall" color="secondary">
                 Cancel
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.primary }]}
+              style={[styles.actionButton, styles.saveButton, { backgroundColor: colors.accent }]}
               onPress={handleAddField}
+              activeOpacity={0.7}
             >
-              <ThemedText variant="bodySmall" style={{ color: '#FFFFFF' }}>
+              <ThemedText variant="bodySmall" style={{ color: '#FFFFFF', fontWeight: '600' }}>
                 Add Field
               </ThemedText>
             </TouchableOpacity>
@@ -172,13 +198,42 @@ export function CustomFieldEditor({ customFields, onCustomFieldsChange }: Custom
         </View>
       )}
 
+      {/* Add button - shown when not adding and fields exist */}
+      {!isAddingField && customFields.length > 0 && (
+        <TouchableOpacity
+          style={[styles.addButton, { borderColor: colors.border }]}
+          onPress={() => setIsAddingField(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
+          <ThemedText variant="bodySmall" color="accent" style={styles.addButtonText}>
+            Add Custom Field
+          </ThemedText>
+        </TouchableOpacity>
+      )}
+
       {/* Empty state */}
       {customFields.length === 0 && !isAddingField && (
-        <View style={[styles.emptyState, { backgroundColor: colors.backgroundTertiary }]}>
-          <Ionicons name="add-circle-outline" size={24} color={colors.textTertiary} />
-          <ThemedText variant="caption" color="tertiary" style={styles.emptyText}>
-            Add custom fields to store additional information
+        <View style={[styles.emptyState, { backgroundColor: colors.backgroundTertiary, borderColor: colors.border }]}>
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.accent + '15' }]}>
+            <Ionicons name="document-text-outline" size={32} color={colors.accent} />
+          </View>
+          <ThemedText variant="body" color="secondary" style={styles.emptyTitle}>
+            No Custom Fields
           </ThemedText>
+          <ThemedText variant="caption" color="tertiary" style={styles.emptyText}>
+            Add custom fields to store additional information about this item
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.emptyAddButton, { backgroundColor: colors.accent }]}
+            onPress={() => setIsAddingField(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <ThemedText variant="bodySmall" style={{ color: '#FFFFFF', marginLeft: spacing.xs, fontWeight: '600' }}>
+              Add Field
+            </ThemedText>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -189,47 +244,46 @@ const styles = StyleSheet.create({
   container: {
     marginTop: spacing.lg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
   fieldCard: {
-    padding: spacing.md,
+    padding: spacing.base,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
+    borderWidth: 1,
   },
-  fieldContent: {
-    flex: 1,
-  },
-  fieldLabelRow: {
+  fieldHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  labelInput: {
+  fieldLabelContainer: {
     flex: 1,
+    minWidth: 0,
+  },
+  fieldLabelInput: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  fieldValueContainer: {
+    marginTop: spacing.xs,
   },
   deleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.sm,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+    zIndex: 10,
+  },
+  compactInput: {
+    marginBottom: 0,
   },
   newFieldCard: {
-    padding: spacing.md,
+    padding: spacing.base,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
+    borderWidth: 1,
   },
   newFieldActions: {
     flexDirection: 'row',
@@ -237,24 +291,64 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
   },
-  cancelButton: {
+  actionButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
-    borderWidth: 1,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    borderWidth: 1.5,
   },
   saveButton: {
+    minWidth: 100,
+  },
+  addButton: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+  },
+  addButtonText: {
+    marginLeft: spacing.sm,
+    fontWeight: '600',
   },
   emptyState: {
-    padding: spacing.lg,
+    padding: spacing['2xl'],
     borderRadius: borderRadius.lg,
     alignItems: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    marginBottom: spacing.xs,
+    fontWeight: '600',
   },
   emptyText: {
-    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
     textAlign: 'center',
+    maxWidth: 280,
+  },
+  emptyAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
   },
 });

@@ -32,9 +32,9 @@ import { useAssets } from '../../../src/context/AssetProvider';
 import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
+import { useAutoSave } from '../../../src/hooks/useAutoSave';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
 import { arraysEqual } from '../../../src/utils/comparison';
-import { useAutoSave } from '../../../src/hooks/useAutoSave';
 import type {
   AssetReference,
   CustomCategory,
@@ -69,6 +69,8 @@ export default function EditItemScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showCategorySelector, setShowCategorySelector] = useState(false);
   const isShowingPrompt = useRef(false);
+  const hasInitializedRef = useRef(false);
+  const lastInitializedItemIdRef = useRef<string | null>(null);
 
   // Store initial state for comparison
   const initialState = useRef<{
@@ -80,46 +82,67 @@ export default function EditItemScreen() {
   } | null>(null);
 
   // Initialize form with item data and migrate legacy images if needed
+  // Only initialize once on mount or when item ID changes, not on item reference changes from auto-save
   useEffect(() => {
     const initForm = async () => {
-      if (item) {
-        // Initialize selectedCategoryId from item.type
-        const categoryId = item.type;
-        if (!selectedCategoryId) {
-          setSelectedCategoryId(categoryId);
-        }
-        
-        let finalAssetRefs = item.assetRefs || [];
-        
-        // Use existing assetRefs or migrate from legacy images
-        if (item.assetRefs && item.assetRefs.length > 0) {
-          // await ensureAssetsLoaded(item.assetRefs.map((ref) => ref.assetId));
-        } else if (item.images && item.images.length > 0) {
-          // Migrate legacy images to assets
-          const migratedRefs = await migrateItemAssets(item);
-          finalAssetRefs = migratedRefs;
-          if (migratedRefs.length > 0) {
-            // await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
-          }
-        }
-
-        setLabel(item.label);
-        setFields({ ...item.fields });
-        setCustomFields(item.customFields || []);
-        setAssetRefs(finalAssetRefs);
-
-        // Store initial state for comparison
-        initialState.current = {
-          label: item.label,
-          selectedCategoryId: categoryId,
-          fields: { ...item.fields },
-          customFields: item.customFields ? [...item.customFields] : [],
-          assetRefs: [...finalAssetRefs],
-        };
+      if (!item) return;
+      
+      // Only initialize if we haven't initialized yet, or if the item ID changed
+      const itemIdChanged = lastInitializedItemIdRef.current !== item.id;
+      if (!itemIdChanged && hasInitializedRef.current) {
+        // Item reference changed but ID is the same - this is likely from auto-save
+        // Don't reset form state to avoid overwriting user changes
+        return;
       }
+
+      // Initialize selectedCategoryId from item.type
+      const categoryId = item.type;
+      if (!selectedCategoryId) {
+        setSelectedCategoryId(categoryId);
+      }
+      
+      let finalAssetRefs = item.assetRefs || [];
+      
+      // Use existing assetRefs or migrate from legacy images
+      if (item.assetRefs && item.assetRefs.length > 0) {
+        // await ensureAssetsLoaded(item.assetRefs.map((ref) => ref.assetId));
+      } else if (item.images && item.images.length > 0) {
+        // Migrate legacy images to assets
+        const migratedRefs = await migrateItemAssets(item);
+        finalAssetRefs = migratedRefs;
+        if (migratedRefs.length > 0) {
+          // await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
+        }
+      }
+
+      setLabel(item.label);
+      setFields({ ...item.fields });
+      setCustomFields(item.customFields || []);
+      setAssetRefs(finalAssetRefs);
+
+      // Store initial state for comparison
+      initialState.current = {
+        label: item.label,
+        selectedCategoryId: categoryId,
+        fields: { ...item.fields },
+        customFields: item.customFields ? [...item.customFields] : [],
+        assetRefs: [...finalAssetRefs],
+      };
+
+      // Mark as initialized and track the item ID
+      hasInitializedRef.current = true;
+      lastInitializedItemIdRef.current = item.id;
     };
     initForm();
-  }, [item, migrateItemAssets, selectedCategoryId]);
+  }, [id, item, migrateItemAssets, selectedCategoryId]);
+
+  // Reset initialization tracking when navigating to a different item
+  useEffect(() => {
+    if (lastInitializedItemIdRef.current !== id) {
+      hasInitializedRef.current = false;
+      lastInitializedItemIdRef.current = null;
+    }
+  }, [id]);
 
   // Smart change detection: compare current state with initial state
   const hasChanges = useMemo(() => {
@@ -266,7 +289,7 @@ export default function EditItemScreen() {
     const updates: Parameters<typeof updateItem>[1] = {
       label: label.trim(),
       fields,
-      customFields: customFields.length > 0 ? customFields : undefined,
+      customFields: customFields, // Always pass explicitly, even if empty array, to ensure deletions are saved
       assetRefs: assetRefs.length > 0 ? assetRefs : undefined,
     };
     
