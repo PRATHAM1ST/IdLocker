@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeProvider';
 import { ThemedText } from './ThemedText';
 import { spacing, borderRadius } from '../styles/theme';
+import type { SaveStatus } from '../hooks/useAutoSave';
 
 interface PageHeaderAction {
   icon: keyof typeof Ionicons.glyphMap;
@@ -25,6 +26,7 @@ interface PageHeaderProps {
   rightActions?: PageHeaderAction[];
   variant?: 'subtitle' | 'title';
   gradientColors?: [string, string]; // Custom gradient colors [start, end]
+  saveStatus?: SaveStatus;
 }
 
 export function PageHeader({
@@ -34,6 +36,7 @@ export function PageHeader({
   rightActions = [],
   variant = 'subtitle',
   gradientColors,
+  saveStatus,
 }: PageHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -42,6 +45,39 @@ export function PageHeader({
   const handleBack = onBack || (() => router.back());
   const gradientStart = gradientColors?.[0] || colors.headerGradientStart;
   const gradientEnd = gradientColors?.[1] || colors.headerGradientEnd;
+
+  // Determine save status display
+  const getSaveStatusDisplay = () => {
+    if (!saveStatus || saveStatus === 'idle') return null;
+
+    switch (saveStatus) {
+      case 'saving':
+        return {
+          icon: null,
+          text: 'Saving...',
+          color: 'rgba(255, 255, 255, 0.9)',
+          showSpinner: true,
+        };
+      case 'saved':
+        return {
+          icon: 'checkmark-circle' as const,
+          text: 'Saved',
+          color: '#4CAF50',
+          showSpinner: false,
+        };
+      case 'error':
+        return {
+          icon: 'alert-circle' as const,
+          text: 'Error saving',
+          color: '#F44336',
+          showSpinner: false,
+        };
+      default:
+        return null;
+    }
+  };
+
+  const saveStatusDisplay = getSaveStatusDisplay();
 
   return (
     <LinearGradient
@@ -70,6 +106,25 @@ export function PageHeader({
             <ThemedText variant="caption" style={styles.headerSubtitle}>
               {subtitle}
             </ThemedText>
+          )}
+          {saveStatusDisplay && (
+            <View style={styles.saveStatusContainer}>
+              {saveStatusDisplay.showSpinner ? (
+                <ActivityIndicator size="small" color={saveStatusDisplay.color} />
+              ) : saveStatusDisplay.icon ? (
+                <Ionicons
+                  name={saveStatusDisplay.icon}
+                  size={14}
+                  color={saveStatusDisplay.color}
+                />
+              ) : null}
+              <ThemedText
+                variant="caption"
+                style={[styles.saveStatusText, { color: saveStatusDisplay.color }]}
+              >
+                {saveStatusDisplay.text}
+              </ThemedText>
+            </View>
           )}
         </View>
 
@@ -126,6 +181,17 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: spacing.xs,
     textAlign: 'center',
+  },
+  saveStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  saveStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   rightActions: {
     flexDirection: 'row',

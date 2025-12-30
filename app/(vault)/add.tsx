@@ -39,6 +39,7 @@ import { useVault } from '../../src/context/VaultProvider';
 import { formatFileSize } from '../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../src/styles/theme';
 import { hasNonEmptyValues } from '../../src/utils/comparison';
+import { useAutoSave } from '../../src/hooks/useAutoSave';
 import type {
   Asset,
   AssetReference,
@@ -89,8 +90,8 @@ export default function AddItemScreen() {
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
   const isShowingPrompt = useRef(false);
+  const itemCreatedRef = useRef(false);
   
   // Track the last initialCategoryId we initialized from to prevent re-initialization
   // when user manually changes the category
@@ -149,6 +150,7 @@ export default function AddItemScreen() {
     setCustomFields([]);
     setAssetRefs([]);
     setErrors({});
+    itemCreatedRef.current = false; // Reset item created flag
     // Reset initial state when category changes (new form)
     initialState.current = {
       selectedType: category.id,
@@ -175,8 +177,11 @@ export default function AddItemScreen() {
     [errors],
   );
 
-  const handleSave = useCallback(async () => {
-    if (!selectedType || !selectedCategory) return;
+  // Auto-save function that returns boolean
+  const performSave = useCallback(async (): Promise<boolean> => {
+    // Don't save if item was already created
+    if (itemCreatedRef.current) return false;
+    if (!selectedType || !selectedCategory) return false;
 
     // Basic validation
     const errorMap: Record<string, string> = {};
@@ -195,13 +200,11 @@ export default function AddItemScreen() {
 
     if (Object.keys(errorMap).length > 0) {
       setErrors(errorMap);
-      return;
+      return false;
     }
 
-    setIsSaving(true);
-
     // Debug: Log what we're saving
-    console.log('[AddItem] Saving item with assets:', {
+    console.log('[AddItem] Auto-saving item with assets:', {
       type: selectedType,
       label: label.trim(),
       assetRefCount: assetRefs.length,
@@ -217,11 +220,10 @@ export default function AddItemScreen() {
     });
 
     // Debug: Log the saved item
-    console.log('[AddItem] Saved item:', newItem);
-
-    setIsSaving(false);
+    console.log('[AddItem] Auto-saved item:', newItem);
 
     if (newItem) {
+      itemCreatedRef.current = true;
       // Reset initial state after successful save
       initialState.current = {
         selectedType: null,
@@ -230,17 +232,49 @@ export default function AddItemScreen() {
         customFields: [],
         assetRefs: [],
       };
-      // Small delay to ensure navigation is ready
+      // Navigate back after first successful save
       setTimeout(() => {
         router.back();
       }, 100);
-    } else {
-      Alert.alert('Error', 'Failed to save item. Please try again.');
+      return true;
     }
+    
+    return false;
   }, [selectedType, selectedCategory, label, fields, customFields, assetRefs, addItem, router]);
 
+  // Determine if auto-save should be enabled
+  const isAutoSaveEnabled = useMemo(() => {
+    // Only enable if we have a selected type and category
+    if (!selectedType || !selectedCategory) return false;
+    // Only enable if we have at least a label (basic requirement)
+    if (!label.trim()) return false;
+    // Don't save if item was already created
+    if (itemCreatedRef.current) return false;
+    return true;
+  }, [selectedType, selectedCategory, label]);
+
+  // Use auto-save hook
+  const saveStatus = useAutoSave({
+    dependencies: [selectedType, label, fields, customFields, assetRefs],
+    saveFn: performSave,
+    debounceMs: 500,
+    enabled: isAutoSaveEnabled,
+    onSaveComplete: (success) => {
+      if (success && itemCreatedRef.current) {
+        // Item was created, navigation will happen in performSave
+      }
+    },
+  });
+
   const handleCancel = useCallback(() => {
-    if (hasChanges && !isShowingPrompt.current) {
+    // If save is in progress, wait for it
+    if (saveStatus === 'saving') {
+      // Wait a bit and check again, or just allow navigation
+      // Auto-save will complete in background
+      return;
+    }
+
+    if (hasChanges && !isShowingPrompt.current && saveStatus !== 'saved') {
       isShowingPrompt.current = true;
       Alert.alert(
         'Unsaved Changes',
@@ -261,19 +295,12 @@ export default function AddItemScreen() {
               router.back();
             },
           },
-          {
-            text: 'Save',
-            onPress: async () => {
-              isShowingPrompt.current = false;
-              await handleSave();
-            },
-          },
         ],
       );
-    } else if (!hasChanges) {
+    } else if (!hasChanges || saveStatus === 'saved') {
       router.back();
     }
-  }, [hasChanges, router, handleSave]);
+  }, [hasChanges, router, saveStatus]);
 
   // ========== Asset Upload Mode Handlers ==========
   const [uploadedAssets, setUploadedAssets] = useState<Asset[]>([]);
@@ -411,9 +438,19 @@ export default function AddItemScreen() {
 
   // Navigation interception for unsaved changes
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!hasChanges) {
-        // No unsaved changes, allow navigation
+    const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+      // If item was created, allow navigation
+      if (itemCreatedRef.current) {
+        return;
+      }
+
+      // If save is in progress, allow navigation (auto-save will complete in background)
+      if (saveStatus === 'saving') {
+        return;
+      }
+
+      if (!hasChanges || saveStatus === 'saved') {
+        // No unsaved changes or already saved, allow navigation
         return;
       }
 
@@ -445,27 +482,12 @@ export default function AddItemScreen() {
               navigation.dispatch(e.data.action);
             },
           },
-          {
-            text: 'Save',
-            onPress: async () => {
-              // Only save if we have a valid form
-              if (selectedType && selectedCategory) {
-                isShowingPrompt.current = false;
-                await handleSave();
-                // Navigation will happen in handleSave after successful save
-              } else {
-                // If form is invalid, just discard
-                isShowingPrompt.current = false;
-                navigation.dispatch(e.data.action);
-              }
-            },
-          },
         ],
       );
     });
 
     return unsubscribe;
-  }, [navigation, hasChanges, handleSave, selectedType, selectedCategory]);
+  }, [navigation, hasChanges, saveStatus, selectedType, selectedCategory]);
 
   // Android hardware back button handler
   useEffect(() => {
@@ -895,19 +917,6 @@ export default function AddItemScreen() {
           assetRefs={assetRefs}
           onAssetRefsChange={setAssetRefs}
         />
-
-        {/* Save button */}
-        <View style={styles.saveContainer}>
-          <Button
-            title={isSaving ? 'Saving...' : 'Save Item'}
-            onPress={handleSave}
-            icon="checkmark"
-            fullWidth
-            size="lg"
-            loading={isSaving}
-            disabled={isSaving}
-          />
-        </View>
       </View>
     );
   };
@@ -931,6 +940,7 @@ export default function AddItemScreen() {
             onPress: () => setEditingCategories((v) => !v),
           },
         ]}
+        saveStatus={mode === 'asset' ? undefined : saveStatus}
       />
 
       <KeyboardAvoidingView

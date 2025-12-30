@@ -34,6 +34,7 @@ import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
 import { arraysEqual } from '../../../src/utils/comparison';
+import { useAutoSave } from '../../../src/hooks/useAutoSave';
 import type {
   AssetReference,
   CustomCategory,
@@ -66,7 +67,6 @@ export default function EditItemScreen() {
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [assetRefs, setAssetRefs] = useState<AssetReference[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState(false);
   const [showCategorySelector, setShowCategorySelector] = useState(false);
   const isShowingPrompt = useRef(false);
 
@@ -238,8 +238,9 @@ export default function EditItemScreen() {
     [item, category, fields],
   );
 
-  const handleSave = useCallback(async () => {
-    if (!item || !category) return;
+  // Auto-save function that returns boolean
+  const performSave = useCallback(async (): Promise<boolean> => {
+    if (!item || !category) return false;
 
     // Basic validation
     const errorMap: Record<string, string> = {};
@@ -258,10 +259,8 @@ export default function EditItemScreen() {
 
     if (Object.keys(errorMap).length > 0) {
       setErrors(errorMap);
-      return;
+      return false;
     }
-
-    setIsSaving(true);
     
     // Include type in updates if category changed
     const updates: Parameters<typeof updateItem>[1] = {
@@ -277,7 +276,6 @@ export default function EditItemScreen() {
     }
     
     const updatedItem = await updateItem(item.id, updates);
-    setIsSaving(false);
 
     if (updatedItem) {
       // Update initial state after successful save
@@ -290,17 +288,37 @@ export default function EditItemScreen() {
           assetRefs: assetRefs ? [...assetRefs] : [],
         };
       }
-      // Small delay to ensure navigation is ready
-      setTimeout(() => {
-        router.back();
-      }, 100);
-    } else {
-      Alert.alert('Error', 'Failed to save changes. Please try again.');
+      return true;
     }
-  }, [item, category, label, fields, customFields, assetRefs, selectedCategoryId, updateItem, router]);
+    
+    return false;
+  }, [item, category, label, fields, customFields, assetRefs, selectedCategoryId, updateItem]);
+
+  // Determine if auto-save should be enabled
+  const isAutoSaveEnabled = useMemo(() => {
+    if (!item || !category) return false;
+    // Only enable if there are changes
+    if (!hasChanges) return false;
+    return true;
+  }, [item, category, hasChanges]);
+
+  // Use auto-save hook
+  const saveStatus = useAutoSave({
+    dependencies: [label, fields, customFields, assetRefs, selectedCategoryId],
+    saveFn: performSave,
+    debounceMs: 500,
+    enabled: isAutoSaveEnabled,
+  });
 
   const handleCancel = useCallback(() => {
-    if (hasChanges && !isShowingPrompt.current) {
+    // If save is in progress, wait for it
+    if (saveStatus === 'saving') {
+      // Wait a bit and check again, or just allow navigation
+      // Auto-save will complete in background
+      return;
+    }
+
+    if (hasChanges && !isShowingPrompt.current && saveStatus !== 'saved') {
       isShowingPrompt.current = true;
       Alert.alert(
         'Unsaved Changes',
@@ -321,25 +339,23 @@ export default function EditItemScreen() {
               router.back();
             },
           },
-          {
-            text: 'Save',
-            onPress: async () => {
-              isShowingPrompt.current = false;
-              await handleSave();
-            },
-          },
         ],
       );
-    } else if (!hasChanges) {
+    } else if (!hasChanges || saveStatus === 'saved') {
       router.back();
     }
-  }, [hasChanges, router, handleSave]);
+  }, [hasChanges, router, saveStatus]);
 
   // Navigation interception for unsaved changes
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!hasChanges) {
-        // No unsaved changes, allow navigation
+    const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+      // If save is in progress, allow navigation (auto-save will complete in background)
+      if (saveStatus === 'saving') {
+        return;
+      }
+
+      if (!hasChanges || saveStatus === 'saved') {
+        // No unsaved changes or already saved, allow navigation
         return;
       }
 
@@ -371,20 +387,12 @@ export default function EditItemScreen() {
               navigation.dispatch(e.data.action);
             },
           },
-          {
-            text: 'Save',
-            onPress: async () => {
-              isShowingPrompt.current = false;
-              await handleSave();
-              // Navigation will happen in handleSave after successful save
-            },
-          },
         ],
       );
     });
 
     return unsubscribe;
-  }, [navigation, hasChanges, handleSave]);
+  }, [navigation, hasChanges, saveStatus]);
 
   // Android hardware back button handler
   useEffect(() => {
@@ -567,6 +575,7 @@ export default function EditItemScreen() {
         title={`Edit ${category.label}`}
         onBack={handleCancel}
         gradientColors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+        saveStatus={saveStatus}
       />
 
       <KeyboardAvoidingView
@@ -631,19 +640,6 @@ export default function EditItemScreen() {
 
           {/* Asset attachments (images, PDFs, documents) */}
           <AssetPicker assetRefs={assetRefs} onAssetRefsChange={handleAssetRefsChange} />
-
-          {/* Save button */}
-          <View style={styles.saveContainer}>
-            <Button
-              title={isSaving ? 'Saving...' : 'Save Changes'}
-              onPress={handleSave}
-              icon="checkmark"
-              fullWidth
-              size="lg"
-              loading={isSaving}
-              disabled={isSaving || !hasChanges}
-            />
-          </View>
           </ScrollView>
         </PageContent>
       </KeyboardAvoidingView>
