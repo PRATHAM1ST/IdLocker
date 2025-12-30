@@ -3,16 +3,16 @@
  * Used across settings, categories, assets, and other inner screens
  */
 
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeProvider';
-import { ThemedText } from './ThemedText';
-import { spacing, borderRadius } from '../styles/theme';
 import type { SaveStatus } from '../hooks/useAutoSave';
+import { borderRadius, spacing } from '../styles/theme';
+import { ThemedText } from './ThemedText';
 
 interface PageHeaderAction {
   icon: keyof typeof Ionicons.glyphMap;
