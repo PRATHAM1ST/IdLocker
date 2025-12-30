@@ -10,7 +10,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  BackHandler,
   Dimensions,
   Image,
   Modal,
@@ -107,16 +106,6 @@ export default function ItemDetailScreen() {
       isActive = false;
     };
   }, [item, getAssetsForItem, migrateItemAssets, ensureAssetsLoaded]);
-
-  // Android hardware back button handler
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.back();
-      return true; // Prevent default back behavior
-    });
-
-    return () => backHandler.remove();
-  }, [router]);
 
   const category = useMemo(
     () => (item ? getCategoryById(item.type) : null),

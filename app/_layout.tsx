@@ -35,12 +35,7 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen
-          name="(vault)"
-          options={{
-            gestureEnabled: false,
-          }}
-        />
+        <Stack.Screen name="(vault)" />
       </Stack>
     </>
   );

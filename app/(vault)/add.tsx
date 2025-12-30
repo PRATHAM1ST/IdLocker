@@ -14,7 +14,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  BackHandler,
   Dimensions,
   Image,
   KeyboardAvoidingView,
@@ -443,16 +442,6 @@ export default function AddItemScreen() {
 
   // Navigation interception - removed since auto-save handles saving automatically
   // Users can navigate back freely
-
-  // Android hardware back button handler
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleCancel();
-      return true; // Prevent default back behavior
-    });
-
-    return () => backHandler.remove();
-  }, [handleCancel]);
 
   const renderAssetUploader = () => (
     <View style={styles.assetUploaderContainer}>
