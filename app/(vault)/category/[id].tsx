@@ -9,15 +9,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  BackHandler,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    Alert,
+    BackHandler,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { Button } from '../../../src/components/Button';
 import { Input } from '../../../src/components/Input';
@@ -89,6 +89,8 @@ export default function CategoryEditScreen() {
   const [previewField, setPreviewField] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const isShowingPrompt = useRef(false);
+  const isDiscarding = useRef(false);
+  const isSavingAndNavigating = useRef(false);
 
   // Store initial state for comparison
   const initialState = useRef<{
@@ -200,9 +202,11 @@ export default function CategoryEditScreen() {
           fields,
           previewField,
         };
+        isSavingAndNavigating.current = true;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to create category');
+        isSavingAndNavigating.current = false;
       }
     } else {
       const updated = await updateCategory(id, {
@@ -222,9 +226,11 @@ export default function CategoryEditScreen() {
           fields,
           previewField,
         };
+        isSavingAndNavigating.current = true;
         router.back();
       } else {
         Alert.alert('Error', 'Failed to update category');
+        isSavingAndNavigating.current = false;
       }
     }
 
@@ -250,6 +256,7 @@ export default function CategoryEditScreen() {
             style: 'destructive',
             onPress: () => {
               isShowingPrompt.current = false;
+              isDiscarding.current = true;
               router.back();
             },
           },
@@ -257,6 +264,7 @@ export default function CategoryEditScreen() {
             text: 'Save',
             onPress: async () => {
               isShowingPrompt.current = false;
+              isSavingAndNavigating.current = true;
               await handleSave();
             },
           },
@@ -270,6 +278,18 @@ export default function CategoryEditScreen() {
   // Navigation interception for unsaved changes
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // If we're already discarding (user confirmed in handleCancel or alert), allow navigation
+      if (isDiscarding.current) {
+        isDiscarding.current = false; // Reset for next time
+        return;
+      }
+
+      // If we're saving and navigating, allow navigation
+      if (isSavingAndNavigating.current) {
+        isSavingAndNavigating.current = false; // Reset for next time
+        return;
+      }
+
       if (!hasChanges) {
         // No unsaved changes, allow navigation
         return;
@@ -300,6 +320,7 @@ export default function CategoryEditScreen() {
             style: 'destructive',
             onPress: () => {
               isShowingPrompt.current = false;
+              isDiscarding.current = true;
               navigation.dispatch(e.data.action);
             },
           },
@@ -307,6 +328,7 @@ export default function CategoryEditScreen() {
             text: 'Save',
             onPress: async () => {
               isShowingPrompt.current = false;
+              isSavingAndNavigating.current = true;
               await handleSave();
               // Navigation will happen in handleSave after successful save
             },

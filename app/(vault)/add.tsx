@@ -13,16 +13,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    BackHandler,
-    Dimensions,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Alert,
+  BackHandler,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { AssetPicker } from '../../src/components/AssetPicker';
 import { Button } from '../../src/components/Button';
@@ -41,13 +41,13 @@ import { formatFileSize } from '../../src/storage/assetStorage';
 import { borderRadius, shadows, spacing } from '../../src/styles/theme';
 import { hasNonEmptyValues } from '../../src/utils/comparison';
 import type {
-    Asset,
-    AssetReference,
-    AssetType,
-    CustomCategory,
-    CustomField,
-    FieldDefinition,
-    VaultItemType,
+  Asset,
+  AssetReference,
+  AssetType,
+  CustomCategory,
+  CustomField,
+  FieldDefinition,
+  VaultItemType,
 } from '../../src/utils/types';
 import { sanitizeInput, validateField } from '../../src/utils/validation';
 
