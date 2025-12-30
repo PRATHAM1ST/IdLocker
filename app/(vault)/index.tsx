@@ -44,19 +44,7 @@ export default function VaultHomeScreen() {
     setHomeFilter(selectedFilter);
   }, [selectedFilter, setHomeFilter]);
 
-  // Android hardware back button handler - exit selection mode
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (isSelectionMode) {
-        handleExitSelectionMode();
-        return true; // Prevent default back behavior
-      }
-      return false; // Allow default back behavior
-    });
-
-    }, [isSelectionMode]);
-
-    // Custom hooks for filtering and navigation
+  // Custom hooks for filtering and navigation
     const { categoryCounts, searchResults } = useVaultFiltering(searchQuery, selectedFilter);
     const {
     prevCategory,
@@ -111,6 +99,28 @@ export default function VaultHomeScreen() {
     setIsSelectionMode(false);
     setSelectedItemIds(new Set());
   }, []);
+
+  // Android hardware back button handler - clear search or exit selection mode
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Priority 1: Clear search if not empty
+      if (searchQuery.trim().length > 0) {
+        setSearchQuery('');
+        return true; // Prevent default back behavior
+      }
+      
+      // Priority 2: Exit selection mode if active
+      if (isSelectionMode) {
+        handleExitSelectionMode();
+        return true; // Prevent default back behavior
+      }
+      
+      // Allow default back behavior
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [searchQuery, isSelectionMode, handleExitSelectionMode]);
 
   const handleDeleteSelected = useCallback(async () => {
     const selectedCount = selectedItemIds.size;
