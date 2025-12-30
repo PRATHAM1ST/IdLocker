@@ -695,7 +695,10 @@ export default function AddItemScreen() {
                 style={styles.typeCardOuterGradient}
               >
                 <LinearGradient
-                  colors={[category.color.gradientStart, category.color.gradientEnd]}
+                  colors={[
+                    category.color.gradientStart || '#3B82F6',
+                    category.color.gradientEnd || '#60A5FA',
+                  ]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.typeCardInnerGradient}

@@ -4,6 +4,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import gradients from '../styles/gradients';
 import type {
   AppSettings,
   BankAccountType,
@@ -316,153 +317,77 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
 // Available icons for custom categories
 export const CATEGORY_ICONS = [...Object.keys(Ionicons.glyphMap)] as const;
 
+// Helper function to convert hex to RGB
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+}
+
+// Helper function to convert RGB to hex
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b].map((x) => Math.round(x).toString(16).padStart(2, '0')).join('');
+}
+
+// Helper function to lighten a hex color (mix with white)
+function lightenColor(hex: string, amount: number = 0.85): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+
+  const r = Math.min(255, rgb.r + (255 - rgb.r) * amount);
+  const g = Math.min(255, rgb.g + (255 - rgb.g) * amount);
+  const b = Math.min(255, rgb.b + (255 - rgb.b) * amount);
+
+  return rgbToHex(r, g, b);
+}
+
+// Helper function to darken a hex color (mix with black)
+function darkenColor(hex: string, amount: number = 0.4): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+
+  const r = Math.max(0, rgb.r * (1 - amount));
+  const g = Math.max(0, rgb.g * (1 - amount));
+  const b = Math.max(0, rgb.b * (1 - amount));
+
+  return rgbToHex(r, g, b);
+}
+
+// Transform gradients to CategoryColor format
+function transformGradientToCategoryColor(gradient: {
+  name: string;
+  colors: readonly string[];
+}): {
+  name: string;
+  gradientStart: string;
+  gradientEnd: string;
+  bg: string;
+  icon: string;
+  text: string;
+} {
+  const colors = gradient.colors;
+  const firstColor = colors[0];
+  const lastColor = colors[colors.length - 1];
+
+  // Use first color as the base for icon, bg, and text
+  return {
+    name: gradient.name,
+    gradientStart: firstColor,
+    gradientEnd: lastColor,
+    icon: firstColor,
+    bg: lightenColor(firstColor, 0.85),
+    text: darkenColor(firstColor, 0.4),
+  };
+}
+
 // Available colors for custom categories (used in category picker)
-export const CATEGORY_COLORS = [
-  {
-    name: 'Blue',
-    gradientStart: '#3B82F6',
-    gradientEnd: '#60A5FA',
-    bg: '#DBEAFE',
-    icon: '#3B82F6',
-    text: '#1E40AF',
-  },
-  {
-    name: 'Red',
-    gradientStart: '#EF4444',
-    gradientEnd: '#F87171',
-    bg: '#FEE2E2',
-    icon: '#EF4444',
-    text: '#991B1B',
-  },
-  {
-    name: 'Green',
-    gradientStart: '#10B981',
-    gradientEnd: '#34D399',
-    bg: '#D1FAE5',
-    icon: '#10B981',
-    text: '#065F46',
-  },
-  {
-    name: 'Purple',
-    gradientStart: '#6366F1',
-    gradientEnd: '#818CF8',
-    bg: '#E0E7FF',
-    icon: '#6366F1',
-    text: '#3730A3',
-  },
-  {
-    name: 'Yellow',
-    gradientStart: '#F59E0B',
-    gradientEnd: '#FBBF24',
-    bg: '#FEF3C7',
-    icon: '#F59E0B',
-    text: '#92400E',
-  },
-  {
-    name: 'Pink',
-    gradientStart: '#EC4899',
-    gradientEnd: '#F472B6',
-    bg: '#FCE7F3',
-    icon: '#EC4899',
-    text: '#9D174D',
-  },
-  {
-    name: 'Cyan',
-    gradientStart: '#06B6D4',
-    gradientEnd: '#22D3EE',
-    bg: '#CFFAFE',
-    icon: '#06B6D4',
-    text: '#0E7490',
-  },
-  {
-    name: 'Orange',
-    gradientStart: '#F97316',
-    gradientEnd: '#FB923C',
-    bg: '#FFEDD5',
-    icon: '#F97316',
-    text: '#9A3412',
-  },
-  {
-    name: 'Violet',
-    gradientStart: '#8B5CF6',
-    gradientEnd: '#A78BFA',
-    bg: '#EDE9FE',
-    icon: '#8B5CF6',
-    text: '#5B21B6',
-  },
-  {
-    name: 'Teal',
-    gradientStart: '#14B8A6',
-    gradientEnd: '#2DD4BF',
-    bg: '#CCFBF1',
-    icon: '#14B8A6',
-    text: '#0F766E',
-  },
-  {
-    name: 'Indigo',
-    gradientStart: '#4F46E5',
-    gradientEnd: '#6366F1',
-    bg: '#E0E7FF',
-    icon: '#4F46E5',
-    text: '#312E81',
-  },
-  {
-    name: 'Rose',
-    gradientStart: '#E11D48',
-    gradientEnd: '#F43F5E',
-    bg: '#FFE4E6',
-    icon: '#E11D48',
-    text: '#881337',
-  },
-  {
-    name: 'Amber',
-    gradientStart: '#D97706',
-    gradientEnd: '#F59E0B',
-    bg: '#FEF3C7',
-    icon: '#D97706',
-    text: '#78350F',
-  },
-  {
-    name: 'Emerald',
-    gradientStart: '#059669',
-    gradientEnd: '#10B981',
-    bg: '#D1FAE5',
-    icon: '#059669',
-    text: '#064E3B',
-  },
-  {
-    name: 'Sky',
-    gradientStart: '#0EA5E9',
-    gradientEnd: '#38BDF8',
-    bg: '#E0F2FE',
-    icon: '#0EA5E9',
-    text: '#0C4A6E',
-  },
-  {
-    name: 'Lime',
-    gradientStart: '#84CC16',
-    gradientEnd: '#A3E635',
-    bg: '#ECFCCB',
-    icon: '#84CC16',
-    text: '#365314',
-  },
-  {
-    name: 'Fuchsia',
-    gradientStart: '#D946EF',
-    gradientEnd: '#E879F9',
-    bg: '#FAE8FF',
-    icon: '#D946EF',
-    text: '#701A75',
-  },
-  {
-    name: 'Slate',
-    gradientStart: '#64748B',
-    gradientEnd: '#94A3B8',
-    bg: '#F1F5F9',
-    icon: '#64748B',
-    text: '#334155',
-  },
-];
+// Transformed from gradients.ts
+export const CATEGORY_COLORS = gradients.map(transformGradientToCategoryColor);
 
 // Sensitive field keys that should be masked by default
 export const SENSITIVE_FIELDS = new Set(['accountNumber', 'idNumber', 'password', 'content', 'cvv', 'pin']);

@@ -163,7 +163,10 @@ export function VaultItemGridCard({
           </View>
         ) : (
           <LinearGradient
-            colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+            colors={[
+              categoryColor.gradientStart || '#6B7280',
+              categoryColor.gradientEnd || '#9CA3AF',
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{...styles.headerGradient, padding: isSelected ? spacing.md - 2 : spacing.md}}

@@ -432,7 +432,10 @@ export default function EditItemScreen() {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={[cat.color.gradientStart, cat.color.gradientEnd]}
+              colors={[
+                cat.color.gradientStart || '#3B82F6',
+                cat.color.gradientEnd || '#60A5FA',
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.typeCardGradient}

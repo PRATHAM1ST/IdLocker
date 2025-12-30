@@ -46,8 +46,13 @@ export function PageHeader({
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   const handleBack = onBack || (() => router.back());
-  const gradientStart = gradientColors?.[0] || colors.headerGradientStart;
-  const gradientEnd = gradientColors?.[1] || colors.headerGradientEnd;
+  // Ensure gradient colors are always valid strings (handle null/undefined)
+  const gradientStart = (gradientColors?.[0] && typeof gradientColors[0] === 'string') 
+    ? gradientColors[0] 
+    : colors.headerGradientStart;
+  const gradientEnd = (gradientColors?.[1] && typeof gradientColors[1] === 'string') 
+    ? gradientColors[1] 
+    : colors.headerGradientEnd;
 
   // Animate sync icon rotation when saving
   useEffect(() => {

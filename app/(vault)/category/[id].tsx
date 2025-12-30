@@ -9,15 +9,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    BackHandler,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Alert,
+  BackHandler,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Button } from '../../../src/components/Button';
 import { Input } from '../../../src/components/Input';
@@ -104,6 +104,7 @@ export default function CategoryEditScreen() {
   // Modal states
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [iconSearchQuery, setIconSearchQuery] = useState('');
   const [fieldForm, setFieldForm] = useState<FieldFormState>(() => createEmptyFieldForm());
   const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
   const [isAddingNewField, setIsAddingNewField] = useState(false);
@@ -525,6 +526,17 @@ export default function CategoryEditScreen() {
   const supportsValueLimits = fieldForm.keyboardType === 'numeric';
   const supportsPrefix = fieldForm.keyboardType === 'phone-pad';
 
+  // Filter icons based on search query
+  const filteredIcons = useMemo(() => {
+    if (!iconSearchQuery.trim()) {
+      return CATEGORY_ICONS;
+    }
+    const query = iconSearchQuery.toLowerCase().trim();
+    return CATEGORY_ICONS.filter(iconName => 
+      iconName.toLowerCase().includes(query)
+    );
+  }, [iconSearchQuery]);
+
   // Helper function to render the field editor form
   const renderFieldEditor = useCallback(() => {
     return (
@@ -882,6 +894,10 @@ export default function CategoryEditScreen() {
     );
   };
 
+  // Ensure gradient colors are always valid strings
+  const gradientStart = color.gradientStart || '#3B82F6';
+  const gradientEnd = color.gradientEnd || '#60A5FA';
+
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -889,7 +905,7 @@ export default function CategoryEditScreen() {
       <PageHeader
         title={isNew ? 'New Category' : 'Edit Category'}
         onBack={handleCancel}
-        gradientColors={[color.gradientStart, color.gradientEnd]}
+        gradientColors={[gradientStart, gradientEnd]}
       />
 
       <KeyboardAvoidingView
@@ -906,7 +922,7 @@ export default function CategoryEditScreen() {
             {/* Preview card */}
             <View style={[styles.previewCard, shadows.md]}>
               <LinearGradient
-                colors={[color.gradientStart, color.gradientEnd]}
+                colors={[gradientStart, gradientEnd]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.previewGradient}
@@ -957,7 +973,7 @@ export default function CategoryEditScreen() {
                 onPress={() => setShowColorPicker(true)}
               >
                 <LinearGradient
-                  colors={[color.gradientStart, color.gradientEnd]}
+                  colors={[gradientStart, gradientEnd]}
                   style={styles.colorPreview}
                 />
                 <ThemedText variant="body" style={styles.pickerText}>
@@ -1042,10 +1058,17 @@ export default function CategoryEditScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
         statusBarTranslucent={false}
+        onRequestClose={() => {
+          setIconSearchQuery('');
+          setShowIconPicker(false);
+        }}
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => setShowIconPicker(false)}>
+            <TouchableOpacity onPress={() => {
+              setIconSearchQuery('');
+              setShowIconPicker(false);
+            }}>
               <ThemedText variant="body" style={{ color: colors.primary }}>
                 Done
               </ThemedText>
@@ -1053,8 +1076,17 @@ export default function CategoryEditScreen() {
             <ThemedText variant="subtitle">Choose Icon</ThemedText>
             <View style={{ width: 40 }} />
           </View>
+          <View style={styles.iconSearchContainer}>
+            <Input
+              placeholder="Search icons..."
+              value={iconSearchQuery}
+              onChangeText={setIconSearchQuery}
+              leftIcon="search-outline"
+              containerStyle={styles.iconSearchInput}
+            />
+          </View>
           <ScrollView contentContainerStyle={styles.iconGrid}>
-            {CATEGORY_ICONS.map((iconName) => (
+            {filteredIcons.map((iconName) => (
               <TouchableOpacity
                 key={iconName}
                 style={[
@@ -1068,6 +1100,7 @@ export default function CategoryEditScreen() {
                 ]}
                 onPress={() => {
                   setIcon(iconName);
+                  setIconSearchQuery('');
                   setShowIconPicker(false);
                 }}
               >
@@ -1119,7 +1152,10 @@ export default function CategoryEditScreen() {
                 }}
               >
                 <LinearGradient
-                  colors={[colorOption.gradientStart, colorOption.gradientEnd]}
+                  colors={[
+                    colorOption.gradientStart || '#3B82F6',
+                    colorOption.gradientEnd || '#60A5FA',
+                  ]}
                   style={styles.colorOptionGradient}
                 />
                 <ThemedText variant="caption">{colorOption.name}</ThemedText>
@@ -1307,6 +1343,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacing.base,
     borderBottomWidth: 1,
+  },
+  iconSearchContainer: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  iconSearchInput: {
+    marginBottom: 0,
   },
   iconGrid: {
     flexDirection: 'row',

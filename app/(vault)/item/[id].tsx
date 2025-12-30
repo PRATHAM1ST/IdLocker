@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   // Content styles
   content: {
     padding: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.lg,
   },
   imageHint: {
     marginBottom: spacing.md,

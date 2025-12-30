@@ -51,7 +51,10 @@ export function DynamicCategoryCard({
           style={styles.cardOuterGradient}
         >
           <LinearGradient
-            colors={[category.color.gradientStart, category.color.gradientEnd]}
+            colors={[
+              category.color.gradientStart || '#3B82F6',
+              category.color.gradientEnd || '#60A5FA',
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.cardInnerGradient}
@@ -130,7 +133,10 @@ export function DynamicCategoryFilterCard({
 
   // For 'all' type (null category), use accent color
   const gradientColors: [string, string] = category
-    ? [category.color.gradientStart, category.color.gradientEnd]
+    ? [
+        category.color.gradientStart || '#3B82F6',
+        category.color.gradientEnd || '#60A5FA',
+      ]
     : [colors.accent, colors.accentLight];
 
   const icon = category ? category.icon : 'grid-outline';
