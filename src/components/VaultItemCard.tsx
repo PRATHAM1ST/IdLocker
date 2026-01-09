@@ -3,17 +3,17 @@
  * Squircle design language with image preview support
  */
 
-import React, { useMemo } from 'react';
-import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../context/ThemeProvider';
+import React, { useMemo } from 'react';
+import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useCategories } from '../context/CategoryProvider';
-import { ThemedText } from './ThemedText';
-import { spacing, borderRadius, shadows } from '../styles/theme';
+import { useTheme } from '../context/ThemeProvider';
+import { borderRadius, shadows, spacing } from '../styles/theme';
 import { getCategoryIconColor } from '../utils/categoryHelpers';
 import type { VaultItem } from '../utils/types';
 import { getItemPreview } from '../utils/validation';
+import { ThemedText } from './ThemedText';
 
 // Helper function to sanitize color values - ensures they're valid strings, never null/undefined
 const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {

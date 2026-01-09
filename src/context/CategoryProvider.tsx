@@ -5,19 +5,19 @@
 
 import React, {
   createContext,
-  useContext,
-  useState,
-  useEffect,
   useCallback,
+  useContext,
+  useEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react';
-import type { CustomCategory, CategoryColor } from '../utils/types';
 import * as vaultStorage from '../storage/vaultStorage';
-import { useAuthLock } from './AuthLockProvider';
+import { CATEGORY_COLORS, DEFAULT_CATEGORIES } from '../utils/constants';
 import { logger } from '../utils/logger';
-import { DEFAULT_CATEGORIES, CATEGORY_COLORS } from '../utils/constants';
+import type { CategoryColor, CustomCategory } from '../utils/types';
 import { generatePrefixedId } from '../utils/uuid';
+import { useAuthLock } from './AuthLockProvider';
 
 interface CategoryContextValue {
   // State

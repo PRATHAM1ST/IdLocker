@@ -43,6 +43,7 @@ import type {
   VaultItemType,
 } from '../../../src/utils/types';
 import { sanitizeInput, validateField } from '../../../src/utils/validation';
+import { DynamicCategoryCard } from '@/src/components';
 
 // Helper function to sanitize color values - ensures they're valid strings, never null/undefined
 const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
@@ -462,23 +463,17 @@ export default function EditItemScreen() {
             onPress={() => handleCategoryChange(cat)}
             activeOpacity={0.85}
           >
-            <LinearGradient
-              colors={[
-                cat.color.gradientStart || '#3B82F6',
-                cat.color.gradientEnd || '#60A5FA',
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.typeCardGradient}
-            >
-              <View style={styles.typeCardDecor} />
-              <View style={styles.typeIconContainer}>
-                <Ionicons name={cat.icon as any} size={28} color="rgba(255,255,255,0.95)" />
-              </View>
-              <ThemedText variant="label" style={styles.typeLabel}>
-                {cat.label}
-              </ThemedText>
-            </LinearGradient>
+            <DynamicCategoryCard
+              key={cat.id}
+              category={cat}
+              count={categoryCounts[cat.id] || 0}
+              onPress={() => handleCategoryChange(cat)}
+              showActions={true}
+              customStyle={{
+                width: '100%',
+                height: 100,
+              }}
+            />
           </TouchableOpacity>
         ))}
       </View>

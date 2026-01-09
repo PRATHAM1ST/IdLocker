@@ -29,8 +29,8 @@ import { ThemedView } from '../../../src/components/ThemedView';
 import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
-import { arraysEqual } from '../../../src/utils/comparison';
 import { getCategoryIconColor } from '../../../src/utils/categoryHelpers';
+import { arraysEqual } from '../../../src/utils/comparison';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../src/utils/constants';
 import type { CategoryColor, FieldDefinition } from '../../../src/utils/types';
 
