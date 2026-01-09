@@ -73,6 +73,40 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     }
   }, [isLocked, hasLoaded, refreshCategories]);
 
+  // Migrate categories from old icon property to iconLight/iconDark
+  const migrateCategories = useCallback((categories: CustomCategory[]): CustomCategory[] => {
+    return categories.map((category) => {
+      // @ts-ignore - Check if category has old 'icon' property
+      if (category.color && 'icon' in category.color && !('iconLight' in category.color)) {
+        const oldIconColor = (category.color as any).icon;
+        // Derive iconLight and iconDark from old icon color
+        // Use the old color for light mode, brighten it for dark mode
+        const iconLight = oldIconColor;
+        // Brighten the color for dark mode (simple approach: increase brightness by ~30%)
+        const rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(oldIconColor);
+        if (rgb) {
+          const r = Math.min(255, parseInt(rgb[1], 16) + Math.floor((255 - parseInt(rgb[1], 16)) * 0.3));
+          const g = Math.min(255, parseInt(rgb[2], 16) + Math.floor((255 - parseInt(rgb[2], 16)) * 0.3));
+          const b = Math.min(255, parseInt(rgb[3], 16) + Math.floor((255 - parseInt(rgb[3], 16)) * 0.3));
+          const iconDark = '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('');
+          
+          // Remove old icon property by destructuring
+          const { icon, ...colorWithoutIcon } = category.color as any;
+          
+          return {
+            ...category,
+            color: {
+              ...colorWithoutIcon,
+              iconLight,
+              iconDark,
+            } as CategoryColor,
+          };
+        }
+      }
+      return category;
+    });
+  }, []);
+
   // Refresh categories from storage
   const refreshCategories = useCallback(async () => {
     setIsLoading(true);
@@ -80,9 +114,18 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
 
     try {
       const data = await vaultStorage.loadCategories();
-      setCategories(data.categories);
+      // Migrate categories if needed
+      const migratedCategories = migrateCategories(data.categories);
+      
+      // If migration occurred, save the migrated categories
+      if (migratedCategories.some((cat, idx) => cat !== data.categories[idx])) {
+        await vaultStorage.saveCategories({ version: 1, categories: migratedCategories });
+        logger.debug('Categories migrated to new icon color format');
+      }
+      
+      setCategories(migratedCategories);
       setHasLoaded(true);
-      logger.debug('Categories refreshed:', data.categories.length);
+      logger.debug('Categories refreshed:', migratedCategories.length);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load categories';
       setError(message);
@@ -90,7 +133,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [migrateCategories]);
 
   // Debounced save function to prevent race conditions
   const debouncedSave = useCallback(
@@ -237,7 +280,8 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       gradientStart: color.gradientStart,
       gradientEnd: color.gradientEnd,
       bg: color.bg,
-      icon: color.icon,
+      iconLight: color.iconLight,
+      iconDark: color.iconDark,
       text: color.text,
     };
   }, []);

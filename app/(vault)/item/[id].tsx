@@ -41,6 +41,14 @@ import { formatDate } from '../../../src/utils/formatters';
 import { buildDisplayFields } from '../../../src/utils/itemHelpers';
 import type { Asset } from '../../../src/utils/types';
 
+// Helper function to sanitize color values - ensures they're valid strings, never null/undefined
+const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
+  if (color == null || typeof color !== 'string' || color.trim() === '') {
+    return fallback;
+  }
+  return color;
+};
+
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -111,7 +119,13 @@ export default function ItemDetailScreen() {
     () => (item ? getCategoryById(item.type) : null),
     [item, getCategoryById],
   );
-  const categoryColor = category?.color || null;
+  const categoryColor = category?.color || {
+    gradientStart: '#6B7280',
+    gradientEnd: '#9CA3AF',
+    icon: '#6B7280',
+    bg: '#F3F4F6',
+    text: '#374151',
+  };
 
   const handleEdit = useCallback(() => {
     if (item) {
@@ -209,7 +223,10 @@ export default function ItemDetailScreen() {
       >
         {/* Gradient Header - Specialized for item detail */}
         <LinearGradient
-          colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+          colors={[
+            sanitizeColorValue(categoryColor.gradientStart, '#6B7280'),
+            sanitizeColorValue(categoryColor.gradientEnd, '#9CA3AF'),
+          ]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.header, { paddingTop: insets.top + spacing.md }]}

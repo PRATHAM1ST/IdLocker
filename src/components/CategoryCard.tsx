@@ -18,6 +18,14 @@ const CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - spacing.md) / 2;
 const FILTER_CARD_WIDTH = 80;
 const FILTER_CARD_HEIGHT = 64;
 
+// Helper function to sanitize color values - ensures they're valid strings, never null/undefined
+const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
+  if (color == null || typeof color !== 'string' || color.trim() === '') {
+    return fallback;
+  }
+  return color;
+};
+
 /**
  * Dynamic category card that works with CustomCategory
  * Enhanced with edit/delete buttons and additional info
@@ -52,8 +60,8 @@ export function DynamicCategoryCard({
         >
           <LinearGradient
             colors={[
-              category.color.gradientStart || '#3B82F6',
-              category.color.gradientEnd || '#60A5FA',
+              sanitizeColorValue(category.color.gradientStart, '#3B82F6'),
+              sanitizeColorValue(category.color.gradientEnd, '#60A5FA'),
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -134,10 +142,13 @@ export function DynamicCategoryFilterCard({
   // For 'all' type (null category), use accent color
   const gradientColors: [string, string] = category
     ? [
-        category.color.gradientStart || '#3B82F6',
-        category.color.gradientEnd || '#60A5FA',
+        sanitizeColorValue(category.color.gradientStart, '#3B82F6'),
+        sanitizeColorValue(category.color.gradientEnd, '#60A5FA'),
       ]
-    : [colors.accent, colors.accentLight];
+    : [
+        sanitizeColorValue(colors.accent, '#3B82F6'),
+        sanitizeColorValue(colors.accentLight, '#60A5FA'),
+      ];
 
   const icon = category ? category.icon : 'grid-outline';
   const label = category ? category.label : 'All';

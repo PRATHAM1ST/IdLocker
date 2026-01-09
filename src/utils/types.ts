@@ -126,7 +126,8 @@ export interface CategoryColor {
   gradientStart: string;
   gradientEnd: string;
   bg: string;
-  icon: string;
+  iconLight: string;
+  iconDark: string;
   text: string;
 }
 

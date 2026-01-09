@@ -44,6 +44,14 @@ import type {
 } from '../../../src/utils/types';
 import { sanitizeInput, validateField } from '../../../src/utils/validation';
 
+// Helper function to sanitize color values - ensures they're valid strings, never null/undefined
+const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
+  if (color == null || typeof color !== 'string' || color.trim() === '') {
+    return fallback;
+  }
+  return color;
+};
+
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -600,7 +608,10 @@ export default function EditItemScreen() {
       <PageHeader
         title={`Edit ${category.label}`}
         onBack={handleCancel}
-        gradientColors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+        gradientColors={[
+          sanitizeColorValue(categoryColor?.gradientStart, '#3B82F6'),
+          sanitizeColorValue(categoryColor?.gradientEnd, '#60A5FA'),
+        ]}
         saveStatus={saveStatus}
       />
 
@@ -623,7 +634,10 @@ export default function EditItemScreen() {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+              colors={[
+                sanitizeColorValue(categoryColor?.gradientStart, '#3B82F6'),
+                sanitizeColorValue(categoryColor?.gradientEnd, '#60A5FA'),
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.typeIndicatorGradient}

@@ -30,6 +30,7 @@ import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { borderRadius, shadows, spacing } from '../../../src/styles/theme';
 import { arraysEqual } from '../../../src/utils/comparison';
+import { getCategoryIconColor } from '../../../src/utils/categoryHelpers';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '../../../src/utils/constants';
 import type { CategoryColor, FieldDefinition } from '../../../src/utils/types';
 
@@ -73,11 +74,19 @@ const createEmptyFieldForm = (): FieldFormState => ({
   options: [],
 });
 
+// Helper function to sanitize color values - ensures they're valid strings, never null/undefined
+const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
+  if (color == null || typeof color !== 'string' || color.trim() === '') {
+    return fallback;
+  }
+  return color;
+};
+
 export default function CategoryEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { addCategory, updateCategory, getCategoryById, getDefaultColor } = useCategories();
 
   const isNew = id === 'new';
@@ -224,7 +233,8 @@ export default function CategoryEditScreen() {
       color.gradientStart !== initial.color.gradientStart ||
       color.gradientEnd !== initial.color.gradientEnd ||
       color.bg !== initial.color.bg ||
-      color.icon !== initial.color.icon ||
+      color.iconLight !== initial.color.iconLight ||
+      color.iconDark !== initial.color.iconDark ||
       color.text !== initial.color.text
     ) {
       return true;
@@ -953,9 +963,9 @@ export default function CategoryEditScreen() {
     );
   };
 
-  // Ensure gradient colors are always valid strings
-  const gradientStart = color.gradientStart || '#3B82F6';
-  const gradientEnd = color.gradientEnd || '#60A5FA';
+  // Ensure gradient colors are always valid strings (handle null explicitly)
+  const gradientStart = sanitizeColorValue(color.gradientStart, '#3B82F6');
+  const gradientEnd = sanitizeColorValue(color.gradientEnd, '#60A5FA');
 
   return (
     <ThemedView style={styles.container}>
@@ -1013,7 +1023,7 @@ export default function CategoryEditScreen() {
                 onPress={() => setShowIconPicker(true)}
               >
                 <View style={[styles.pickerPreview, { backgroundColor: color.bg }]}>
-                  <Ionicons name={icon as any} size={24} color={color.icon} />
+                  <Ionicons name={icon as any} size={24} color={getCategoryIconColor(color, isDark)} />
                 </View>
                 <ThemedText variant="body" style={styles.pickerText}>
                   Change Icon
@@ -1165,7 +1175,7 @@ export default function CategoryEditScreen() {
                       { backgroundColor: colors.card },
                       icon === iconName && {
                         backgroundColor: color.bg,
-                        borderColor: color.icon,
+                        borderColor: getCategoryIconColor(color, isDark),
                         borderWidth: 2,
                       },
                     ]}
@@ -1178,7 +1188,7 @@ export default function CategoryEditScreen() {
                     <Ionicons
                       name={iconName as any}
                       size={28}
-                      color={icon === iconName ? color.icon : colors.text}
+                      color={icon === iconName ? getCategoryIconColor(color, isDark) : colors.text}
                     />
                   </TouchableOpacity>
                 ))}
@@ -1224,19 +1234,20 @@ export default function CategoryEditScreen() {
                   ]}
                   onPress={() => {
                     setColor({
-                      gradientStart: colorOption.gradientStart,
-                      gradientEnd: colorOption.gradientEnd,
-                      bg: colorOption.bg,
-                      icon: colorOption.icon,
-                      text: colorOption.text,
+                      gradientStart: sanitizeColorValue(colorOption.gradientStart, '#3B82F6'),
+                      gradientEnd: sanitizeColorValue(colorOption.gradientEnd, '#60A5FA'),
+                      bg: sanitizeColorValue(colorOption.bg, '#F3F4F6'),
+                      iconLight: sanitizeColorValue(colorOption.iconLight, '#3B82F6'),
+                      iconDark: sanitizeColorValue(colorOption.iconDark, '#6B7280'),
+                      text: sanitizeColorValue(colorOption.text, '#374151'),
                     });
                     setShowColorPicker(false);
                   }}
                 >
                   <LinearGradient
                     colors={[
-                      colorOption.gradientStart || '#3B82F6',
-                      colorOption.gradientEnd || '#60A5FA',
+                      sanitizeColorValue(colorOption.gradientStart, '#3B82F6'),
+                      sanitizeColorValue(colorOption.gradientEnd, '#60A5FA'),
                     ]}
                     style={styles.colorOptionGradient}
                   />

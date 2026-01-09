@@ -82,7 +82,8 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       gradientStart: '#3B82F6',
       gradientEnd: '#60A5FA',
       bg: '#DBEAFE',
-      icon: '#3B82F6',
+      iconLight: '#2563EB',
+      iconDark: '#60A5FA',
       text: '#1E40AF',
     },
     previewField: 'accountNumber',
@@ -120,7 +121,8 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       gradientStart: '#EF4444',
       gradientEnd: '#F87171',
       bg: '#FEE2E2',
-      icon: '#EF4444',
+      iconLight: '#DC2626',
+      iconDark: '#F87171',
       text: '#991B1B',
     },
     previewField: 'lastFourDigits',
@@ -191,7 +193,8 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       gradientStart: '#10B981',
       gradientEnd: '#34D399',
       bg: '#D1FAE5',
-      icon: '#10B981',
+      iconLight: '#059669',
+      iconDark: '#34D399',
       text: '#065F46',
     },
     previewField: 'idNumber',
@@ -228,7 +231,8 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       gradientStart: '#6366F1',
       gradientEnd: '#818CF8',
       bg: '#E0E7FF',
-      icon: '#6366F1',
+      iconLight: '#4F46E5',
+      iconDark: '#818CF8',
       text: '#3730A3',
     },
     previewField: 'username',
@@ -272,7 +276,8 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       gradientStart: '#F59E0B',
       gradientEnd: '#FBBF24',
       bg: '#FEF3C7',
-      icon: '#F59E0B',
+      iconLight: '#D97706',
+      iconDark: '#FBBF24',
       text: '#92400E',
     },
     fields: [
@@ -298,7 +303,8 @@ export const DEFAULT_CATEGORIES: CustomCategory[] = [
       gradientStart: '#A855F7',
       gradientEnd: '#C084FC',
       bg: '#F3E8FF',
-      icon: '#A855F7',
+      iconLight: '#9333EA',
+      iconDark: '#C084FC',
       text: '#6B21A8',
     },
     fields: [
@@ -358,6 +364,18 @@ function darkenColor(hex: string, amount: number = 0.4): string {
   return rgbToHex(r, g, b);
 }
 
+// Helper function to brighten a color for dark mode icons
+function brightenColor(hex: string, amount: number = 0.3): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+
+  const r = Math.min(255, rgb.r + (255 - rgb.r) * amount);
+  const g = Math.min(255, rgb.g + (255 - rgb.g) * amount);
+  const b = Math.min(255, rgb.b + (255 - rgb.b) * amount);
+
+  return rgbToHex(r, g, b);
+}
+
 // Transform gradients to CategoryColor format
 function transformGradientToCategoryColor(gradient: {
   name: string;
@@ -367,19 +385,26 @@ function transformGradientToCategoryColor(gradient: {
   gradientStart: string;
   gradientEnd: string;
   bg: string;
-  icon: string;
+  iconLight: string;
+  iconDark: string;
   text: string;
 } {
   const colors = gradient.colors;
   const firstColor = colors[0];
   const lastColor = colors[colors.length - 1];
 
-  // Use first color as the base for icon, bg, and text
+  // Use first color as the base
+  // For light mode: use the original color (may need slight darkening for contrast)
+  // For dark mode: brighten the color for better visibility on dark backgrounds
+  const iconLightColor = darkenColor(firstColor, 0.1); // Slightly darker for light mode contrast
+  const iconDarkColor = brightenColor(firstColor, 0.3); // Brighter for dark mode visibility
+
   return {
     name: gradient.name,
     gradientStart: firstColor,
     gradientEnd: lastColor,
-    icon: firstColor,
+    iconLight: iconLightColor,
+    iconDark: iconDarkColor,
     bg: lightenColor(firstColor, 0.85),
     text: darkenColor(firstColor, 0.4),
   };

@@ -12,9 +12,18 @@ import { useCategories } from '../context/CategoryProvider';
 import { useTheme } from '../context/ThemeProvider';
 import { borderRadius, shadows, spacing, typography } from '../styles/theme';
 import { formatCardExpiry, formatRelativeTime } from '../utils/formatters';
+import { getCategoryIconColor } from '../utils/categoryHelpers';
 import type { VaultItem } from '../utils/types';
 import { getItemPreview } from '../utils/validation';
 import { ThemedText } from './ThemedText';
+
+// Helper function to sanitize color values - ensures they're valid strings, never null/undefined
+const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
+  if (color == null || typeof color !== 'string' || color.trim() === '') {
+    return fallback;
+  }
+  return color;
+};
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = spacing.md;
@@ -44,7 +53,8 @@ export function VaultItemGridCard({
   const categoryColor = category?.color || {
     gradientStart: '#6B7280',
     gradientEnd: '#9CA3AF',
-    icon: '#6B7280',
+    iconLight: '#6B7280',
+    iconDark: '#9CA3AF',
     bg: '#F3F4F6',
     text: '#374151',
   };
@@ -128,7 +138,10 @@ export function VaultItemGridCard({
             {/* Category badge on image */}
             <View style={styles.imageHeaderBadges}>
               <View
-                style={[styles.categoryBadge, { backgroundColor: categoryColor.gradientStart }]}
+                style={[
+                  styles.categoryBadge,
+                  { backgroundColor: sanitizeColorValue(categoryColor.gradientStart, '#6B7280') },
+                ]}
               >
                 <Ionicons
                   name={(category?.icon || 'folder-outline') as any}
@@ -164,8 +177,8 @@ export function VaultItemGridCard({
         ) : (
           <LinearGradient
             colors={[
-              categoryColor.gradientStart || '#6B7280',
-              categoryColor.gradientEnd || '#9CA3AF',
+              sanitizeColorValue(categoryColor.gradientStart, '#6B7280'),
+              sanitizeColorValue(categoryColor.gradientEnd, '#9CA3AF'),
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -225,7 +238,7 @@ export function VaultItemGridCard({
               <Ionicons
                 name={(category?.icon || 'folder-outline') as any}
                 size={24}
-                color={isDark ? categoryColor.text : categoryColor.icon}
+                color={getCategoryIconColor(categoryColor, isDark)}
               />
             </View>
             <View style={styles.footerLeft}>

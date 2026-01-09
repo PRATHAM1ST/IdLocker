@@ -54,6 +54,14 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TYPE_CARD_WIDTH = (SCREEN_WIDTH - spacing.base * 2 - spacing.md) / 2;
 const TYPE_CARD_HEIGHT = 100;
 
+// Helper function to sanitize color values - ensures they're valid strings, never null/undefined
+const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
+  if (color == null || typeof color !== 'string' || color.trim() === '') {
+    return fallback;
+  }
+  return color;
+};
+
 export default function AddItemScreen() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -685,8 +693,8 @@ export default function AddItemScreen() {
               >
                 <LinearGradient
                   colors={[
-                    category.color.gradientStart || '#3B82F6',
-                    category.color.gradientEnd || '#60A5FA',
+                    sanitizeColorValue(category.color.gradientStart, '#3B82F6'),
+                    sanitizeColorValue(category.color.gradientEnd, '#60A5FA'),
                   ]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -806,7 +814,10 @@ export default function AddItemScreen() {
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={[categoryColor.gradientStart || "#000", categoryColor.gradientEnd || "#000"]}
+            colors={[
+              sanitizeColorValue(categoryColor.gradientStart, '#3B82F6'),
+              sanitizeColorValue(categoryColor.gradientEnd, '#60A5FA'),
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.typeIndicatorGradient}

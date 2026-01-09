@@ -11,8 +11,17 @@ import { useTheme } from '../context/ThemeProvider';
 import { useCategories } from '../context/CategoryProvider';
 import { ThemedText } from './ThemedText';
 import { spacing, borderRadius, shadows } from '../styles/theme';
+import { getCategoryIconColor } from '../utils/categoryHelpers';
 import type { VaultItem } from '../utils/types';
 import { getItemPreview } from '../utils/validation';
+
+// Helper function to sanitize color values - ensures they're valid strings, never null/undefined
+const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
+  if (color == null || typeof color !== 'string' || color.trim() === '') {
+    return fallback;
+  }
+  return color;
+};
 
 interface VaultItemCardProps {
   item: VaultItem;
@@ -45,7 +54,10 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
     >
       {/* Gradient accent bar */}
       <LinearGradient
-        colors={[categoryColor.gradientStart, categoryColor.gradientEnd]}
+        colors={[
+          sanitizeColorValue(categoryColor.gradientStart, '#6B7280'),
+          sanitizeColorValue(categoryColor.gradientEnd, '#9CA3AF'),
+        ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.accentBar}
@@ -65,14 +77,14 @@ export function VaultItemCard({ item, onPress, showMenu = false }: VaultItemCard
             </View>
           )}
           {/* Small category indicator */}
-          <View style={[styles.categoryDot, { backgroundColor: categoryColor.icon }]} />
+          <View style={[styles.categoryDot, { backgroundColor: getCategoryIconColor(categoryColor, isDark) }]} />
         </View>
       ) : (
         <View style={[styles.iconContainer, { backgroundColor: categoryColor.bg }]}>
           <Ionicons
             name={(category?.icon || 'folder-outline') as any}
             size={22}
-            color={categoryColor.icon}
+            color={getCategoryIconColor(categoryColor, isDark)}
           />
         </View>
       )}
@@ -118,7 +130,8 @@ export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
   const categoryColor = category?.color || {
     gradientStart: '#6B7280',
     gradientEnd: '#9CA3AF',
-    icon: '#6B7280',
+    iconLight: '#6B7280',
+    iconDark: '#9CA3AF',
     bg: '#F3F4F6',
     text: '#374151',
   };
@@ -145,14 +158,14 @@ export function VaultItemCardCompact({ item, onPress }: VaultItemCardProps) {
             style={styles.compactThumbnail}
             resizeMode="cover"
           />
-          <View style={[styles.compactCategoryDot, { backgroundColor: categoryColor.icon }]} />
+          <View style={[styles.compactCategoryDot, { backgroundColor: getCategoryIconColor(categoryColor, isDark) }]} />
         </View>
       ) : (
         <View style={[styles.compactIcon, { backgroundColor: categoryColor.bg }]}>
           <Ionicons
             name={(category?.icon || 'folder-outline') as any}
             size={18}
-            color={categoryColor.icon}
+            color={getCategoryIconColor(categoryColor, isDark)}
           />
         </View>
       )}
