@@ -4,7 +4,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -27,7 +27,7 @@ import { ThemedView } from '../../src/components/ThemedView';
 import { useAssets } from '../../src/context/AssetProvider';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { useVault } from '../../src/context/VaultProvider';
-import { formatFileSize, shareAsset } from '../../src/storage/assetStorage';
+import { formatFileSize, openAssetInExternalApp, shareAsset } from '../../src/storage/assetStorage';
 import { borderRadius, spacing } from '../../src/styles/theme';
 import { assetToImageAttachment } from '../../src/utils/assetHelpers';
 import type { Asset, AssetType } from '../../src/utils/types';
@@ -48,6 +48,7 @@ const FILTERS: { key: FilterType; label: string; icon: keyof typeof Ionicons.gly
 ];
 
 export default function AssetsScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const { assets, isLoading, deleteAsset, refreshAssets } = useAssets();
   const { items } = useVault();
@@ -127,6 +128,10 @@ export default function AssetsScreen() {
 
   const handleShare = useCallback(async (asset: Asset) => {
     await shareAsset(asset.uri, asset.mimeType);
+  }, []);
+
+  const handleOpen = useCallback(async (asset: Asset) => {
+    await openAssetInExternalApp(asset.uri, asset.mimeType);
   }, []);
 
   const handleDelete = useCallback(
@@ -475,6 +480,14 @@ export default function AssetsScreen() {
                       onPress={() => handleOpenImageTools(previewAsset)}
                     >
                       <Ionicons name="color-wand-outline" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  )}
+                  {previewAsset?.type !== 'image' && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                      onPress={() => handleOpen(previewAsset)}
+                    >
+                      <Ionicons name="open-outline" size={24} color="#FFFFFF" />
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity

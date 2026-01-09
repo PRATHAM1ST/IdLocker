@@ -7,6 +7,7 @@
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Sharing from 'expo-sharing';
 import { logger } from '../utils/logger';
@@ -544,6 +545,53 @@ export async function shareAsset(
   } catch (error) {
     logger.error('Failed to share asset:', error);
     return false;
+  }
+}
+
+/**
+ * Open an asset in an external app that supports the file type
+ * On both Android and iOS: Uses expo-sharing which shows the native share sheet
+ * with app picker/"Open in..." options. This handles FileProvider automatically on Android.
+ */
+export async function openAssetInExternalApp(
+  uri: string,
+  mimeType: string = 'application/octet-stream',
+): Promise<boolean> {
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists) {
+      logger.error('File does not exist:', uri);
+      return false;
+    }
+
+    // Use expo-sharing on both platforms - it handles FileProvider on Android automatically
+    // and shows the native share sheet with "Open in..." options on iOS
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (!isAvailable) {
+      logger.warn('Sharing not available on this device');
+      return false;
+    }
+
+    await Sharing.shareAsync(uri, {
+      mimeType,
+      dialogTitle: Platform.OS === 'android' ? 'Open with' : 'Open File',
+      UTI: Platform.OS === 'ios' ? mimeType : undefined, // Uniform Type Identifier for iOS only
+    });
+
+    logger.debug(`Asset opened in external app (${Platform.OS})`);
+    return true;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Failed to open asset in external app:', errorMessage);
+    
+    // Fallback to regular share if open fails
+    try {
+      logger.debug('Falling back to share dialog');
+      return await shareAsset(uri, mimeType);
+    } catch (shareError) {
+      logger.error('Fallback share also failed:', shareError);
+      return false;
+    }
   }
 }
 

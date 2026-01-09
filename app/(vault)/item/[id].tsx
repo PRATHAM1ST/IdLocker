@@ -34,7 +34,7 @@ import { useAssets } from '../../../src/context/AssetProvider';
 import { useCategories } from '../../../src/context/CategoryProvider';
 import { useTheme } from '../../../src/context/ThemeProvider';
 import { useVault } from '../../../src/context/VaultProvider';
-import { formatFileSize, shareAsset } from '../../../src/storage/assetStorage';
+import { formatFileSize, openAssetInExternalApp, shareAsset } from '../../../src/storage/assetStorage';
 import { borderRadius, spacing } from '../../../src/styles/theme';
 import { assetToImageAttachment, getAssetIcon } from '../../../src/utils/assetHelpers';
 import { formatDate } from '../../../src/utils/formatters';
@@ -54,7 +54,7 @@ export default function ItemDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { getItem, deleteItem, isLoading } = useVault();
+  const { getItem, deleteItem, isLoading, updateItem } = useVault();
   const { getCategoryById } = useCategories();
   const { getAssetsForItem, migrateItemAssets, ensureAssetsLoaded } = useAssets();
 
@@ -98,9 +98,20 @@ export default function ItemDetailScreen() {
       let assetsForItem = getAssetsForItem(item);
 
       if (assetsForItem.length === 0 && item.images && item.images.length > 0) {
-        await migrateItemAssets(item);
-        await ensureAssetsLoaded(item.images.map((img) => img.id));
-        assetsForItem = getAssetsForItem(item);
+        const migratedRefs = await migrateItemAssets(item);
+        if (migratedRefs.length > 0) {
+          // Immediately update the item in vault with migrated assetRefs
+          await updateItem(item.id, { assetRefs: migratedRefs });
+          await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
+          // Re-fetch the item to get updated assetRefs
+          const updatedItem = getItem(item.id);
+          if (updatedItem) {
+            assetsForItem = getAssetsForItem(updatedItem);
+          }
+        } else {
+          await ensureAssetsLoaded(item.images.map((img) => img.id));
+          assetsForItem = getAssetsForItem(item);
+        }
       }
 
       if (isActive) {
@@ -113,7 +124,7 @@ export default function ItemDetailScreen() {
     return () => {
       isActive = false;
     };
-  }, [item, getAssetsForItem, migrateItemAssets, ensureAssetsLoaded]);
+  }, [item, getAssetsForItem, migrateItemAssets, ensureAssetsLoaded, updateItem, getItem]);
 
   const category = useMemo(
     () => (item ? getCategoryById(item.type) : null),
@@ -161,6 +172,10 @@ export default function ItemDetailScreen() {
 
   const handleShareAsset = useCallback(async (asset: Asset) => {
     await shareAsset(asset.uri, asset.mimeType);
+  }, []);
+
+  const handleOpenAsset = useCallback(async (asset: Asset) => {
+    await openAssetInExternalApp(asset.uri, asset.mimeType);
   }, []);
 
   const handleOpenImageTools = useCallback((asset: Asset) => {
@@ -423,6 +438,15 @@ export default function ItemDetailScreen() {
                     onPress={() => handleOpenImageTools(selectedAsset)}
                     backgroundColor={colors.accent}
                     style={styles.toolsButton}
+                  />
+                )}
+
+                {selectedAsset.type !== 'image' && (
+                  <ModalActionButton
+                    icon="open-outline"
+                    onPress={() => handleOpenAsset(selectedAsset)}
+                    backgroundColor={colors.primary}
+                    style={styles.shareButton}
                   />
                 )}
 

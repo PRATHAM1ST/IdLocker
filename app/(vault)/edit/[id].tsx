@@ -4,6 +4,7 @@
  * Supports custom categories and item-level custom fields
  */
 
+import { DynamicCategoryCard } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,7 +44,6 @@ import type {
   VaultItemType,
 } from '../../../src/utils/types';
 import { sanitizeInput, validateField } from '../../../src/utils/validation';
-import { DynamicCategoryCard } from '@/src/components';
 
 // Helper function to sanitize color values - ensures they're valid strings, never null/undefined
 const sanitizeColorValue = (color: string | null | undefined, fallback: string): string => {
@@ -121,6 +121,8 @@ export default function EditItemScreen() {
         finalAssetRefs = migratedRefs;
         if (migratedRefs.length > 0) {
           // await ensureAssetsLoaded(migratedRefs.map((ref) => ref.assetId));
+          // Immediately update the item in vault with migrated assetRefs
+          await updateItem(item.id, { assetRefs: migratedRefs });
         }
       }
 
@@ -299,7 +301,9 @@ export default function EditItemScreen() {
       label: label.trim(),
       fields,
       customFields: customFields, // Always pass explicitly, even if empty array, to ensure deletions are saved
-      assetRefs: assetRefs.length > 0 ? assetRefs : undefined,
+      // Always save assetRefs if they've been set (even if empty array) to ensure linking is preserved
+      // Only pass undefined if we want to preserve existing refs (which we don't in save)
+      assetRefs: assetRefs,
     };
     
     // Only include type if it changed
