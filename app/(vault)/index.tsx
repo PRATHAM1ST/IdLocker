@@ -30,11 +30,10 @@ export default function VaultHomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { categories } = useCategories();
-  const { setHomeFilter } = useHomeFilter();
+  const { setHomeFilter, searchQuery, setSearchQuery } = useHomeFilter();
   const { deleteItem } = useVault();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const swipeableRef = useRef<SwipeableMethods>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
