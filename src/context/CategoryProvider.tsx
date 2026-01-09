@@ -3,7 +3,15 @@
  * Manages categories state and CRUD operations
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import type { CustomCategory, CategoryColor } from '../utils/types';
 import * as vaultStorage from '../storage/vaultStorage';
 import { useAuthLock } from './AuthLockProvider';
@@ -49,6 +57,9 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // Debounced save timeout ref
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Load categories when unlocked
   useEffect(() => {
     if (!isLocked && !hasLoaded) {
@@ -60,7 +71,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       setCategories(DEFAULT_CATEGORIES);
       setHasLoaded(false);
     }
-  }, [isLocked, hasLoaded]);
+  }, [isLocked, hasLoaded, refreshCategories]);
 
   // Refresh categories from storage
   const refreshCategories = useCallback(async () => {
@@ -81,6 +92,44 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     }
   }, []);
 
+  // Debounced save function to prevent race conditions
+  const debouncedSave = useCallback(
+    (currentCategories: CustomCategory[], immediate: boolean = false) => {
+      // Clear any pending save
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      const performSave = async () => {
+        try {
+          await vaultStorage.saveCategories({ version: 1, categories: currentCategories });
+        } catch (err) {
+          logger.debug('Categories save failed (expected in Expo Go)', err);
+        }
+      };
+
+      if (immediate) {
+        // Save immediately for critical operations (delete, reset)
+        performSave();
+      } else {
+        // Debounce saves for add/update operations
+        saveTimeoutRef.current = setTimeout(performSave, 100);
+      }
+    },
+    [],
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // Add new category
   const addCategory = useCallback(
     async (
@@ -95,22 +144,17 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       } as CustomCategory;
 
       // Update local state immediately
-      setCategories((prev) => [...prev, newCategory]);
+      setCategories((prev) => {
+        const updated = [...prev, newCategory];
+        // Schedule debounced save
+        debouncedSave(updated, false);
+        return updated;
+      });
       logger.debug('Category added:', newCategory);
-
-      // Persist in background
-      setTimeout(() => {
-        setCategories((currentCategories) => {
-          vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
-            logger.debug('Category added to memory but not persisted');
-          });
-          return currentCategories;
-        });
-      }, 100);
 
       return newCategory;
     },
-    [],
+    [debouncedSave],
   );
 
   // Update existing category
@@ -132,22 +176,17 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       };
 
       // Update local state immediately
-      setCategories((prev) => prev.map((cat) => (cat.id === id ? updatedCategory : cat)));
+      setCategories((prev) => {
+        const updated = prev.map((cat) => (cat.id === id ? updatedCategory : cat));
+        // Schedule debounced save
+        debouncedSave(updated, false);
+        return updated;
+      });
       logger.debug('Category updated:', id);
-
-      // Persist in background
-      setTimeout(() => {
-        setCategories((currentCategories) => {
-          vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
-            logger.debug('Category updated in memory but not persisted');
-          });
-          return currentCategories;
-        });
-      }, 100);
 
       return updatedCategory;
     },
-    [categories],
+    [categories, debouncedSave],
   );
 
   // Delete category
@@ -160,22 +199,17 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       }
 
       // Update local state immediately
-      setCategories((prev) => prev.filter((cat) => cat.id !== id));
+      setCategories((prev) => {
+        const updated = prev.filter((cat) => cat.id !== id);
+        // Save immediately for delete operations (critical)
+        debouncedSave(updated, true);
+        return updated;
+      });
       logger.debug('Category deleted:', id);
-
-      // Persist in background
-      setTimeout(() => {
-        setCategories((currentCategories) => {
-          vaultStorage.saveCategories({ version: 1, categories: currentCategories }).catch(() => {
-            logger.debug('Category deleted from memory but not persisted');
-          });
-          return currentCategories;
-        });
-      }, 100);
 
       return true;
     },
-    [categories],
+    [categories, debouncedSave],
   );
 
   // Get single category by ID
@@ -189,16 +223,10 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
   // Reset to defaults
   const resetToDefaults = useCallback(async (): Promise<boolean> => {
     setCategories(DEFAULT_CATEGORIES);
-
-    // Persist in background
-    setTimeout(() => {
-      vaultStorage.saveCategories({ version: 1, categories: DEFAULT_CATEGORIES }).catch(() => {
-        logger.debug('Categories reset in memory but not persisted');
-      });
-    }, 100);
-
+    // Save immediately for reset operations (critical)
+    debouncedSave(DEFAULT_CATEGORIES, true);
     return true;
-  }, []);
+  }, [debouncedSave]);
 
   // Get a default color for new categories
   const getDefaultColor = useCallback((): CategoryColor => {

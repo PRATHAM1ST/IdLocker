@@ -61,7 +61,14 @@ async function loadVaultMeta(): Promise<VaultMeta | null> {
       return null;
     }
 
-    const meta = JSON.parse(metaStr) as VaultMeta;
+    let meta: VaultMeta;
+    try {
+      meta = JSON.parse(metaStr) as VaultMeta;
+    } catch (parseError) {
+      logger.error('loadVaultMeta: Failed to parse metadata JSON', parseError);
+      return null;
+    }
+
     logger.debug('loadVaultMeta: Success', meta);
     return meta;
   } catch (error) {
@@ -154,7 +161,13 @@ export async function loadVault(): Promise<VaultData> {
 
     // Reassemble JSON
     const jsonStr = chunks.join('');
-    const data = JSON.parse(jsonStr);
+    let data: VaultData;
+    try {
+      data = JSON.parse(jsonStr);
+    } catch (parseError) {
+      logger.error('loadVault: Failed to parse vault JSON', parseError);
+      return { version: 1, items: [] };
+    }
 
     if (!isVaultData(data)) {
       logger.warn('loadVault: Invalid vault data format, starting fresh');
@@ -426,7 +439,13 @@ export async function loadSettings(): Promise<AppSettings> {
       return DEFAULT_SETTINGS;
     }
 
-    const settings = JSON.parse(settingsStr);
+    let settings: AppSettings;
+    try {
+      settings = JSON.parse(settingsStr);
+    } catch (parseError) {
+      logger.error('loadSettings: Failed to parse settings JSON', parseError);
+      return DEFAULT_SETTINGS;
+    }
 
     if (!isAppSettings(settings)) {
       logger.warn('loadSettings: Invalid settings format, using defaults');
@@ -554,7 +573,13 @@ export async function loadCategories(): Promise<CategoriesData> {
       return defaultData;
     }
 
-    const data = JSON.parse(categoriesStr);
+    let data: CategoriesData;
+    try {
+      data = JSON.parse(categoriesStr);
+    } catch (parseError) {
+      logger.error('loadCategories: Failed to parse categories JSON', parseError);
+      return { version: 1, categories: DEFAULT_CATEGORIES };
+    }
 
     if (!isCategoriesData(data)) {
       logger.warn('loadCategories: Invalid categories data format, using defaults');

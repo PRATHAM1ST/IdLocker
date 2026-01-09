@@ -98,7 +98,18 @@ export async function loadAssetsData(): Promise<AssetsData> {
   try {
     const data = await SecureStore.getItemAsync(ASSETS_STORE_KEY);
     if (data) {
-      const parsed = JSON.parse(data);
+      let parsed: AssetsData;
+      try {
+        parsed = JSON.parse(data);
+      } catch (parseError) {
+        logger.error('Failed to parse assets data JSON:', parseError);
+        return {
+          version: CURRENT_VERSION,
+          assets: [],
+          migrated: false,
+        };
+      }
+
       if (isAssetsData(parsed)) {
         return parsed;
       }
@@ -173,7 +184,7 @@ export async function saveImageAsset(
 
     // Get file size
     const fileInfo = await FileSystem.getInfoAsync(destUri);
-    const size = (fileInfo as any).size || 0;
+    const size = fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 0;
 
     const asset: Asset = {
       id,
@@ -241,7 +252,7 @@ export async function saveDocumentAsset(
 
     // Get file size
     const fileInfo = await FileSystem.getInfoAsync(destUri);
-    const size = (fileInfo as any).size || 0;
+    const size = fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 0;
 
     const asset: Asset = {
       id,
@@ -431,7 +442,9 @@ export async function migrateImageToAsset(image: ImageAttachment): Promise<Asset
       to: destUri,
     });
 
-    const size = (fileInfo as any).size || 0;
+    // Get file size from the copied file
+    const copiedFileInfo = await FileSystem.getInfoAsync(destUri);
+    const size = copiedFileInfo.exists && 'size' in copiedFileInfo ? copiedFileInfo.size : 0;
 
     const asset: Asset = {
       id,

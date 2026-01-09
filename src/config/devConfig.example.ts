@@ -17,10 +17,13 @@ export const DEV_CONFIG = {
   USE_DUMMY_DATA: false,
 
   /**
-   * Skip authentication in development (DANGEROUS - for UI testing only)
+   * ⚠️ SECURITY RISK: Skip authentication in development (DANGEROUS - for UI testing only)
    * Set to true to bypass biometric lock
+   * 
+   * ⚠️ WARNING: Default is false for security. Only set to true for local UI testing.
+   * NEVER commit with this set to true!
    */
-  SKIP_AUTH: true,
+  SKIP_AUTH: false,
 
   /**
    * Enable verbose logging

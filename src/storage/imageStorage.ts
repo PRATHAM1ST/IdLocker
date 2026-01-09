@@ -347,7 +347,7 @@ export async function getImageStorageSize(): Promise<number> {
       const uri = `${IMAGES_DIR}${filename}`;
       const fileInfo = await FileSystem.getInfoAsync(uri);
       if (fileInfo.exists && 'size' in fileInfo) {
-        totalSize += (fileInfo as any).size || 0;
+        totalSize += fileInfo.size || 0;
       }
     }
 

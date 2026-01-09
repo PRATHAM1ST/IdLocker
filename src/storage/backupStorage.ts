@@ -152,8 +152,13 @@ function parseBackupJson(json: string): VaultBackupFileV1 {
   let parsed: VaultBackupFileV1;
   try {
     parsed = JSON.parse(json) as VaultBackupFileV1;
-  } catch {
-    throw new Error('The selected file is not a valid IdLocker backup.');
+  } catch (parseError) {
+    const errorMessage =
+      parseError instanceof Error ? parseError.message : 'Unknown JSON parse error';
+    logger.error('Failed to parse backup JSON:', errorMessage);
+    throw new Error(
+      `The selected file is not a valid IdLocker backup. JSON parse error: ${errorMessage}`,
+    );
   }
 
   assertBackupPayload(parsed);

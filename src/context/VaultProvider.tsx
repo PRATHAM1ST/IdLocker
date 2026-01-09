@@ -4,7 +4,15 @@
  * Works in-memory first, then tries to persist to SecureStore
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import * as vaultStorage from '../storage/vaultStorage';
 import { logger } from '../utils/logger';
 import type { VaultItem, VaultItemType } from '../utils/types';
@@ -46,18 +54,8 @@ export function VaultProvider({ children }: VaultProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Load vault when unlocked
-  useEffect(() => {
-    if (!isLocked && !hasLoaded) {
-      refreshVault();
-    }
-
-    // Clear items when locked for security
-    if (isLocked) {
-      setItems([]);
-      setHasLoaded(false);
-    }
-  }, [isLocked, hasLoaded]);
+  // Debounced save timeout ref
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refresh vault data from storage
   const refreshVault = useCallback(async () => {
@@ -78,6 +76,57 @@ export function VaultProvider({ children }: VaultProviderProps) {
     }
   }, []);
 
+  // Load vault when unlocked
+  useEffect(() => {
+    if (!isLocked && !hasLoaded) {
+      refreshVault();
+    }
+
+    // Clear items when locked for security
+    if (isLocked) {
+      setItems([]);
+      setHasLoaded(false);
+    }
+  }, [isLocked, hasLoaded, refreshVault]);
+
+  // Debounced save function to prevent race conditions
+  const debouncedSave = useCallback(
+    (currentItems: VaultItem[], immediate: boolean = false) => {
+      // Clear any pending save
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      const performSave = async () => {
+        try {
+          await vaultStorage.saveVault({ version: 1, items: currentItems });
+        } catch (err) {
+          logger.debug('Vault save failed (expected in Expo Go)', err);
+        }
+      };
+
+      if (immediate) {
+        // Save immediately for critical operations (delete)
+        performSave();
+      } else {
+        // Debounce saves for add/update operations
+        saveTimeoutRef.current = setTimeout(performSave, 100);
+      }
+    },
+    [],
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // Add new item - manages state in-memory first, then tries to persist
   const addItem = useCallback(
     async (item: Omit<VaultItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<VaultItem | null> => {
@@ -96,23 +145,17 @@ export function VaultProvider({ children }: VaultProviderProps) {
       };
 
       // Update local state immediately
-      setItems((prev) => [...prev, newItem]);
+      setItems((prev) => {
+        const updated = [...prev, newItem];
+        // Schedule debounced save
+        debouncedSave(updated, false);
+        return updated;
+      });
       logger.vaultOperation('add item');
-
-      // Try to persist to storage in background (may fail in Expo Go)
-      // Use setTimeout to ensure state is updated first
-      setTimeout(() => {
-        setItems((currentItems) => {
-          vaultStorage.saveVault({ version: 1, items: currentItems }).catch(() => {
-            logger.debug('Item added to memory but not persisted');
-          });
-          return currentItems;
-        });
-      }, 100);
 
       return newItem;
     },
-    [],
+    [debouncedSave],
   );
 
   // Update existing item - manages state in-memory first, then tries to persist
@@ -143,22 +186,17 @@ export function VaultProvider({ children }: VaultProviderProps) {
       };
 
       // Update local state immediately
-      setItems((prev) => prev.map((item) => (item.id === id ? updatedItem : item)));
+      setItems((prev) => {
+        const updated = prev.map((item) => (item.id === id ? updatedItem : item));
+        // Schedule debounced save
+        debouncedSave(updated, false);
+        return updated;
+      });
       logger.vaultOperation('update item');
-
-      // Try to persist in background
-      setTimeout(() => {
-        setItems((currentItems) => {
-          vaultStorage.saveVault({ version: 1, items: currentItems }).catch(() => {
-            logger.debug('Item updated in memory but not persisted');
-          });
-          return currentItems;
-        });
-      }, 100);
 
       return updatedItem;
     },
-    [items],
+    [items, debouncedSave],
   );
 
   // Delete item - manages state in-memory first, then tries to persist
@@ -172,22 +210,17 @@ export function VaultProvider({ children }: VaultProviderProps) {
       }
 
       // Update local state immediately
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      setItems((prev) => {
+        const updated = prev.filter((item) => item.id !== id);
+        // Save immediately for delete operations (critical)
+        debouncedSave(updated, true);
+        return updated;
+      });
       logger.vaultOperation('delete item');
-
-      // Try to persist in background
-      setTimeout(() => {
-        setItems((currentItems) => {
-          vaultStorage.saveVault({ version: 1, items: currentItems }).catch(() => {
-            logger.debug('Item deleted from memory but not persisted');
-          });
-          return currentItems;
-        });
-      }, 100);
 
       return true;
     },
-    [items],
+    [items, debouncedSave],
   );
 
   // Get single item by ID
