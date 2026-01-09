@@ -7,6 +7,7 @@
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Sharing from 'expo-sharing';
@@ -550,8 +551,8 @@ export async function shareAsset(
 
 /**
  * Open an asset in an external app that supports the file type
- * On both Android and iOS: Uses expo-sharing which shows the native share sheet
- * with app picker/"Open in..." options. This handles FileProvider automatically on Android.
+ * On Android: Uses expo-intent-launcher to open files directly in the default app
+ * On iOS: Uses expo-sharing which shows the native share sheet with "Open in..." options
  */
 export async function openAssetInExternalApp(
   uri: string,
@@ -564,22 +565,49 @@ export async function openAssetInExternalApp(
       return false;
     }
 
-    // Use expo-sharing on both platforms - it handles FileProvider on Android automatically
-    // and shows the native share sheet with "Open in..." options on iOS
-    const isAvailable = await Sharing.isAvailableAsync();
-    if (!isAvailable) {
-      logger.warn('Sharing not available on this device');
-      return false;
+    if (Platform.OS === 'android') {
+      // On Android, convert file:// URI to content:// URI for FileProvider
+      // This allows the file to be accessed by other apps via Android's FileProvider system
+      try {
+        const contentUri = await FileSystem.getContentUriAsync(uri);
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          type: mimeType,
+          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+        });
+        logger.debug('Asset opened in external app (Android)');
+        return true;
+      } catch (intentError) {
+        // If IntentLauncher fails (e.g., no app to handle the file), fall back to share sheet
+        logger.debug('IntentLauncher failed, falling back to share sheet:', intentError);
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (!isAvailable) {
+          logger.warn('Sharing not available on this device');
+          return false;
+        }
+        await Sharing.shareAsync(uri, {
+          mimeType,
+          dialogTitle: 'Open with',
+        });
+        return true;
+      }
+    } else {
+      // On iOS, use the share sheet which shows "Open in..." options
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        logger.warn('Sharing not available on this device');
+        return false;
+      }
+
+      await Sharing.shareAsync(uri, {
+        mimeType,
+        dialogTitle: 'Open File',
+        UTI: mimeType, // Uniform Type Identifier for iOS
+      });
+
+      logger.debug('Asset opened in external app (iOS)');
+      return true;
     }
-
-    await Sharing.shareAsync(uri, {
-      mimeType,
-      dialogTitle: Platform.OS === 'android' ? 'Open with' : 'Open File',
-      UTI: Platform.OS === 'ios' ? mimeType : undefined, // Uniform Type Identifier for iOS only
-    });
-
-    logger.debug(`Asset opened in external app (${Platform.OS})`);
-    return true;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Failed to open asset in external app:', errorMessage);
